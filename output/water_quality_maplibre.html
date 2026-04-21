@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>LA Water Quality Root Cause Intelligence</title>
+<link href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.js"></script>
+<style>
+:root {
+  --nyt-cream: #f2ede4;
+  --nyt-water: #c9dfe8;
+  --nyt-dark:  #1a1a1a;
+  --nyt-gray:  #6b6860;
+  --nyt-line:  #e0dbd4;
+  --panel-w:   300px;
+  --sidebar-w: 220px;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family: Arial, sans-serif; background: var(--nyt-cream); overflow: hidden; }
+#map { position:absolute; top:0; left:var(--sidebar-w); right:0; bottom:56px; }
+
+/* ── Sidebar ─────────────────────────────────────────── */
+#sidebar {
+  position:absolute; top:0; left:0; bottom:0; width:var(--sidebar-w);
+  background:#fff; border-right:1px solid var(--nyt-line);
+  display:flex; flex-direction:column; z-index:20; overflow:hidden;
+}
+#sidebar-header {
+  padding:14px 14px 10px;
+  border-bottom:2px solid var(--nyt-dark);
+}
+#sidebar-header h1 {
+  font-family: Georgia, serif; font-size:13px; color:var(--nyt-dark);
+  line-height:1.4; font-weight:bold;
+}
+#sidebar-header p { font-size:10px; color:var(--nyt-gray); margin-top:3px; }
+#layer-list { flex:1; overflow-y:auto; padding:8px 0; }
+.layer-group { padding:6px 14px 2px; }
+.layer-group-label {
+  font-size:9px; letter-spacing:1.5px; text-transform:uppercase;
+  color:#aaa; font-weight:bold; margin-bottom:4px;
+}
+.layer-item {
+  display:flex; align-items:center; gap:8px;
+  padding:5px 0; cursor:pointer; user-select:none;
+}
+.layer-item label {
+  display:flex; align-items:center; gap:8px; cursor:pointer;
+  font-size:11.5px; color:var(--nyt-dark); flex:1;
+}
+.layer-item input[type=checkbox] { display:none; }
+.layer-toggle {
+  width:28px; height:15px; border-radius:8px; background:#ccc;
+  position:relative; flex-shrink:0; transition:background .2s;
+}
+.layer-toggle::after {
+  content:''; position:absolute; top:2px; left:2px;
+  width:11px; height:11px; border-radius:50%; background:#fff;
+  transition:left .2s;
+}
+.layer-item.active .layer-toggle { background:var(--nyt-dark); }
+.layer-item.active .layer-toggle::after { left:15px; }
+.layer-dot {
+  width:9px; height:9px; border-radius:50%; flex-shrink:0;
+}
+.layer-line {
+  width:18px; height:3px; border-radius:2px; flex-shrink:0;
+}
+
+/* ── Title bar ───────────────────────────────────────── */
+#titlebar {
+  position:absolute; top:0; left:var(--sidebar-w); right:0; height:44px;
+  background:rgba(255,255,255,0.96); border-bottom:1px solid var(--nyt-line);
+  display:flex; align-items:center; justify-content:center; z-index:15;
+  box-shadow:0 1px 4px rgba(0,0,0,0.06);
+}
+#titlebar span {
+  font-family: Georgia, serif; font-size:14px; font-weight:bold; color:var(--nyt-dark);
+  letter-spacing:0.3px;
+}
+#map { top:44px; }
+
+/* ── NYT Click Panel ─────────────────────────────────── */
+#info-panel {
+  position:absolute; top:54px; right:10px; width:var(--panel-w);
+  background:#fff; border:1px solid #ddd; border-radius:3px;
+  box-shadow:0 4px 20px rgba(0,0,0,0.14); z-index:20;
+  display:none; overflow:hidden;
+}
+#info-panel-header {
+  background:var(--nyt-dark); color:#fff;
+  padding:9px 32px 9px 14px; font-size:9px;
+  letter-spacing:2px; text-transform:uppercase; position:relative;
+}
+#info-panel-close {
+  position:absolute; top:7px; right:11px; color:#aaa;
+  cursor:pointer; font-size:17px; line-height:1;
+}
+#info-panel-close:hover { color:#fff; }
+#info-panel-body { padding:14px 16px 16px; font-family:Georgia,serif; }
+#info-name { font-size:15px; font-weight:bold; color:var(--nyt-dark);
+             margin-bottom:2px; line-height:1.35; }
+#info-city { font-size:11px; color:#999; margin-bottom:12px;
+             font-family:Arial,sans-serif; }
+.stat-row { display:flex; justify-content:space-between;
+            border-bottom:1px solid #f0f0f0; padding:5px 0;
+            font-size:11.5px; font-family:Arial,sans-serif; }
+.stat-label { color:#777; }
+.stat-val { font-weight:bold; color:var(--nyt-dark); }
+#info-risk {
+  margin-top:11px; padding:7px 10px; text-align:center;
+  font-size:10px; font-weight:bold; letter-spacing:1px;
+  text-transform:uppercase; border-radius:3px;
+  font-family:Arial,sans-serif;
+}
+#info-narrative {
+  margin-top:10px; font-size:12px; color:#555;
+  line-height:1.65; font-style:italic;
+}
+
+/* ── Time slider ─────────────────────────────────────── */
+#time-bar {
+  position:absolute; bottom:0; left:var(--sidebar-w); right:0; height:56px;
+  background:rgba(255,255,255,0.96); border-top:1px solid var(--nyt-line);
+  display:flex; align-items:center; gap:14px; padding:0 20px; z-index:15;
+}
+#time-bar label { font-size:10px; color:var(--nyt-gray);
+                  text-transform:uppercase; letter-spacing:1px; white-space:nowrap; }
+#month-slider { flex:1; accent-color:var(--nyt-dark); cursor:pointer; }
+#month-display {
+  font-family:Georgia,serif; font-size:13px; font-weight:bold;
+  color:var(--nyt-dark); min-width:72px; text-align:right;
+}
+#play-btn {
+  width:30px; height:30px; border-radius:50%;
+  background:var(--nyt-dark); color:#fff; border:none;
+  cursor:pointer; font-size:13px; display:flex; align-items:center;
+  justify-content:center; flex-shrink:0;
+}
+#play-btn:hover { background:#333; }
+
+/* ── Map controls ────────────────────────────────────── */
+.maplibregl-ctrl-top-left { top:54px !important; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div id="sidebar-header">
+    <h1>LA Water Quality<br>Root Cause Intelligence</h1>
+    <p>2020–2025 · Click layers to toggle</p>
+  </div>
+  <div id="layer-list">
+    <div class="layer-group">
+      <div class="layer-group-label">Environmental Events</div>
+      <div class="layer-item active" onclick="toggle(this,'fire-fill','fire-line','fire-label')">
+        <label><span class="layer-dot" style="background:#FF4500"></span>2025 Wildfire Perimeters</label>
+        <div class="layer-toggle"></div>
+      </div>
+    </div>
+    <div class="layer-group">
+      <div class="layer-group-label">Water Infrastructure</div>
+      <div class="layer-item active" onclick="toggle(this,'ws-fill','ws-line')">
+        <label><span class="layer-line" style="background:#007730"></span>Water System Boundaries</label>
+        <div class="layer-toggle"></div>
+      </div>
+    </div>
+    <div class="layer-group">
+      <div class="layer-group-label">Water Quality</div>
+      <div class="layer-item active" onclick="toggle(this,'wqp-heat')">
+        <label><span class="layer-dot" style="background:linear-gradient(to right,blue,yellow,red);border-radius:0;width:18px;height:6px"></span>WQP Contamination Heat</label>
+        <div class="layer-toggle"></div>
+      </div>
+      <div class="layer-item active" onclick="toggle(this,'gw-heat')">
+        <label><span class="layer-dot" style="background:#00aaff"></span>Groundwater Wells Heat</label>
+        <div class="layer-toggle"></div>
+      </div>
+      <div class="layer-item active" onclick="toggle(this,'usgs-circle')">
+        <label><span class="layer-dot" style="background:#1565C0"></span>USGS Gauges</label>
+        <div class="layer-toggle"></div>
+      </div>
+      <div class="layer-item" onclick="toggle(this,'monthly-heat')" id="monthly-item">
+        <label><span class="layer-dot" style="background:#8e44ad"></span>WQP Monthly Slider ⏱</label>
+        <div class="layer-toggle"></div>
+      </div>
+    </div>
+    <div class="layer-group">
+      <div class="layer-group-label">Pollution Sources</div>
+      <div class="layer-item active" onclick="toggle(this,'geo-heat')">
+        <label><span class="layer-dot" style="background:#8B008B"></span>GeoTracker Sites Heat</label>
+        <div class="layer-toggle"></div>
+      </div>
+      <div class="layer-item active" onclick="toggle(this,'tri-circle')">
+        <label><span class="layer-dot" style="background:#8B4513"></span>TRI Industrial Facilities</label>
+        <div class="layer-toggle"></div>
+      </div>
+      <div class="layer-item active" onclick="toggle(this,'sf-circle')">
+        <label><span class="layer-dot" style="background:#2c2c2c"></span>Superfund Sites</label>
+        <div class="layer-toggle"></div>
+      </div>
+    </div>
+    <div class="layer-group">
+      <div class="layer-group-label">Public Health</div>
+      <div class="layer-item active" onclick="toggle(this,'school-circle')">
+        <label><span class="layer-dot" style="background:#27ae60"></span>School Lead Sampling</label>
+        <div class="layer-toggle"></div>
+      </div>
+      <div class="layer-item active" onclick="toggle(this,'aqs-circle')">
+        <label><span class="layer-dot" style="background:#e67e22"></span>AQS Air Quality Stations</label>
+        <div class="layer-toggle"></div>
+      </div>
+      <div class="layer-item active" onclick="toggle(this,'ej-heat')">
+        <label><span class="layer-dot" style="background:#aa6600"></span>CalEnviroScreen Score</label>
+        <div class="layer-toggle"></div>
+      </div>
+      <div class="layer-item active" onclick="toggle(this,'cdc-heat')">
+        <label><span class="layer-dot" style="background:#c0392b"></span>CDC PLACES Asthma Rate</label>
+        <div class="layer-toggle"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Title bar -->
+<div id="titlebar">
+  <span>🌊 LA Water Quality Root Cause Intelligence &nbsp;·&nbsp; 2020–2025</span>
+</div>
+
+<!-- Map -->
+<div id="map"></div>
+
+<!-- NYT-style info panel -->
+<div id="info-panel">
+  <div id="info-panel-header">
+    Water System Profile
+    <span id="info-panel-close" onclick="document.getElementById('info-panel').style.display='none'">&times;</span>
+  </div>
+  <div id="info-panel-body">
+    <div id="info-name">—</div>
+    <div id="info-city">—</div>
+    <div id="info-stats"></div>
+    <div id="info-risk"></div>
+    <div id="info-narrative"></div>
+  </div>
+</div>
+
+<!-- Time slider -->
+<div id="time-bar">
+  <button id="play-btn" onclick="playPause()">▶</button>
+  <label>WQP Monthly</label>
+  <input id="month-slider" type="range" min="0" max="0" value="0"
+         oninput="onSlider(this.value)">
+  <span id="month-display">—</span>
+</div>
+
+<script>
+// ── NYT palette ─────────────────────────────────────────────────────
+const C = {
+  bg:'#f2ede4', water:'#c9dfe8', park:'#dde8d4',
+  bld:'#ddd8cc', roadMj:'#e0d8cc', roadMn:'#ede9e0',
+  label:'#6b6860', halo:'rgba(242,237,228,0.85)'
+};
+
+// ── Map init ────────────────────────────────────────────────────────
+const map = new maplibregl.Map({
+  container: 'map',
+  style: 'https://tiles.openfreemap.org/styles/positron',
+  center: [-118.2437, 34.0522],
+  zoom: 10, maxZoom: 16, minZoom: 7
+});
+map.addControl(new maplibregl.NavigationControl(), 'top-left');
+map.addControl(new maplibregl.ScaleControl({ unit:'imperial' }), 'bottom-left');
+
+// ── Popup helper ────────────────────────────────────────────────────
+const popup = new maplibregl.Popup({ closeButton:true, maxWidth:'260px' });
+
+// ── System panel data ───────────────────────────────────────────────
+let sysData = {};
+fetch('data/system_panel.json').then(r=>r.text()).then(t=>{
+  sysData = JSON.parse(t.replace(/\bNaN\b/g,'null'));
+});
+
+function fmt(v,unit=''){
+  if(v===null||v===undefined) return '—';
+  if(typeof v==='number'){
+    if(v>=1e6) return (v/1e6).toFixed(1)+'M'+unit;
+    if(v>=1e3) return v.toLocaleString()+unit;
+    return v.toFixed(1)+unit;
+  }
+  return v;
+}
+
+function showPanel(props){
+  const id = props.SABL_PWSID;
+  const d  = sysData[id]||{};
+  const name = d.name||props.WATER_SYSTEM_NAME||id||'—';
+  const city = d.city||'—';
+  const ot = (d.owner_type||'').trim();
+  const owner = ot==='L'?'Public utility':ot==='P'?'Private utility':'Other';
+  const viols = d.violations??'—';
+  const vc = (typeof viols==='number'&&viols>0)?'#c0392b':'#27ae60';
+  const ces = d.ces_score!=null ? d.ces_score.toFixed(1) : '—';
+  const pct = d.ces_pct!=null   ? d.ces_pct.toFixed(0)  : '—';
+  const pov = d.poverty!=null   ? d.poverty.toFixed(1)+'%' : '—';
+  const ast = d.asthma!=null    ? d.asthma.toFixed(1)   : '—';
+  const risk= d.risk||'—';
+  const rc  = {Low:'#27ae60',Moderate:'#f39c12',High:'#e67e22',Critical:'#c0392b'}[risk]||'#888';
+
+  document.getElementById('info-name').textContent=name;
+  document.getElementById('info-city').textContent=`${city} · ${owner}`;
+  document.getElementById('info-stats').innerHTML=`
+    <div class="stat-row"><span class="stat-label">Population served</span><span class="stat-val">${fmt(d.population)}</span></div>
+    <div class="stat-row"><span class="stat-label">Service connections</span><span class="stat-val">${fmt(d.connections)}</span></div>
+    <div class="stat-row"><span class="stat-label">Violations on record</span><span class="stat-val" style="color:${vc}">${viols}</span></div>
+    <div class="stat-row"><span class="stat-label">CalEnviroScreen</span><span class="stat-val">${ces} (${pct}th pct.)</span></div>
+    <div class="stat-row"><span class="stat-label">Poverty rate</span><span class="stat-val">${pov}</span></div>
+    <div class="stat-row"><span class="stat-label">Asthma (per 10k)</span><span class="stat-val">${ast}</span></div>`;
+  const re=document.getElementById('info-risk');
+  re.textContent=`⚠ Risk Level: ${risk}`;
+  re.style.cssText=`background:${rc}22;color:${rc};border:1px solid ${rc}55;margin-top:11px;padding:7px 10px;text-align:center;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;border-radius:3px;font-family:Arial,sans-serif;`;
+  let narr=`${name} serves ${fmt(d.population)} people in ${city}. `;
+  if(typeof viols==='number'&&viols>0) narr+=`${viols} regulatory violation${viols>1?'s':''} on record. `;
+  if(pct!=='—') narr+=`CalEnviroScreen ranks at the ${pct}th percentile statewide. `;
+  if(pov!=='—') narr+=`About ${pov} of residents live below poverty line.`;
+  document.getElementById('info-narrative').textContent=narr;
+  document.getElementById('info-panel').style.display='block';
+}
+
+// ── Layer toggle ────────────────────────────────────────────────────
+function toggle(el,...ids){
+  const on = !el.classList.contains('active');
+  el.classList.toggle('active', on);
+  const vis = on ? 'visible' : 'none';
+  ids.forEach(id=>{ try{ map.setLayoutProperty(id,'visibility',vis); }catch(e){} });
+  // special: monthly slider needs time bar toggle
+  if(ids.includes('monthly-heat')){
+    document.getElementById('time-bar').style.opacity = on ? '1' : '0.4';
+  }
+}
+
+// ── Time slider ─────────────────────────────────────────────────────
+let months=[], playing=false, playTimer=null;
+
+function onSlider(i){
+  const m = months[+i];
+  document.getElementById('month-display').textContent = m||'—';
+  if(map.getLayer('monthly-heat')){
+    map.setFilter('monthly-heat',['==',['get','month'],m]);
+  }
+}
+
+function playPause(){
+  playing=!playing;
+  document.getElementById('play-btn').textContent = playing ? '⏸' : '▶';
+  if(playing){
+    playTimer = setInterval(()=>{
+      const sl=document.getElementById('month-slider');
+      let v=+sl.value+1;
+      if(v>months.length-1){ v=0; }
+      sl.value=v; onSlider(v);
+    },600);
+  } else {
+    clearInterval(playTimer);
+  }
+}
+
+// ── Style load → apply NYT colors + add all layers ──────────────────
+map.on('style.load', async()=>{
+
+  // Apply NYT color overrides
+  const s = (id,prop,val)=>{ try{ if(map.getLayer(id)) map.setPaintProperty(id,prop,val); }catch(e){} };
+  s('background','background-color',C.bg);
+  ['water','water-shadow'].forEach(id=>s(id,'fill-color',C.water));
+  ['waterway','waterway-shadow'].forEach(id=>s(id,'line-color','#a8c8d8'));
+  map.getStyle().layers.forEach(l=>{
+    if(!l.id) return;
+    const id=l.id;
+    if(id.includes('park')||id.includes('grass')||id.includes('wood')||id.includes('landcover'))
+      s(id,'fill-color',C.park);
+    if(id.includes('building')) { s(id,'fill-color',C.bld); s(id,'fill-extrusion-color',C.bld); }
+    if(l.type==='line'&&(id.includes('road')||id.includes('highway')||id.includes('street')))
+      s(id,'line-color',(id.includes('major')||id.includes('motorway')||id.includes('primary'))?C.roadMj:C.roadMn);
+    if(l.type==='symbol'){ s(id,'text-color',C.label); s(id,'text-halo-color',C.halo); }
+  });
+
+  // ── Helper: add source + layers ─────────────────────────────────
+  async function addGeoJSON(name, url){
+    const res = await fetch(url);
+    const data = await res.json();
+    map.addSource(name,{type:'geojson',data});
+    return data;
+  }
+
+  // ── 1. Wildfire perimeters ───────────────────────────────────────
+  await addGeoJSON('fires','../data/raw_data/fire_perimeters/la_2025_fires_calfire.geojson');
+  map.addLayer({id:'fire-fill',type:'fill',source:'fires',
+    paint:{'fill-color':'#FF4500','fill-opacity':0.35}});
+  map.addLayer({id:'fire-line',type:'line',source:'fires',
+    paint:{'line-color':'#CC2200','line-width':2.5}});
+  map.addLayer({id:'fire-label',type:'symbol',source:'fires',
+    layout:{'text-field':['get','FIRE_NAME'],'text-size':11,'text-offset':[0,1.2],
+            'text-font':['Open Sans Bold','Arial Unicode MS Bold']},
+    paint:{'text-color':'#CC2200','text-halo-color':'rgba(255,255,255,0.8)','text-halo-width':1.5}});
+  map.on('click','fire-fill',e=>{
+    const p=e.features[0].properties;
+    popup.setLngLat(e.lngLat).setHTML(
+      `<b style="color:#CC2200">🔥 ${p.FIRE_NAME}</b><br>${(+p.GIS_ACRES||0).toLocaleString()} acres`
+    ).addTo(map);
+  });
+
+  // ── 2. Water system boundaries ───────────────────────────────────
+  await addGeoJSON('ws','../data/raw_data/water_system_boundaries/la_water_system_boundaries.geojson');
+  map.addLayer({id:'ws-fill',type:'fill',source:'ws',
+    paint:{'fill-color':'#00AA44','fill-opacity':['case',['boolean',['feature-state','hover'],false],0.22,0.07]}});
+  map.addLayer({id:'ws-line',type:'line',source:'ws',
+    paint:{'line-color':'#007730','line-width':['case',['boolean',['feature-state','hover'],false],2.5,1.5]}});
+  let hoverId=null;
+  map.on('mousemove','ws-fill',e=>{
+    map.getCanvas().style.cursor='pointer';
+    if(hoverId!==null) map.setFeatureState({source:'ws',id:hoverId},{hover:false});
+    hoverId=e.features[0].id;
+    map.setFeatureState({source:'ws',id:hoverId},{hover:true});
+  });
+  map.on('mouseleave','ws-fill',()=>{
+    map.getCanvas().style.cursor='';
+    if(hoverId!==null){ map.setFeatureState({source:'ws',id:hoverId},{hover:false}); hoverId=null; }
+  });
+  map.on('click','ws-fill',e=>showPanel(e.features[0].properties));
+
+  // ── 3. WQP heatmap ──────────────────────────────────────────────
+  await addGeoJSON('wqp','data/wqp_heatmap.geojson');
+  map.addLayer({id:'wqp-heat',type:'heatmap',source:'wqp',
+    paint:{
+      'heatmap-weight':['get','w'],
+      'heatmap-intensity':['interpolate',['linear'],['zoom'],7,1,15,3],
+      'heatmap-color':['interpolate',['linear'],['heatmap-density'],
+        0,'rgba(0,0,255,0)',0.3,'cyan',0.6,'yellow',0.9,'orange',1,'red'],
+      'heatmap-radius':['interpolate',['linear'],['zoom'],7,12,15,25],
+      'heatmap-opacity':0.75
+    }});
+
+  // ── 4. GeoTracker heatmap ────────────────────────────────────────
+  await addGeoJSON('geo','data/geotracker.geojson');
+  map.addLayer({id:'geo-heat',type:'heatmap',source:'geo',
+    paint:{
+      'heatmap-intensity':['interpolate',['linear'],['zoom'],7,1,15,2],
+      'heatmap-color':['interpolate',['linear'],['heatmap-density'],
+        0,'rgba(0,0,0,0)',0.3,'#9b59b6',0.7,'#8B008B',1,'#4a0050'],
+      'heatmap-radius':['interpolate',['linear'],['zoom'],7,14,15,28],
+      'heatmap-opacity':0.7
+    }});
+
+  // ── 5. Groundwater heatmap ───────────────────────────────────────
+  await addGeoJSON('gw','data/groundwater.geojson');
+  map.addLayer({id:'gw-heat',type:'heatmap',source:'gw',
+    paint:{
+      'heatmap-intensity':['interpolate',['linear'],['zoom'],7,0.5,15,2],
+      'heatmap-color':['interpolate',['linear'],['heatmap-density'],
+        0,'rgba(0,170,255,0)',0.4,'rgba(0,170,255,0.4)',1,'rgba(0,80,200,0.8)'],
+      'heatmap-radius':['interpolate',['linear'],['zoom'],7,10,15,20],
+      'heatmap-opacity':0.6
+    }});
+
+  // ── 6. TRI facilities ────────────────────────────────────────────
+  await addGeoJSON('tri','data/tri.geojson');
+  map.addLayer({id:'tri-circle',type:'circle',source:'tri',
+    paint:{
+      'circle-color':'#8B4513','circle-radius':4,'circle-opacity':0.8,
+      'circle-stroke-color':'#fff','circle-stroke-width':0.8
+    }});
+  map.on('click','tri-circle',e=>{
+    const p=e.features[0].properties;
+    popup.setLngLat(e.lngLat).setHTML(
+      `<b>⚗ ${p.name}</b><br><small>NAICS: ${p.naics||'—'}</small>`
+    ).addTo(map);
+  });
+
+  // ── 7. Superfund sites ───────────────────────────────────────────
+  await addGeoJSON('sf','data/superfund.geojson');
+  map.addLayer({id:'sf-circle',type:'circle',source:'sf',
+    paint:{
+      'circle-color':'#2c2c2c','circle-radius':5,'circle-opacity':0.85,
+      'circle-stroke-color':'#ff0000','circle-stroke-width':1.5
+    }});
+  map.on('click','sf-circle',e=>{
+    const p=e.features[0].properties;
+    popup.setLngLat(e.lngLat).setHTML(
+      `<b>☢ ${p.name}</b><br><small>${p.city||''}</small>`
+    ).addTo(map);
+  });
+
+  // ── 8. School lead ───────────────────────────────────────────────
+  await addGeoJSON('schools','data/schools.geojson');
+  map.addLayer({id:'school-circle',type:'circle',source:'schools',
+    paint:{
+      'circle-color':['case',['get','exceed'],'#c0392b','#27ae60'],
+      'circle-radius':['interpolate',['linear'],['get','max_ppb'],0,3,50,8],
+      'circle-opacity':0.85,
+      'circle-stroke-color':'#fff','circle-stroke-width':1
+    }});
+  map.on('click','school-circle',e=>{
+    const p=e.features[0].properties;
+    popup.setLngLat(e.lngLat).setHTML(
+      `<b>🏫 ${p.name}</b><br>Max lead: <b style="color:${p.exceed?'#c0392b':'#27ae60'}">${(+p.max_ppb||0).toFixed(1)} ppb</b><br>Avg: ${(+p.avg_ppb||0).toFixed(1)} ppb · Samples: ${p.n}`
+    ).addTo(map);
+  });
+
+  // ── 9. AQS air stations ──────────────────────────────────────────
+  await addGeoJSON('aqs','data/aqs.geojson');
+  map.addLayer({id:'aqs-circle',type:'circle',source:'aqs',
+    paint:{
+      'circle-color':['interpolate',['linear'],['get','aqi'],0,'#2ecc71',50,'#f1c40f',100,'#e67e22',200,'#c0392b'],
+      'circle-radius':7,'circle-opacity':0.9,
+      'circle-stroke-color':'#fff','circle-stroke-width':1.5
+    }});
+  map.on('click','aqs-circle',e=>{
+    const p=e.features[0].properties;
+    popup.setLngLat(e.lngLat).setHTML(
+      `<b>💨 ${p.name||'AQS Station'}</b><br>Peak AQI: <b>${p.aqi}</b>`
+    ).addTo(map);
+  });
+
+  // ── 10. CalEnviroScreen ──────────────────────────────────────────
+  await addGeoJSON('ej','data/ejscreen.geojson');
+  map.addLayer({id:'ej-heat',type:'heatmap',source:'ej',
+    paint:{
+      'heatmap-weight':['interpolate',['linear'],['get','ces'],0,0,100,1],
+      'heatmap-intensity':['interpolate',['linear'],['zoom'],7,0.6,15,2],
+      'heatmap-color':['interpolate',['linear'],['heatmap-density'],
+        0,'rgba(255,255,200,0)',0.4,'#f39c12',0.8,'#e67e22',1,'#8e3000'],
+      'heatmap-radius':['interpolate',['linear'],['zoom'],7,18,15,35],
+      'heatmap-opacity':0.55
+    }});
+
+  // ── 11. CDC PLACES ───────────────────────────────────────────────
+  await addGeoJSON('cdc','data/cdc_places.geojson');
+  map.addLayer({id:'cdc-heat',type:'heatmap',source:'cdc',
+    paint:{
+      'heatmap-weight':['interpolate',['linear'],['get','asthma'],0,0,50,1],
+      'heatmap-intensity':['interpolate',['linear'],['zoom'],7,0.4,15,1.5],
+      'heatmap-color':['interpolate',['linear'],['heatmap-density'],
+        0,'rgba(192,57,43,0)',0.4,'rgba(192,57,43,0.4)',1,'rgba(120,0,0,0.85)'],
+      'heatmap-radius':['interpolate',['linear'],['zoom'],7,20,15,40],
+      'heatmap-opacity':0.5
+    }});
+
+  // ── 12. USGS gauges ──────────────────────────────────────────────
+  await addGeoJSON('usgs','data/usgs.geojson');
+  map.addLayer({id:'usgs-circle',type:'circle',source:'usgs',
+    minzoom:10,
+    paint:{
+      'circle-color':'#1565C0','circle-radius':3,'circle-opacity':0.7,
+      'circle-stroke-color':'#42A5F5','circle-stroke-width':1
+    }});
+  map.on('click','usgs-circle',e=>{
+    const p=e.features[0].properties;
+    popup.setLngLat(e.lngLat).setHTML(
+      `<b>📊 ${p.name}</b><br><small>${p.type}</small>`
+    ).addTo(map);
+  });
+
+  // ── 13. WQP monthly time slider ──────────────────────────────────
+  const mo = await fetch('data/wqp_monthly.json').then(r=>r.json());
+  months = mo.months;
+  map.addSource('monthly',{type:'geojson',data:{type:'FeatureCollection',features:mo.features}});
+  map.addLayer({id:'monthly-heat',type:'heatmap',source:'monthly',
+    layout:{'visibility':'none'},
+    filter:['==',['get','month'],months[0]||''],
+    paint:{
+      'heatmap-weight':['get','norm'],
+      'heatmap-intensity':['interpolate',['linear'],['zoom'],7,1,15,3],
+      'heatmap-color':['interpolate',['linear'],['heatmap-density'],
+        0,'rgba(0,0,255,0)',0.3,'cyan',0.6,'yellow',0.9,'orange',1,'red'],
+      'heatmap-radius':['interpolate',['linear'],['zoom'],7,14,15,28],
+      'heatmap-opacity':0.8
+    }});
+  // Init slider
+  const sl=document.getElementById('month-slider');
+  sl.max=months.length-1; sl.value=months.length-1;
+  onSlider(months.length-1);
+
+  console.log('✅ All 13 layers loaded');
+});
+</script>
+</body>
+</html>
