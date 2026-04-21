@@ -223,7 +223,7 @@ GET /map?contaminant=lead&date_range=2024-2025   → 地图热力数据
     └── 回归断点（RD）    ← 利用政策边界做准自然实验
 
 产品层（Zerve 平台）
-├── 交互式地图           (folium / plotly)
+├── 交互式地图           (MapLibre GL JS + OpenFreeMap, NYT Palatino 配色)
 ├── 自动报告生成         (Zerve Conversational Reports)
 └── REST API 部署        (Zerve Deployments)
 ```
@@ -270,12 +270,42 @@ GET /map?contaminant=lead&date_range=2024-2025   → 地图热力数据
 
 | NYT 原版技术 | 本项目实现方式 |
 |-------------|--------------|
-| **ai2html**（Illustrator → SVG 静态底图）| **CartoDB Positron** 瓦片底图（同款极简白底风格）|
-| **D3.js scrollytelling**（滚动触发叙事）| **TimestampedGeoJson 时间滑块**（月度污染动画）|
-| **Google Places Autocomplete**（位置切换 → 模板文字注入）| **GeoJSON click handler + 预计算 lookup table**（点击供水系统边界 → 右侧面板动态渲染）|
-| **WebGL 自定义 globe** | **Folium + Leaflet.js**（轻量、无需 WebGL）|
+| **ai2html**（Illustrator → SVG 静态底图）| **MapLibre GL JS + OpenFreeMap Positron**（WebGL 矢量瓦片，自定义 NYT 配色覆盖）|
+| **D3.js scrollytelling**（滚动触发叙事）| **底部时间滑块**（月度污染动画，TimestampedGeoJson 同款体验）|
+| **Google Places Autocomplete**（位置切换 → 模板文字注入）| **GeoJSON click handler + 预聚合 JSON**（点击供水系统边界 → 浮动右侧面板动态渲染）|
+| **WebGL 自定义 globe** | **MapLibre GL JS WebGL 原生渲染**（热力图、散点图、面图层均为 GPU 加速）|
 
-**关键实现**：`system_panel_data.json`（212 个供水系统预聚合统计）在构建时通过空间连接生成，以 JS 对象形式内嵌入 HTML。点击任何供水系统边界即可触发面板，展示：人口规模、服务连接数、违规记录数、CalEnviroScreen 环境公正评分、贫困率、哮喘发病率及综合风险等级（Low / Moderate / High / Critical）。
+**地图技术栈**：
+- **底图**：[OpenFreeMap](https://openfreemap.org/) Positron 矢量瓦片（免费，无 API Key）
+- **NYT 配色方案**：`background:#f2ede4`、`water:#c9dfe8`、`park:#dde8d4`、`building:#ddd8cc`，道路米灰色，标注 `#6b6860`，通过 `style.load` 事件覆盖底图样式层
+- **字体**：全站使用 `Palatino Linotype, Book Antiqua, Palatino, Georgia, serif`（NYT 社论衬线字体）
+- **布局**：全屏地图（`inset:0`），浮动标题（顶部居中）、浮动 ☰ 图层面板（右上角，可折叠）、浮动信息面板（右侧，点击水系边界时弹出）
+- **数据加载**：13 个图层全部通过 `fetch()` 异步加载预导出的 GeoJSON 文件（`output/data/`）
+
+**13个图层**：
+| 图层 | 类型 | 数据源 |
+|------|------|--------|
+| 2025野火边界 | fill + line + label | `data/fires.geojson` |
+| 供水系统边界 | fill + line（点击弹出信息面板）| `data/water_systems.geojson` |
+| WQP污染物热力图 | MapLibre heatmap（WebGL）| `data/wqp_heatmap.geojson` |
+| WQP月度时间轴 | 散点 + 底部时间滑块 | `data/wqp_monthly.json` |
+| TRI工业设施 | 散点 | `data/tri.geojson` |
+| GeoTracker污染点 | heatmap | `data/geotracker.geojson` |
+| 学校铅采样 | 散点（铅浓度着色）| `data/schools.geojson` |
+| 地下水站点 | heatmap（采样3000点）| `data/groundwater.geojson` |
+| AQS空气质量 | 散点（PM2.5着色）| `data/aqs.geojson` |
+| EJScreen 环境公正 | fill（CES评分着色）| `data/ejscreen.geojson` |
+| CDC健康结果 | fill（癌症率着色）| `data/cdc_places.geojson` |
+| Superfund污染场地 | 散点 | `data/superfund.geojson` |
+| USGS水文站 | 散点（采样2000点）| `data/usgs.geojson` |
+
+**本地运行**（Stadia Maps / Stamen Watercolor 底图需 localhost）：
+```bash
+cd output && python -m http.server 8000
+# 访问 http://localhost:8000/water_quality_maplibre.html
+```
+
+**关键实现**：`data/system_panel.json`（供水系统预聚合统计）在构建时通过空间连接生成，以 JSON 文件形式加载。点击任何供水系统边界即可触发浮动信息面板，展示：人口规模、服务连接数、违规记录数、CalEnviroScreen 环境公正评分、贫困率、哮喘发病率及综合风险等级（Low / Moderate / High / Critical）。
 
 ### PDF 数据提取
 
@@ -540,7 +570,7 @@ from econml.dml import CausalForestDML
 | 阶段 | 任务 | 状态 |
 |------|------|------|
 | ✅ 数据采集 | 15+数据源抓取、坐标修复、地理编码 | 完成 |
-| ✅ 交互地图 | 14层 Folium 地图 + 时间滑块 + NYT风格点击面板 | 完成 |
+| ✅ 交互地图 | MapLibre GL JS 13层地图，NYT Palatino 配色，浮动图层面板 + 浮动信息面板 + 底部时间滑块 | 完成 |
 | 🔄 分析第一章 | EDA + 平行趋势验证 + 描述统计图 | 进行中 |
 | ⬜ 分析第三章 | DiD + 事件研究图 + ITS | 待开始 |
 | ⬜ 分析第三章 | 空间回归 + CATE 因果森林 | 待开始 |
