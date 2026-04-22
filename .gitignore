@@ -1,6 +1,6 @@
 # Only the final HTML is tracked — everything else is ignored
 data/
-output/
+output/data/
 
 # API keys / secrets
 .env

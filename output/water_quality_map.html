@@ -276,7 +276,7 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
       <div class="layer-item" onclick="tog(this,'gw-heat')">
         <div class="layer-item-left">
           <span class="l-dot" style="background:#00aaff"></span>
-          <span>地下水采样点</span>
+          <span>DWR 地下水监测站</span>
         </div><div class="sw"></div>
       </div>
       <div class="layer-item" onclick="tog(this,'usgs-circle')">
@@ -297,10 +297,22 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
           <span>PFAS 饮用水污染</span>
         </div><div class="sw"></div>
       </div>
+      <div class="layer-item" onclick="tog(this,'beach-circle')">
+        <div class="layer-item-left">
+          <span class="l-dot" style="background:#00bcd4"></span>
+          <span>Heal the Bay 海滩水质</span>
+        </div><div class="sw"></div>
+      </div>
     </div>
 
     <div class="layer-group">
       <div class="group-label">污染源</div>
+      <div class="layer-item" onclick="tog(this,'hab-circle')">
+        <div class="layer-item-left">
+          <span class="l-dot" style="background:#8bc34a"></span>
+          <span>HAB 有害藻华</span>
+        </div><div class="sw"></div>
+      </div>
       <div class="layer-item" onclick="tog(this,'geo-heat')">
         <div class="layer-item-left">
           <span class="l-dot" style="background:#b8b5b1"></span>
@@ -319,6 +331,18 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
           <span>Superfund 污染场地</span>
         </div><div class="sw"></div>
       </div>
+      <div class="layer-item" onclick="tog(this,'pesticide-circle')">
+        <div class="layer-item-left">
+          <span class="l-dot" style="background:#ff9800"></span>
+          <span>CDPR 农药使用</span>
+        </div><div class="sw"></div>
+      </div>
+      <div class="layer-item" onclick="tog(this,'npdes-circle')">
+        <div class="layer-item-left">
+          <span class="l-dot" style="background:#9c27b0"></span>
+          <span>NPDES 废水排放点</span>
+        </div><div class="sw"></div>
+      </div>
     </div>
 
     <div class="layer-group">
@@ -326,7 +350,7 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
       <div class="layer-item" onclick="tog(this,'school-circle')">
         <div class="layer-item-left">
           <span class="l-dot" style="background:#c0392b"></span>
-          <span>学校饮用水铅含量</span>
+          <span>DDW 学校饮用水铅含量</span>
         </div><div class="sw"></div>
       </div>
       <div class="layer-item" onclick="togAqs(this)">
