@@ -3,8 +3,7 @@ data/
 src/
 output/data/
 output/maplibre_test.html
-output/water_quality_map.html
-output/water_quality_map_*.html
+output/water_quality_map_v*.html
 requirements.txt
 
 # API keys / secrets

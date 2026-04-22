@@ -667,28 +667,26 @@ function onSlider(i){
 }
 
 function updateWqpZcta(month){
-  if(!wqpStationsData||!wqpContaminant||!map.getSource('aqs-zcta')) return;
-  const stMonthData=wqpStationsData.data[wqpContaminant]?.[month]||{};
-  const stZcta=wqpStationsData.station_zcta||{};
-  // Aggregate station values to ZCTAs (median per ZCTA)
+  if(!wqpZctaData||!wqpContaminant||!map.getSource('aqs-zcta')) return;
+  // Use all-time mean per ZCTA (per-month data is too sparse to show useful choropleth)
+  const allMonthsData=wqpZctaData.data[wqpContaminant]||{};
   const zctaVals={};
-  Object.entries(stMonthData).forEach(([sid,val])=>{
-    const z=stZcta[sid]; if(!z) return;
-    if(!zctaVals[z]) zctaVals[z]=[];
-    zctaVals[z].push(val);
+  Object.values(allMonthsData).forEach(mdata=>{
+    Object.entries(mdata).forEach(([zcta,val])=>{
+      if(!zctaVals[zcta]) zctaVals[zcta]=[];
+      zctaVals[zcta].push(val);
+    });
   });
-  const zctaMedian={};
+  const zctaMean={};
   Object.entries(zctaVals).forEach(([z,vals])=>{
-    vals.sort((a,b)=>a-b);
-    zctaMedian[z]=vals[Math.floor(vals.length/2)];
+    zctaMean[z]=vals.reduce((a,b)=>a+b,0)/vals.length;
   });
-  // Normalize to 95th percentile of current values
-  const sorted=Object.values(zctaMedian).sort((a,b)=>a-b);
+  // Normalize to 95th percentile
+  const sorted=Object.values(zctaMean).sort((a,b)=>a-b);
   const maxVal=sorted[Math.floor(sorted.length*0.95)]||sorted[sorted.length-1]||1;
-  // Apply to all ZCTAs (only colored if has station data)
-  if(!wqpZctaData) return;
+  // Apply to all ZCTAs
   Object.keys(wqpZctaData.zcta_id).forEach(zcta=>{
-    const raw=zctaMedian[zcta];
+    const raw=zctaMean[zcta];
     const norm=(raw!=null)?Math.min(1,raw/maxVal):null;
     map.setFeatureState({source:'aqs-zcta',id:zcta},{wqp_val:norm});
   });
