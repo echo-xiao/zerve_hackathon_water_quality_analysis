@@ -380,7 +380,6 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
     <span>饮用水污染物监测</span>
     <span id="wqp-chart-date" style="font-family:var(--palatino);font-size:10px;color:var(--dark);font-weight:bold">—</span>
   </div>
-  <svg id="wqp-svg" style="display:block;width:100%;height:auto;cursor:crosshair"></svg>
   <div id="wqp-selector" style="margin-top:6px"></div>
 </div>
 
@@ -460,6 +459,13 @@ function togMonthly(el){
   });
   document.getElementById('wqp-chart').classList.toggle('visible', on);
   showWqpMarkers(on);
+  if(on){
+    const sl=document.getElementById('month-slider');
+    updateWqpZcta(months[+sl.value]||'');
+    if(!playing) playPause();
+  } else {
+    if(playing) playPause();
+  }
   requestAnimationFrame(stackCharts);
 }
 
@@ -536,7 +542,7 @@ function showPanel(props){
 let months=[], playing=false, playTimer=null;
 let aqsDates=[], aqsPlaying=false, aqsTimer=null;
 let aqsData=null, stationZcta={}, ztcaToSite={}, selectedStation=null;
-let wqpZctaData=null, wqpContaminant=null;
+let wqpZctaData=null, wqpContaminant=null, wqpSelectedCity='__all__';
 
 // Zipcode → 城市名映射（覆盖所有 190 个 ZCTA）
 const ZCTA_CITY = {
@@ -769,6 +775,11 @@ function onWqpContaminant(val){
   updateWqpMarkers(m);
 }
 
+function onWqpCityChange(val){
+  wqpSelectedCity=val;
+  drawWqpChart();
+}
+
 function drawWqpChart(){
   const svg=document.getElementById('wqp-svg');
   if(!svg||!wqpZctaData||!wqpContaminant) return;
@@ -776,40 +787,81 @@ function drawWqpChart(){
   const wqpMonths=wqpZctaData.months;
   const n=wqpMonths.length;
   if(n<2) return;
-  const W=400,H=72,PL=38,PR=8,PT=8,PB=16;
-  const w=W-PL-PR, h=H-PT-PB;
-  // 每月所有 ZCTA 均值
-  const series=wqpMonths.map(m=>{
-    const vals=Object.values(contData[m]||{});
-    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+
+  // 按城市分组
+  const cityZctas={};
+  Object.values(contData).forEach(mdata=>{
+    Object.keys(mdata).forEach(zcta=>{
+      const city=ZCTA_CITY[zcta]||zcta;
+      if(!cityZctas[city]) cityZctas[city]=new Set();
+      cityZctas[city].add(zcta);
+    });
   });
-  const defined=series.filter(v=>v!=null);
-  if(!defined.length) return;
-  const maxY=Math.max(...defined,0.001);
+  const allCities=Object.keys(cityZctas).sort();
+
+  // 初始化城市下拉（只填充一次）
+  const citySelect=document.getElementById('wqp-city-select');
+  if(citySelect.options.length<=1){
+    allCities.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=c; o.textContent=c; citySelect.appendChild(o);
+    });
+    citySelect.onchange=e=>onWqpCityChange(e.target.value);
+  }
+
+  const citiesToDraw=wqpSelectedCity==='__all__'?allCities:[wqpSelectedCity];
+
+  // 每个城市：每月取其所有 ZCTA 的均值
+  const cityLines=citiesToDraw.map(city=>{
+    const zctas=[...cityZctas[city]];
+    const series=wqpMonths.map(m=>{
+      const vals=zctas.map(z=>(contData[m]||{})[z]).filter(v=>v!=null);
+      return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+    });
+    return {city, series};
+  }).filter(({series})=>series.some(v=>v!=null));
+
+  const W=400,H=80,PL=38,PR=8,PT=8,PB=16;
+  const w=W-PL-PR, h=H-PT-PB;
+  const allVals=cityLines.flatMap(({series})=>series).filter(v=>v!=null);
+  if(!allVals.length) return;
+  const maxY=Math.max(...allVals,0.001);
   const rawStep=maxY/3;
   const mag=Math.pow(10,Math.floor(Math.log10(rawStep)));
   const step=Math.ceil(rawStep/mag)*mag;
-  const color=getWqpColor();
-  const r=parseInt(color.slice(1,3),16),g=parseInt(color.slice(3,5),16),b=parseInt(color.slice(5,7),16);
+
+  const baseColor=getWqpColor();
+  const br=parseInt(baseColor.slice(1,3),16),bg=parseInt(baseColor.slice(3,5),16),bb=parseInt(baseColor.slice(5,7),16);
+
+  function lineColor(i,total){
+    const t=total<=1?0:i/(total-1);
+    const blend=0.6*t;
+    return `rgb(${Math.round(br+(255-br)*blend)},${Math.round(bg+(255-bg)*blend)},${Math.round(bb+(255-bb)*blend)})`;
+  }
+  const colors=cityLines.map((_,i)=>lineColor(i,cityLines.length));
+
   let html='';
-  // 刻度线 + Y轴标签
   for(let v=step;v<=maxY*1.05;v+=step){
     const y=PT+h-(v/maxY)*h;
     if(y<PT) break;
     html+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+w}" y2="${y.toFixed(1)}" stroke="#dedad4" stroke-width="0.6"/>`;
     html+=`<text x="${PL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="#aaa" font-family="Arial,sans-serif">${+v.toPrecision(2)}</text>`;
   }
-  // 填充面积 + 折线
-  const pts=wqpMonths.map((m,i)=>{
-    if(series[i]==null) return null;
-    return `${(PL+i/(n-1)*w).toFixed(1)},${(PT+h-series[i]/maxY*h).toFixed(1)}`;
-  }).filter(Boolean);
-  if(pts.length){
-    const fx=pts[0].split(',')[0], lx=pts[pts.length-1].split(',')[0];
-    html+=`<polygon points="${fx},${PT+h} ${pts.join(' ')} ${lx},${PT+h}" fill="rgba(${r},${g},${b},0.13)"/>`;
-    html+=`<polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.9"/>`;
-  }
-  // 年份标签
+
+  cityLines.forEach(({series},ci)=>{
+    const color=colors[ci];
+    const pts=wqpMonths.map((m,i)=>{
+      if(series[i]==null) return null;
+      return `${(PL+i/(n-1)*w).toFixed(1)},${(PT+h-series[i]/maxY*h).toFixed(1)}`;
+    }).filter(Boolean);
+    if(!pts.length) return;
+    html+=`<polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.4" opacity="0.9"/>`;
+    wqpMonths.forEach((m,i)=>{
+      if(series[i]==null) return;
+      html+=`<circle cx="${(PL+i/(n-1)*w).toFixed(1)}" cy="${(PT+h-series[i]/maxY*h).toFixed(1)}" r="1.6" fill="${color}"/>`;
+    });
+  });
+
   wqpMonths.forEach((m,i)=>{
     if(m.slice(5)==='01'){
       const x=(PL+i/(n-1)*w).toFixed(1);
@@ -817,21 +869,21 @@ function drawWqpChart(){
       html+=`<text x="${x}" y="${H-2}" text-anchor="middle" font-size="8" fill="#bbb" font-family="Arial,sans-serif">${m.slice(0,4)}</text>`;
     }
   });
-  // 当前月 cursor
+
   const sl=document.getElementById('month-slider');
   const ci=wqpMonths.indexOf(months[+sl.value]||'');
   const cxi=ci>=0?ci:n-1;
-  const cx=(PL+cxi/(n-1)*w).toFixed(1);
-  html+=`<line id="wqp-cursor" x1="${cx}" y1="${PT}" x2="${cx}" y2="${PT+h}" stroke="#666" stroke-width="1" stroke-dasharray="3,2"/>`;
+  html+=`<line id="wqp-cursor" x1="${(PL+cxi/(n-1)*w).toFixed(1)}" y1="${PT}" x2="${(PL+cxi/(n-1)*w).toFixed(1)}" y2="${PT+h}" stroke="#666" stroke-width="1" stroke-dasharray="3,2"/>`;
+
   svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
   svg.innerHTML=html;
-  // 点击跳转月份
   svg.onclick=e=>{
     const rect=svg.getBoundingClientRect();
     const frac=Math.max(0,Math.min(1,(e.clientX-rect.left-rect.width*PL/W)/(rect.width*w/W)));
     const idx=Math.round(frac*(months.length-1));
     document.getElementById('month-slider').value=idx; onSlider(idx);
   };
+
 }
 
 function updateWqpFillColor(color){
@@ -1411,6 +1463,9 @@ map.on('style.load', async()=>{
   const sl=document.getElementById('month-slider');
   sl.max=months.length-1; sl.value=0;
   onSlider(0);
+
+  // aqs-zcta source is 5MB+ — re-apply WQP feature states after map finishes rendering
+  map.once('idle', ()=>updateWqpZcta(months[+sl.value]||''));
 
   // Apply any pending visibility toggles
   Object.entries(pendingToggles).forEach(([id,vis])=>{
