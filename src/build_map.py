@@ -571,6 +571,31 @@ def export_geojson_layers(stations_df, results_df, fire_data, tri_data,
     print(f"  所有图层已导出 → {out}/")
 
 
+def load_beach_quality():
+    """加载海滩水质数据"""
+    path = os.path.join(DATA_DIR, "beach", "beach_quality.json")
+    if not os.path.exists(path):
+        return []
+    with open(path) as f:
+        data = json.load(f)
+    print(f"  海滩水质：{len(data)} 个海滩")
+    return data
+
+
+def load_hab_events():
+    """加载有害藻华事件"""
+    path = os.path.join(DATA_DIR, "hab", "la_hab_events.json")
+    if not os.path.exists(path):
+        return []
+    with open(path) as f:
+        data = json.load(f)
+    # handle nested structure
+    if isinstance(data, dict):
+        data = data.get("result", {}).get("records", [])
+    print(f"  HAB 事件：{len(data)} 条")
+    return data
+
+
 def load_ewg_systems():
     """加载 EWG 主要供水系统数据"""
     ewg_dir = os.path.join(DATA_DIR, "ewg")
@@ -758,7 +783,7 @@ def build_map(contaminant_filter=None, after_fire=False):
         heat_layer.add_to(m)
 
     # ── 图层 3：监测站（可点击）──────────────
-    station_layer = folium.FeatureGroup(name="📍 WQP 监测站", show=False)
+    station_layer = folium.FeatureGroup(name="📍 WQP 污染物监测站", show=False)
     cluster = MarkerCluster(
         options={"maxClusterRadius": 40, "disableClusteringAtZoom": 13}
     )

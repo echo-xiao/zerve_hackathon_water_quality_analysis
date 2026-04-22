@@ -11,6 +11,7 @@ LA Water Quality - 全量数据收集
 数据源：
   wqp        Water Quality Portal（监测站 + 133K 检测记录）
   usgs       USGS 水文数据
+  usgs_meas  USGS 实测水质时间序列（温度/DO/pH/流量等）
   ca         California Open Data（地下水 + 违规记录）
   la         LA Open Data
   epa_echo   EPA ECHO（设施 + 执法记录）
@@ -21,6 +22,10 @@ LA Water Quality - 全量数据收集
   census     US Census 人口/收入数据（无需 Key）
   noaa       NOAA 气候数据（需要 .env 中的 NOAA_API_KEY）
   fire       2025 LA 野火边界 GeoJSON（Palisades + Eaton Fire）
+  beach      Heal the Bay 海滩水质评级（LA County 海滩）
+  hab        CA Water Board 有害藻华事件（HAB）
+  cdpr       CDPR 农药使用报告（LA County）
+  npdes      EPA ECHO NPDES 废水排放监测值
 """
 
 import requests
@@ -1134,11 +1139,344 @@ def fetch_ejscreen():
 
 
 # ══════════════════════════════════════════════════════════════
+# 18. USGS 实测水质时间序列
+# ══════════════════════════════════════════════════════════════
+def fetch_usgs_measurements():
+    out_dir = os.path.join(BASE_DIR, "usgs")
+    os.makedirs(out_dir, exist_ok=True)
+
+    out_path = os.path.join(out_dir, "measurements.json")
+    if os.path.exists(out_path):
+        print("  ⏭ measurements.json 已存在，跳过")
+        return
+
+    print("  获取 LA County USGS 实测水质时间序列（温度/DO/pH/流量/电导/浊度）...")
+    try:
+        r = requests.get(
+            "https://waterservices.usgs.gov/nwis/dv/",
+            params={
+                "format": "json",
+                "stateCd": "ca",
+                "countyCd": "037",
+                "parameterCd": "00060,00010,00300,00400,00095,63680",
+                "startDT": "2020-01-01",
+                "endDT": "2025-03-31",
+                "siteStatus": "all",
+            },
+            timeout=180,
+        )
+        if r.status_code != 200 or not r.text.strip():
+            print(f"  ⚠ measurements 返回 {r.status_code}，跳过")
+            return
+        try:
+            data = r.json()
+            with open(out_path, "w") as f:
+                json.dump(data, f, indent=2)
+            ts_count = len(data.get("value", {}).get("timeSeries", []))
+            print(f"  ✓ measurements.json（{ts_count} 时间序列）")
+        except Exception as e:
+            print(f"  ⚠ JSON 解析失败，保存原始文本：{e}")
+            with open(os.path.join(out_dir, "measurements.txt"), "w") as f:
+                f.write(r.text)
+            print("  ✓ measurements.txt（原始格式）")
+    except Exception as e:
+        print(f"  ⚠ fetch_usgs_measurements 请求失败：{e}")
+
+
+# ══════════════════════════════════════════════════════════════
+# 19. Heal the Bay 海滩水质评级
+# ══════════════════════════════════════════════════════════════
+def fetch_heal_the_bay():
+    out_dir = os.path.join(BASE_DIR, "beach")
+    os.makedirs(out_dir, exist_ok=True)
+
+    out_path = os.path.join(out_dir, "beach_quality.json")
+    if os.path.exists(out_path):
+        print("  ⏭ beach_quality.json 已存在，跳过")
+        return
+
+    results = []
+
+    # 方法 1：尝试 Heal the Bay 官方 API
+    print("  尝试 Heal the Bay API...")
+    try:
+        r = requests.get(
+            "https://api.healthebay.org/v1/beaches",
+            params={"county": "Los Angeles", "state": "CA"},
+            timeout=30,
+        )
+        if r.status_code == 200:
+            data = r.json()
+            beaches = data if isinstance(data, list) else data.get("beaches", data.get("results", []))
+            for b in beaches:
+                results.append({
+                    "name": b.get("name", b.get("beach_name", "")),
+                    "lat": b.get("lat", b.get("latitude", None)),
+                    "lon": b.get("lon", b.get("longitude", None)),
+                    "grade": b.get("grade", b.get("overall_grade", "")),
+                    "last_sample_date": b.get("last_sample_date", b.get("sample_date", "")),
+                    "bacteria_level": b.get("bacteria_level", b.get("enterococcus", "")),
+                })
+            print(f"  ✓ Heal the Bay API 返回 {len(results)} 个海滩")
+        else:
+            print(f"  ⚠ Heal the Bay API 返回 {r.status_code}，尝试备用来源")
+    except Exception as e:
+        print(f"  ⚠ Heal the Bay API 失败：{e}，尝试备用来源")
+
+    time.sleep(1)
+
+    # 方法 2：CEDEN CA Water Board 海滩数据
+    if not results:
+        print("  尝试 CA Water Board CEDEN 海滩数据...")
+        try:
+            r = requests.get(
+                "https://data.ca.gov/api/3/action/datastore_search",
+                params={
+                    "resource_id": "c4ae47fc-f0fa-4b0d-a2c0-ed2b8a0dea0e",
+                    "filters": json.dumps({"county": "Los Angeles"}),
+                    "limit": 5000,
+                },
+                timeout=60,
+            )
+            if r.status_code == 200:
+                data = r.json()
+                records = data.get("result", {}).get("records", [])
+                for rec in records:
+                    results.append({
+                        "name": rec.get("StationName", rec.get("station_name", "")),
+                        "lat": rec.get("TargetLatitude", rec.get("latitude", None)),
+                        "lon": rec.get("TargetLongitude", rec.get("longitude", None)),
+                        "grade": rec.get("Result", ""),
+                        "last_sample_date": rec.get("SampleDate", rec.get("sample_date", "")),
+                        "bacteria_level": rec.get("ResultQualCode", ""),
+                    })
+                print(f"  ✓ CEDEN 返回 {len(records)} 条记录")
+            else:
+                print(f"  ⚠ CEDEN 返回 {r.status_code}")
+        except Exception as e:
+            print(f"  ⚠ CEDEN 请求失败：{e}")
+        time.sleep(1)
+
+    # 方法 3：从 WQP 站点过滤海滩/海洋类型站点
+    if not results:
+        print("  从 WQP 站点过滤海滩/海洋类型...")
+        wqp_path = os.path.join(BASE_DIR, "wqp", "stations.csv")
+        if os.path.exists(wqp_path):
+            try:
+                import csv
+                with open(wqp_path, newline="", encoding="utf-8", errors="replace") as csvf:
+                    reader = csv.DictReader(csvf)
+                    for row in reader:
+                        stype = row.get("MonitoringLocationTypeName", "")
+                        if "Beach" in stype or "Ocean" in stype or "Coastal" in stype:
+                            try:
+                                lat = float(row.get("LatitudeMeasure", 0) or 0)
+                                lon = float(row.get("LongitudeMeasure", 0) or 0)
+                            except (ValueError, TypeError):
+                                lat, lon = None, None
+                            results.append({
+                                "name": row.get("MonitoringLocationName", ""),
+                                "lat": lat if lat else None,
+                                "lon": lon if lon else None,
+                                "grade": "",
+                                "last_sample_date": "",
+                                "bacteria_level": "",
+                            })
+                print(f"  ✓ 从 WQP 过滤出 {len(results)} 个海滩/海洋站点")
+            except Exception as e:
+                print(f"  ⚠ WQP 过滤失败：{e}")
+
+    with open(out_path, "w") as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+    print(f"  ✓ beach_quality.json（{len(results)} 条记录）")
+
+
+# ══════════════════════════════════════════════════════════════
+# 20. 有害藻华（HAB）
+# ══════════════════════════════════════════════════════════════
+def fetch_hab():
+    out_dir = os.path.join(BASE_DIR, "hab")
+    os.makedirs(out_dir, exist_ok=True)
+
+    out_path = os.path.join(out_dir, "la_hab_events.json")
+    if os.path.exists(out_path):
+        print("  ⏭ la_hab_events.json 已存在，跳过")
+        return
+
+    results = []
+
+    # 主要来源：CA Water Board HAB 数据
+    print("  获取 CA Water Board 有害藻华（HAB）事件...")
+    try:
+        r = requests.get(
+            "https://data.ca.gov/api/3/action/datastore_search",
+            params={
+                "resource_id": "25c6ccd4-7a56-4e6f-99c1-0e7c2c58d9b3",
+                "filters": json.dumps({"County": "Los Angeles"}),
+                "limit": 5000,
+            },
+            timeout=60,
+        )
+        if r.status_code == 200:
+            data = r.json()
+            records = data.get("result", {}).get("records", [])
+            results.extend(records)
+            print(f"  ✓ CA HAB 数据：{len(records)} 条事件")
+        else:
+            print(f"  ⚠ CA HAB 返回 {r.status_code}")
+    except Exception as e:
+        print(f"  ⚠ CA HAB 请求失败：{e}")
+
+    time.sleep(1)
+
+    # 备用：CEDEN 藻类水质数据
+    if not results:
+        print("  尝试 CEDEN 藻类水质数据...")
+        try:
+            r = requests.get(
+                "https://data.ca.gov/api/3/action/datastore_search",
+                params={
+                    "resource_id": "8f4a023a-7849-41cd-a0fb-92d21a29e396",
+                    "filters": json.dumps({"county": "Los Angeles"}),
+                    "limit": 5000,
+                },
+                timeout=60,
+            )
+            if r.status_code == 200:
+                data = r.json()
+                records = data.get("result", {}).get("records", [])
+                results.extend(records)
+                print(f"  ✓ CEDEN 藻类数据：{len(records)} 条")
+            else:
+                print(f"  ⚠ CEDEN 藻类数据返回 {r.status_code}")
+        except Exception as e:
+            print(f"  ⚠ CEDEN 藻类数据请求失败：{e}")
+
+    with open(out_path, "w") as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+    print(f"  ✓ la_hab_events.json（{len(results)} 条记录）")
+
+
+# ══════════════════════════════════════════════════════════════
+# 21. CDPR 农药使用数据
+# ══════════════════════════════════════════════════════════════
+def fetch_cdpr_pesticides():
+    out_dir = os.path.join(BASE_DIR, "cdpr")
+    os.makedirs(out_dir, exist_ok=True)
+
+    out_path = os.path.join(out_dir, "la_pesticide_use.json")
+    if os.path.exists(out_path):
+        print("  ⏭ la_pesticide_use.json 已存在，跳过")
+        return
+
+    print("  获取 CDPR 农药使用报告（LA County）...")
+    try:
+        r = requests.get(
+            "https://data.ca.gov/api/3/action/datastore_search",
+            params={
+                "resource_id": "8d3e1af8-e8ee-4c3e-becd-98ea5677c97f",
+                "filters": json.dumps({"county_name": "Los Angeles"}),
+                "limit": 5000,
+            },
+            timeout=60,
+        )
+        if r.status_code == 200:
+            data = r.json()
+            records = data.get("result", {}).get("records", [])
+            with open(out_path, "w") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            print(f"  ✓ la_pesticide_use.json（{len(records)} 条记录）")
+        else:
+            print(f"  ⚠ CDPR 返回 {r.status_code}，保存空结果")
+            with open(out_path, "w") as f:
+                json.dump({"result": {"records": []}}, f)
+    except Exception as e:
+        print(f"  ⚠ CDPR 请求失败：{e}")
+        with open(out_path, "w") as f:
+            json.dump({"result": {"records": []}}, f)
+
+
+# ══════════════════════════════════════════════════════════════
+# 22. NPDES 排放监测值（EPA ECHO）
+# ══════════════════════════════════════════════════════════════
+def fetch_npdes():
+    out_dir = os.path.join(BASE_DIR, "npdes")
+    os.makedirs(out_dir, exist_ok=True)
+
+    fac_path = os.path.join(out_dir, "la_npdes_facilities.json")
+    dmr_path = os.path.join(out_dir, "la_npdes_dmr.json")
+
+    # 获取 NPDES 设施列表
+    if os.path.exists(fac_path):
+        print("  ⏭ la_npdes_facilities.json 已存在，跳过")
+    else:
+        print("  获取 EPA ECHO NPDES 废水排放设施列表（LA County）...")
+        try:
+            r = requests.get(
+                "https://echodata.epa.gov/echo/cwa_rest_services.get_facilities",
+                params={
+                    "output": "JSON",
+                    "p_st": "CA",
+                    "p_county": "LOS ANGELES",
+                    "p_act": "Y",
+                },
+                timeout=60,
+            )
+            if r.status_code == 200:
+                data = r.json()
+                with open(fac_path, "w") as f:
+                    json.dump(data, f, indent=2)
+                fac_count = len(data.get("Results", {}).get("Facilities", []))
+                print(f"  ✓ la_npdes_facilities.json（{fac_count} 个设施）")
+            else:
+                print(f"  ⚠ NPDES 设施列表返回 {r.status_code}")
+                with open(fac_path, "w") as f:
+                    json.dump({}, f)
+        except Exception as e:
+            print(f"  ⚠ NPDES 设施列表请求失败：{e}")
+            with open(fac_path, "w") as f:
+                json.dump({}, f)
+
+    time.sleep(1)
+
+    # 获取排放监测报告
+    if os.path.exists(dmr_path):
+        print("  ⏭ la_npdes_dmr.json 已存在，跳过")
+    else:
+        print("  获取 EPA ECHO NPDES 排放监测报告（2024 年）...")
+        try:
+            r = requests.get(
+                "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_annual",
+                params={
+                    "p_st": "CA",
+                    "p_county": "LOS ANGELES",
+                    "p_year": "2024",
+                    "output": "JSON",
+                },
+                timeout=90,
+            )
+            if r.status_code == 200:
+                data = r.json()
+                with open(dmr_path, "w") as f:
+                    json.dump(data, f, indent=2)
+                print(f"  ✓ la_npdes_dmr.json")
+            else:
+                print(f"  ⚠ NPDES DMR 返回 {r.status_code}")
+                with open(dmr_path, "w") as f:
+                    json.dump({}, f)
+        except Exception as e:
+            print(f"  ⚠ NPDES DMR 请求失败：{e}")
+            with open(dmr_path, "w") as f:
+                json.dump({}, f)
+
+
+# ══════════════════════════════════════════════════════════════
 # 主程序
 # ══════════════════════════════════════════════════════════════
 SOURCES = {
     "wqp":       ("Water Quality Portal（监测站 + 检测记录）",      fetch_wqp),
     "usgs":      ("USGS 水文数据",                                  fetch_usgs),
+    "usgs_meas": ("USGS 实测水质时间序列（温度/DO/pH/流量等）",      fetch_usgs_measurements),
     "ca":        ("California Open Data（地下水 + 违规）",          fetch_ca_open_data),
     "la":        ("LA Open Data（本地水质）",                       fetch_la_open_data),
     "epa_echo":  ("EPA ECHO（设施 + 执法记录）",                    fetch_epa_echo),
@@ -1154,11 +1492,16 @@ SOURCES = {
     "aqs":       ("EPA AQS 空气质量数据（需 AQS_EMAIL + AQS_KEY）",fetch_aqs),
     "geotracker":("CA GeoTracker 地下储油罐 + 污染地块（无需 Key）",fetch_geotracker),
     "ejscreen":  ("EPA EJScreen 环境正义综合指标（无需 Key）",       fetch_ejscreen),
+    "beach":     ("Heal the Bay 海滩水质评级（LA County 海滩）",     fetch_heal_the_bay),
+    "hab":       ("CA Water Board 有害藻华事件（HAB）",              fetch_hab),
+    "cdpr":      ("CDPR 农药使用报告（LA County）",                  fetch_cdpr_pesticides),
+    "npdes":     ("EPA ECHO NPDES 废水排放监测值",                   fetch_npdes),
 }
 
-DEFAULT_ORDER = ["wqp", "usgs", "ca", "la", "epa_echo", "epa_sdwis",
+DEFAULT_ORDER = ["wqp", "usgs", "usgs_meas", "ca", "la", "epa_echo", "epa_sdwis",
                  "ewg", "ladwp", "census", "noaa", "fire",
-                 "cdc", "tri", "aqs", "geotracker", "ejscreen"]
+                 "cdc", "tri", "aqs", "geotracker", "ejscreen",
+                 "beach", "hab", "cdpr", "npdes"]
 
 if __name__ == "__main__":
     args = sys.argv[1:]
