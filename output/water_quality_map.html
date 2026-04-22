@@ -1416,6 +1416,54 @@ map.on('style.load', async()=>{
 
   // ── 12. USGS gauges ──────────────────────────────────────────────
   await load('usgs','data/usgs.geojson');
+  // ── 新增：Beach / HAB / NPDES ────────────────────────────────────
+  await load('beach','data/beach.geojson');
+  map.addLayer({id:'beach-circle',type:'circle',source:'beach',layout:{'visibility':'none'},paint:{
+    'circle-color':'#00bcd4','circle-radius':4,'circle-opacity':0.8,
+    'circle-stroke-color':'#fff','circle-stroke-width':1
+  }});
+  map.on('click','beach-circle',e=>{
+    const p=e.features[0].properties;
+    popup.setLngLat(e.lngLat)
+      .setHTML(`<b style="font-family:'Palatino Linotype',serif">🏖 ${p.name||'海滩站点'}</b><br>
+                <small style="color:#666">${p.site_type||''}</small>`)
+      .addTo(map);
+  });
+  map.on('mouseenter','beach-circle',()=>map.getCanvas().style.cursor='pointer');
+  map.on('mouseleave','beach-circle',()=>map.getCanvas().style.cursor='');
+
+  await load('hab','data/hab.geojson');
+  map.addLayer({id:'hab-circle',type:'circle',source:'hab',layout:{'visibility':'none'},paint:{
+    'circle-color':'#8bc34a','circle-radius':7,'circle-opacity':0.85,
+    'circle-stroke-color':'#558b2f','circle-stroke-width':1.5
+  }});
+  map.on('click','hab-circle',e=>{
+    const p=e.features[0].properties;
+    popup.setLngLat(e.lngLat)
+      .setHTML(`<b style="font-family:'Palatino Linotype',serif">🌿 ${p.water_body||'水体'}</b><br>
+                <small style="color:#666">${p.type||''} · ${p.year||''}</small><br>
+                <small>状态：${p.status||'—'}</small>`)
+      .addTo(map);
+  });
+  map.on('mouseenter','hab-circle',()=>map.getCanvas().style.cursor='pointer');
+  map.on('mouseleave','hab-circle',()=>map.getCanvas().style.cursor='');
+
+  await load('npdes','data/npdes.geojson');
+  map.addLayer({id:'npdes-circle',type:'circle',source:'npdes',layout:{'visibility':'none'},paint:{
+    'circle-color':'#9c27b0','circle-radius':4,'circle-opacity':0.75,
+    'circle-stroke-color':'#fff','circle-stroke-width':1
+  }});
+  map.on('click','npdes-circle',e=>{
+    const p=e.features[0].properties;
+    const flow=p.flow?`排放量：<b>${p.flow}</b> MGD<br>`:'';
+    popup.setLngLat(e.lngLat)
+      .setHTML(`<b style="font-family:'Palatino Linotype',serif">🏭 ${p.name||'NPDES设施'}</b><br>
+                <small style="color:#666">${p.city||''} · ${p.permit||''}</small><br>
+                ${flow}<small>状态：${p.status||'—'}</small>`)
+      .addTo(map);
+  });
+  map.on('mouseenter','npdes-circle',()=>map.getCanvas().style.cursor='pointer');
+  map.on('mouseleave','npdes-circle',()=>map.getCanvas().style.cursor='');
   map.addLayer({id:'usgs-circle',type:'circle',source:'usgs',minzoom:10,layout:{'visibility':'none'},paint:{
     'circle-color':'#1565C0','circle-radius':3,'circle-opacity':0.7,
     'circle-stroke-color':'#42A5F5','circle-stroke-width':1

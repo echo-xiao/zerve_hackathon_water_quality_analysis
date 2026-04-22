@@ -1305,52 +1305,32 @@ def fetch_hab():
 
     results = []
 
-    # 主要来源：CA Water Board HAB 数据
-    print("  获取 CA Water Board 有害藻华（HAB）事件...")
-    try:
-        r = requests.get(
-            "https://data.ca.gov/api/3/action/datastore_search",
-            params={
-                "resource_id": "25c6ccd4-7a56-4e6f-99c1-0e7c2c58d9b3",
-                "filters": json.dumps({"County": "Los Angeles"}),
-                "limit": 5000,
-            },
-            timeout=60,
-        )
-        if r.status_code == 200:
-            data = r.json()
-            records = data.get("result", {}).get("records", [])
-            results.extend(records)
-            print(f"  ✓ CA HAB 数据：{len(records)} 条事件")
-        else:
-            print(f"  ⚠ CA HAB 返回 {r.status_code}")
-    except Exception as e:
-        print(f"  ⚠ CA HAB 请求失败：{e}")
-
-    time.sleep(1)
-
-    # 备用：CEDEN 藻类水质数据
-    if not results:
-        print("  尝试 CEDEN 藻类水质数据...")
+    # CA FHAB Bloom Reports（正确 resource ID）
+    for label, rid in [
+        ("Bloom Reports", "c6a36b91-ad38-4611-8750-87ee99e497dd"),
+        ("HAB Cases",     "67648948-034f-4882-bbc0-c07c7d38daf9"),
+        ("HAB Results",   "9d4e1df4-0cd6-4165-9e63-effcafd9dccc"),
+    ]:
+        print(f"  获取 CA FHAB {label}...")
         try:
             r = requests.get(
                 "https://data.ca.gov/api/3/action/datastore_search",
                 params={
-                    "resource_id": "8f4a023a-7849-41cd-a0fb-92d21a29e396",
-                    "filters": json.dumps({"county": "Los Angeles"}),
+                    "resource_id": rid,
+                    "filters": json.dumps({"County": "Los Angeles"}),
                     "limit": 5000,
                 },
                 timeout=60,
             )
-            if r.status_code == 200:
-                data = r.json()
-                records = data.get("result", {}).get("records", [])
+            if r.status_code == 200 and r.json().get("success"):
+                records = r.json().get("result", {}).get("records", [])
                 results.extend(records)
-                print(f"  ✓ CEDEN 藻类数据：{len(records)} 条")
+                print(f"  ✓ {label}：{len(records)} 条")
             else:
-                print(f"  ⚠ CEDEN 藻类数据返回 {r.status_code}")
+                print(f"  ⚠ {label} 返回 {r.status_code}")
         except Exception as e:
-            print(f"  ⚠ CEDEN 藻类数据请求失败：{e}")
+            print(f"  ⚠ {label} 请求失败：{e}")
+        time.sleep(1)
 
     with open(out_path, "w") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
@@ -1369,31 +1349,41 @@ def fetch_cdpr_pesticides():
         print("  ⏭ la_pesticide_use.json 已存在，跳过")
         return
 
-    print("  获取 CDPR 农药使用报告（LA County）...")
+    # CDPR 通过年度 ZIP 包提供数据（2023年为最新），下载后过滤 LA County（county code=19）
+    print("  下载 CDPR 农药使用报告 2023 ZIP...")
+    import zipfile, io
+    zip_url = "https://files.cdpr.ca.gov/pub/outgoing/pur_archives/pur2023.zip"
     try:
-        r = requests.get(
-            "https://data.ca.gov/api/3/action/datastore_search",
-            params={
-                "resource_id": "8d3e1af8-e8ee-4c3e-becd-98ea5677c97f",
-                "filters": json.dumps({"county_name": "Los Angeles"}),
-                "limit": 5000,
-            },
-            timeout=60,
-        )
+        r = requests.get(zip_url, timeout=180, stream=True)
         if r.status_code == 200:
-            data = r.json()
-            records = data.get("result", {}).get("records", [])
+            z = zipfile.ZipFile(io.BytesIO(r.content))
+            # 主数据在 pur2023/pur_data/udc23_XX.txt
+            data_files = [n for n in z.namelist()
+                          if "/pur_data/udc" in n and n.endswith(".txt")]
+            records = []
+            for fn in data_files:
+                with z.open(fn) as f:
+                    lines = f.read().decode("latin-1").splitlines()
+                    if not lines:
+                        continue
+                    header = [h.strip() for h in lines[0].split(",")]
+                    for line in lines[1:]:
+                        parts = line.split(",")
+                        if len(parts) >= len(header):
+                            rec = dict(zip(header, [p.strip() for p in parts]))
+                            if rec.get("county_cd", "").strip() == "19":
+                                records.append(rec)
             with open(out_path, "w") as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-            print(f"  ✓ la_pesticide_use.json（{len(records)} 条记录）")
+                json.dump(records, f, indent=2, ensure_ascii=False)
+            print(f"  ✓ la_pesticide_use.json（{len(records)} 条 LA County 农药记录）")
         else:
-            print(f"  ⚠ CDPR 返回 {r.status_code}，保存空结果")
+            print(f"  ⚠ CDPR ZIP 返回 {r.status_code}")
             with open(out_path, "w") as f:
-                json.dump({"result": {"records": []}}, f)
+                json.dump([], f)
     except Exception as e:
         print(f"  ⚠ CDPR 请求失败：{e}")
         with open(out_path, "w") as f:
-            json.dump({"result": {"records": []}}, f)
+            json.dump([], f)
 
 
 # ══════════════════════════════════════════════════════════════
@@ -1412,30 +1402,48 @@ def fetch_npdes():
     else:
         print("  获取 EPA ECHO NPDES 废水排放设施列表（LA County）...")
         try:
+            # Step 1: get_facilities 返回 QueryID
             r = requests.get(
                 "https://echodata.epa.gov/echo/cwa_rest_services.get_facilities",
-                params={
-                    "output": "JSON",
-                    "p_st": "CA",
-                    "p_county": "LOS ANGELES",
-                    "p_act": "Y",
-                },
+                params={"output": "JSON", "p_st": "CA", "p_co": "Los Angeles", "p_act": "Y"},
                 timeout=60,
             )
             if r.status_code == 200:
-                data = r.json()
+                meta = r.json()
+                res_meta = meta.get("Results", {})
+                qid = res_meta.get("QueryID")
+                total = res_meta.get("QueryRows", 0)
+                print(f"  QueryID={qid}, 共 {total} 个设施，逐页抓取...")
+                # Step 2: get_qid 分页获取设施详情
+                facilities = []
+                page = 1
+                while True:
+                    r2 = requests.get(
+                        "https://echodata.epa.gov/echo/cwa_rest_services.get_qid",
+                        params={"output": "JSON", "qid": qid, "pageno": page},
+                        timeout=60,
+                    )
+                    if r2.status_code != 200:
+                        break
+                    batch = r2.json().get("Results", {}).get("Facilities", [])
+                    if not batch:
+                        break
+                    facilities.extend(batch)
+                    if len(batch) < 1000:
+                        break
+                    page += 1
+                    time.sleep(0.3)
                 with open(fac_path, "w") as f:
-                    json.dump(data, f, indent=2)
-                fac_count = len(data.get("Results", {}).get("Facilities", []))
-                print(f"  ✓ la_npdes_facilities.json（{fac_count} 个设施）")
+                    json.dump(facilities, f, indent=2)
+                print(f"  ✓ la_npdes_facilities.json（{len(facilities)} 个设施）")
             else:
                 print(f"  ⚠ NPDES 设施列表返回 {r.status_code}")
                 with open(fac_path, "w") as f:
-                    json.dump({}, f)
+                    json.dump([], f)
         except Exception as e:
             print(f"  ⚠ NPDES 设施列表请求失败：{e}")
             with open(fac_path, "w") as f:
-                json.dump({}, f)
+                json.dump([], f)
 
     time.sleep(1)
 
