@@ -288,7 +288,7 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
       <div class="layer-item" id="monthly-item" onclick="togMonthly(this)">
         <div class="layer-item-left">
           <span class="l-dot" style="background:#5b7fa6"></span>
-          <span>饮用水污染物监测 ⏱</span>
+          <span>WQP 水质监测 ⏱</span>
         </div><div class="sw"></div>
       </div>
       <div class="layer-item" onclick="tog(this,'pfas-circle')">
@@ -376,9 +376,14 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 
 <!-- WQP contaminant selector panel -->
 <div id="wqp-chart">
-  <div id="wqp-chart-hdr">
-    <span>饮用水污染物监测</span>
-    <span id="wqp-chart-date" style="font-family:var(--palatino);font-size:10px;color:var(--dark);font-weight:bold">—</span>
+  <div id="wqp-chart-hdr" style="flex-direction:column;gap:3px;">
+    <div style="display:flex;align-items:center;gap:8px;width:100%;">
+      <span style="white-space:nowrap">WQP 水质监测</span>
+      <input id="wqp-slider-vis" type="range" min="0" max="100" value="0"
+        style="flex:1;accent-color:var(--dark);cursor:pointer;height:3px;">
+      <span id="wqp-chart-date" style="font-family:var(--palatino);font-size:10px;color:var(--dark);font-weight:bold;white-space:nowrap">—</span>
+    </div>
+    <div id="wqp-timeline-labels" style="display:flex;justify-content:space-between;padding:0 2px;font-family:var(--sans);font-size:8px;color:#bbb;pointer-events:none;"></div>
   </div>
   <div id="wqp-selector" style="margin-top:6px"></div>
 </div>
@@ -719,6 +724,9 @@ const STATION_COLORS = {
 function onSlider(i){
   const m=months[+i]||'';
   document.getElementById('month-display').textContent=m;
+  // sync visible slider
+  const vis=document.getElementById('wqp-slider-vis');
+  if(vis && +vis.max>0) vis.value=i;
   const lbl=document.getElementById('wqp-chart-date');
   if(lbl) lbl.textContent=m;
   updateWqpZcta(m);
@@ -1408,13 +1416,23 @@ map.on('style.load', async()=>{
 
   // Create WQP station HTML markers (hidden by default)
   Object.entries(wqpSt.station_coords).forEach(([sid,[lon,lat]])=>{
+    const siteType=(wqpSt.station_type||{})[sid]||'';
     const el=document.createElement('div');
-    el.style.cssText='display:none;align-items:center;gap:4px;pointer-events:none;';
+    el.style.cssText='display:none;flex-direction:column;align-items:flex-start;gap:1px;pointer-events:none;';
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:4px;';
     const dot=document.createElement('div');
     dot.style.cssText='width:9px;height:9px;border-radius:50%;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.3);';
     const valEl=document.createElement('span');
     valEl.style.cssText='font-size:11px;font-weight:bold;font-family:Arial,sans-serif;line-height:1;';
-    el.appendChild(dot); el.appendChild(valEl);
+    row.appendChild(dot); row.appendChild(valEl);
+    el.appendChild(row);
+    if(siteType){
+      const typeEl=document.createElement('span');
+      typeEl.style.cssText='font-size:8px;font-family:Arial,sans-serif;color:#888;line-height:1;padding-left:13px;';
+      typeEl.textContent=siteType;
+      el.appendChild(typeEl);
+    }
     const marker=new maplibregl.Marker({element:el,anchor:'left'}).setLngLat([lon,lat]).addTo(map);
     wqpMarkers[sid]={marker,valueEl:valEl,dotEl:dot};
   });
@@ -1446,14 +1464,45 @@ map.on('style.load', async()=>{
     layout:{'visibility':'none'},
     paint:{'line-color':['get','color'],'line-width':1,'line-dasharray':[3,3],'line-opacity':0.55}});
 
-  // Populate contaminant tags
+  // Populate contaminant tags grouped by category
   const sel=document.getElementById('wqp-selector');
-  wqpRaw.contaminants.forEach(c=>{
-    const tag=document.createElement('span');
-    tag.className='wqp-tag'; tag.textContent=c; tag.dataset.val=c;
-    tag.addEventListener('click',()=>onWqpContaminant(c));
-    sel.appendChild(tag);
-  });
+  const categories=wqpRaw.categories||{};
+  const contCategory=wqpRaw.cont_category||{};
+  const availableConts=new Set(wqpRaw.contaminants);
+
+  if(Object.keys(categories).length>0){
+    Object.entries(categories).forEach(([cat,members])=>{
+      const inCat=members.filter(m=>availableConts.has(m));
+      if(!inCat.length) return;
+      const label=document.createElement('div');
+      label.style.cssText='width:100%;font-family:var(--sans);font-size:8px;letter-spacing:1px;text-transform:uppercase;color:#bbb;margin:5px 0 2px;';
+      label.textContent=cat;
+      sel.appendChild(label);
+      inCat.forEach(c=>{
+        const tag=document.createElement('span');
+        tag.className='wqp-tag'; tag.textContent=c; tag.dataset.val=c;
+        tag.addEventListener('click',()=>onWqpContaminant(c));
+        sel.appendChild(tag);
+      });
+    });
+    // uncategorized
+    const uncategorized=wqpRaw.contaminants.filter(c=>!contCategory[c]);
+    if(uncategorized.length){
+      uncategorized.forEach(c=>{
+        const tag=document.createElement('span');
+        tag.className='wqp-tag'; tag.textContent=c; tag.dataset.val=c;
+        tag.addEventListener('click',()=>onWqpContaminant(c));
+        sel.appendChild(tag);
+      });
+    }
+  } else {
+    wqpRaw.contaminants.forEach(c=>{
+      const tag=document.createElement('span');
+      tag.className='wqp-tag'; tag.textContent=c; tag.dataset.val=c;
+      tag.addEventListener('click',()=>onWqpContaminant(c));
+      sel.appendChild(tag);
+    });
+  }
   wqpContaminant=wqpRaw.contaminants[0];
   const firstTag=sel.querySelector('[data-val="'+wqpContaminant+'"]');
   if(firstTag){ const c=getWqpColor(); firstTag.classList.add('active'); firstTag.style.background=c; firstTag.style.borderColor=c; }
@@ -1463,6 +1512,20 @@ map.on('style.load', async()=>{
   const sl=document.getElementById('month-slider');
   sl.max=months.length-1; sl.value=0;
   onSlider(0);
+
+  // 初始化可见时间轴 slider
+  const visSlider=document.getElementById('wqp-slider-vis');
+  visSlider.max=months.length-1; visSlider.value=0;
+  visSlider.oninput=function(){ sl.value=this.value; onSlider(this.value); };
+
+  // 年份标签
+  const labelsEl=document.getElementById('wqp-timeline-labels');
+  const years=[...new Set(months.map(m=>m.slice(0,4)))];
+  years.forEach(y=>{
+    const span=document.createElement('span');
+    span.textContent=y;
+    labelsEl.appendChild(span);
+  });
 
   // aqs-zcta source is 5MB+ — re-apply WQP feature states after map finishes rendering
   map.once('idle', ()=>updateWqpZcta(months[+sl.value]||''));

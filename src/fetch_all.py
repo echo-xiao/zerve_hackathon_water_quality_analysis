@@ -49,7 +49,7 @@ def fetch_wqp():
         "https://www.waterqualitydata.us/data/Station/search",
         params={
             "statecode": "US:06", "countycode": "US:06:037",
-            "siteType": "Stream;Lake, Reservoir, Impoundment;Well",
+            # 不限 siteType，抓所有类型（含河流、湖泊、水井、海滩、设施等）
             "mimeType": "csv", "zip": "no"
         },
         headers={"Accept": "text/csv"}
