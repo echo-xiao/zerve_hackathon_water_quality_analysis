@@ -22,22 +22,25 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 
 /* ── Floating title ──────────────────────────── */
 #title {
-  position:absolute; top:14px; left:50%; transform:translateX(-50%);
-  z-index:20; background:rgba(255,255,255,0.95);
-  padding:9px 24px; border-radius:3px;
-  box-shadow:0 2px 12px rgba(0,0,0,0.13);
+  position:absolute; top:18px; left:50%; transform:translateX(-50%);
+  z-index:20; background:none;
   text-align:center; white-space:nowrap;
   pointer-events:none;
 }
 #title h1 {
-  font-family:var(--palatino); font-size:15px;
-  color:var(--dark); font-weight:bold; letter-spacing:0.2px;
+  font-family:var(--palatino); font-size:18px;
+  color:#1a1a1a; font-weight:bold; letter-spacing:0.3px;
+  text-shadow: 0 1px 3px rgba(242,237,228,0.9), 0 0 8px rgba(242,237,228,0.7);
 }
-#title p { font-family:var(--sans); font-size:10px; color:var(--gray); margin-top:2px; }
+#title p {
+  font-family:var(--sans); font-size:10px; color:#3a3a3a; margin-top:3px;
+  text-shadow: 0 1px 3px rgba(242,237,228,0.95);
+  letter-spacing:0.5px; text-transform:uppercase;
+}
 
 /* ── Floating layer panel ────────────────────── */
 #layers-btn {
-  position:absolute; top:14px; right:14px; z-index:21;
+  position:absolute; top:14px; left:14px; z-index:21;
   background:#fff; border:1px solid var(--line);
   border-radius:3px; padding:7px 14px;
   font-family:var(--palatino); font-size:12px; color:var(--dark);
@@ -46,8 +49,8 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 }
 #layers-btn:hover { background:#f9f7f4; }
 #layers-panel {
-  position:absolute; top:50px; right:14px; z-index:20;
-  width:210px; background:#fff;
+  position:absolute; top:50px; left:14px; z-index:20;
+  width:240px; background:#fff;
   border:1px solid var(--line); border-radius:3px;
   box-shadow:0 4px 20px rgba(0,0,0,0.14);
   overflow:hidden;
@@ -68,9 +71,10 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
   display:flex; align-items:center; justify-content:space-between;
   padding:5px 0; cursor:pointer;
 }
-.layer-item-left { display:flex; align-items:center; gap:8px; }
-.layer-item-left span:first-child {
+.layer-item-left { display:flex; align-items:center; gap:8px; flex:1; min-width:0; }
+.layer-item-left span:last-child {
   font-family:var(--palatino); font-size:12px; color:var(--dark);
+  white-space:nowrap;
 }
 .l-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
 .l-line { width:16px; height:3px; border-radius:2px; flex-shrink:0; }
@@ -83,11 +87,11 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 .layer-item.on .sw { background:var(--dark); }
 .layer-item.on .sw::after { left:14px; }
 
-/* ── NYT click panel ─────────────────────────── */
+/* ── Info panel ──────────────────────────────── */
 #info-panel {
   position:absolute; top:14px; right:14px; width:290px; z-index:22;
   background:#fff; border:1px solid #ddd; border-radius:3px;
-  box-shadow:0 4px 20px rgba(0,0,0,0.15); display:none; overflow:hidden;
+  box-shadow:0 4px 20px rgba(0,0,0,0.15); display:block; overflow:hidden;
 }
 #info-header {
   background:var(--dark); color:#fff; padding:9px 32px 9px 14px;
@@ -132,6 +136,16 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
   z-index:20; display:none;
 }
 #time-bar.visible { display:flex; }
+#aqs-bar {
+  position:absolute; bottom:0; left:0; right:0; height:52px;
+  background:rgba(255,255,255,0.96); border-top:1px solid var(--line);
+  display:none; align-items:center; gap:12px; padding:0 18px;
+  z-index:19;
+}
+#aqs-bar.visible { display:flex; }
+#time-bar.visible ~ #aqs-bar, #time-bar.visible + #aqs-bar { bottom:52px; }
+#aqs-label { font-family:var(--sans); font-size:9px; color:var(--gray);
+             text-transform:uppercase; letter-spacing:1px; white-space:nowrap; }
 #time-label { font-family:var(--sans); font-size:9px; color:var(--gray);
               text-transform:uppercase; letter-spacing:1px; white-space:nowrap; }
 #play-btn {
@@ -146,6 +160,76 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
   color:var(--dark); min-width:70px; text-align:right;
 }
 
+/* Chart panels */
+#aqs-chart, #wqp-chart {
+  position:absolute; right:16px;
+  width:clamp(280px, 28vw, 480px);
+  background:rgba(255,255,255,0.96); border:1px solid var(--line);
+  border-radius:3px; box-shadow:0 2px 12px rgba(0,0,0,0.12);
+  padding:10px 14px 8px; display:none; z-index:18;
+}
+#aqs-chart { bottom:16px; }
+#wqp-chart { bottom:16px; }
+#aqs-chart.visible { display:block; }
+#wqp-chart.visible { display:block; }
+#wqp-chart-hdr {
+  font-family:var(--sans); font-size:9px; color:var(--gray);
+  text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+#wqp-chart-date { font-family:var(--palatino); font-size:10px; color:var(--dark); font-weight:bold; }
+#wqp-svg { cursor:crosshair; }
+#wqp-selector {
+  display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px;
+}
+.wqp-tag {
+  font-family:var(--sans); font-size:9.5px; padding:2px 7px;
+  border:1px solid #ddd; border-radius:10px; cursor:pointer;
+  color:var(--gray); background:#f7f5f1; white-space:nowrap;
+  transition:all .15s;
+}
+.wqp-tag:hover { border-color:#aaa; color:var(--dark); }
+.wqp-tag.active {
+  background:var(--dark); color:#fff; border-color:var(--dark);
+}
+
+#aqs-chart-hdr {
+  font-family:var(--sans); font-size:9px; color:var(--gray);
+  text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;
+}
+#aqs-legend {
+  display:flex; flex-wrap:wrap; gap:5px; margin-top:6px;
+}
+/* ── AQS station HTML markers ───────────── */
+.station-marker {
+  display:flex; align-items:center; gap:6px; cursor:pointer;
+}
+.station-dot {
+  width:10px; height:10px; background:#2171b5;
+  border-radius:50%; flex-shrink:0;
+  box-shadow:0 1px 4px rgba(0,0,0,0.35);
+  transition:width .2s,height .2s;
+}
+.station-aqi {
+  color:#08336e; font-size:14px; font-weight:bold;
+  font-family:Arial,sans-serif; line-height:1;
+  text-shadow:none;
+}
+
+.aqs-li {
+  font-family:var(--sans); font-size:9.5px; padding:2px 7px;
+  border-radius:10px; border:1.5px solid; cursor:pointer;
+  background:rgba(255,255,255,0.7);
+  white-space:nowrap; transition:all .15s; user-select:none;
+}
+.aqs-li:hover { opacity:0.75; }
+.aqs-li.dimmed { opacity:0.25; }
+.aqs-li.selected { color:#fff !important; }
+.aqs-li-line { display:none; }
+#aqs-chart-hdr { display:flex; justify-content:space-between; align-items:center; }
+#aqs-chart-date { font-family:var(--palatino); font-size:10px; color:var(--dark); font-weight:bold; }
+#aqs-svg { cursor:crosshair; }
+
 /* maplibre controls */
 .maplibregl-ctrl-top-left { top:54px !important; }
 .maplibregl-ctrl-bottom-left { bottom:52px !important; }
@@ -156,7 +240,7 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 
 <!-- Floating title -->
 <div id="title">
-  <h1>🌊 LA Water Quality Root Cause Intelligence</h1>
+  <h1>LA WATER QUALITY ANALYSIS</h1>
   <p>2020–2025 · Wildfires · Contamination · Environmental Justice</p>
 </div>
 
@@ -164,132 +248,158 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 <button id="layers-btn" onclick="togglePanel()">☰ &nbsp;Layers</button>
 
 <!-- Layer panel -->
-<div id="layers-panel" class="hidden">
+<div id="layers-panel">
   <div id="layers-panel-header">Map Layers</div>
   <div id="layer-list">
 
     <div class="layer-group">
-      <div class="group-label">Events</div>
+      <div class="group-label">事件</div>
       <div class="layer-item on" onclick="tog(this,'fire-fill','fire-line','fire-label')">
         <div class="layer-item-left">
           <span class="l-dot" style="background:#FF4500"></span>
-          <span>Wildfire Perimeters</span>
+          <span>2025 野火边界</span>
         </div><div class="sw"></div>
       </div>
     </div>
 
     <div class="layer-group">
-      <div class="group-label">Water Infrastructure</div>
+      <div class="group-label">供水基础设施</div>
       <div class="layer-item on" onclick="tog(this,'ws-fill','ws-line')">
         <div class="layer-item-left">
-          <span class="l-line" style="background:#007730"></span>
-          <span>Water System Bounds</span>
+          <span class="l-line" style="background:#555555"></span>
+          <span>供水系统边界</span>
         </div><div class="sw"></div>
       </div>
     </div>
 
     <div class="layer-group">
-      <div class="group-label">Water Quality</div>
-      <div class="layer-item on" onclick="tog(this,'wqp-heat')">
-        <div class="layer-item-left">
-          <span class="l-dot" style="background:orange"></span>
-          <span>WQP Contamination</span>
-        </div><div class="sw"></div>
-      </div>
-      <div class="layer-item on" onclick="tog(this,'gw-heat')">
+      <div class="group-label">水质监测</div>
+      <div class="layer-item" onclick="tog(this,'gw-heat')">
         <div class="layer-item-left">
           <span class="l-dot" style="background:#00aaff"></span>
-          <span>Groundwater Wells</span>
+          <span>地下水采样点</span>
         </div><div class="sw"></div>
       </div>
-      <div class="layer-item on" onclick="tog(this,'usgs-circle')">
+      <div class="layer-item" onclick="tog(this,'usgs-circle')">
         <div class="layer-item-left">
           <span class="l-dot" style="background:#1565C0"></span>
-          <span>USGS Gauges</span>
+          <span>USGS 水文监测站</span>
         </div><div class="sw"></div>
       </div>
       <div class="layer-item" id="monthly-item" onclick="togMonthly(this)">
         <div class="layer-item-left">
-          <span class="l-dot" style="background:#8e44ad"></span>
-          <span>Monthly Slider ⏱</span>
+          <span class="l-dot" style="background:#5b7fa6"></span>
+          <span>饮用水污染物监测 ⏱</span>
+        </div><div class="sw"></div>
+      </div>
+      <div class="layer-item" onclick="tog(this,'pfas-circle')">
+        <div class="layer-item-left">
+          <span class="l-dot" style="background:#1a6b8a"></span>
+          <span>PFAS 饮用水污染</span>
         </div><div class="sw"></div>
       </div>
     </div>
 
     <div class="layer-group">
-      <div class="group-label">Pollution Sources</div>
-      <div class="layer-item on" onclick="tog(this,'geo-heat')">
+      <div class="group-label">污染源</div>
+      <div class="layer-item" onclick="tog(this,'geo-heat')">
         <div class="layer-item-left">
-          <span class="l-dot" style="background:#8B008B"></span>
-          <span>GeoTracker Sites</span>
+          <span class="l-dot" style="background:#b8b5b1"></span>
+          <span>GeoTracker 污染清理点</span>
         </div><div class="sw"></div>
       </div>
-      <div class="layer-item on" onclick="tog(this,'tri-circle')">
+      <div class="layer-item" onclick="tog(this,'tri-circle')">
         <div class="layer-item-left">
-          <span class="l-dot" style="background:#8B4513"></span>
-          <span>TRI Facilities</span>
+          <span class="l-dot" style="background:#c49a6c"></span>
+          <span>TRI 工业排放设施</span>
         </div><div class="sw"></div>
       </div>
-      <div class="layer-item on" onclick="tog(this,'sf-circle')">
-        <div class="layer-item-left">
-          <span class="l-dot" style="background:#2c2c2c"></span>
-          <span>Superfund Sites</span>
-        </div><div class="sw"></div>
-      </div>
-    </div>
-
-    <div class="layer-group">
-      <div class="group-label">Public Health</div>
-      <div class="layer-item on" onclick="tog(this,'school-circle')">
-        <div class="layer-item-left">
-          <span class="l-dot" style="background:#27ae60"></span>
-          <span>School Lead Sampling</span>
-        </div><div class="sw"></div>
-      </div>
-      <div class="layer-item on" onclick="tog(this,'aqs-circle')">
-        <div class="layer-item-left">
-          <span class="l-dot" style="background:#e67e22"></span>
-          <span>AQS Air Quality</span>
-        </div><div class="sw"></div>
-      </div>
-      <div class="layer-item on" onclick="tog(this,'ej-heat')">
-        <div class="layer-item-left">
-          <span class="l-dot" style="background:#aa6600"></span>
-          <span>CalEnviroScreen</span>
-        </div><div class="sw"></div>
-      </div>
-      <div class="layer-item on" onclick="tog(this,'cdc-heat')">
+      <div class="layer-item" onclick="tog(this,'sf-circle')">
         <div class="layer-item-left">
           <span class="l-dot" style="background:#c0392b"></span>
-          <span>CDC PLACES Asthma</span>
+          <span>Superfund 污染场地</span>
+        </div><div class="sw"></div>
+      </div>
+    </div>
+
+    <div class="layer-group">
+      <div class="group-label">公共卫生</div>
+      <div class="layer-item" onclick="tog(this,'school-circle')">
+        <div class="layer-item-left">
+          <span class="l-dot" style="background:#c0392b"></span>
+          <span>学校饮用水铅含量</span>
+        </div><div class="sw"></div>
+      </div>
+      <div class="layer-item" onclick="togAqs(this)">
+        <div class="layer-item-left">
+          <span class="l-dot" style="background:#5a8cb4"></span>
+          <span>AQS 空气质量 PM2.5 ⏱</span>
+        </div><div class="sw"></div>
+      </div>
+      <div class="layer-item" onclick="tog(this,'ej-heat')">
+        <div class="layer-item-left">
+          <span class="l-dot" style="background:#aa6600"></span>
+          <span>CalEnviroScreen 环境负担</span>
         </div><div class="sw"></div>
       </div>
     </div>
 
   </div>
 </div>
-
-<!-- NYT info panel -->
+<!-- Info panel -->
 <div id="info-panel">
   <div id="info-header">
     Water System Profile
-    <span id="info-close" onclick="document.getElementById('info-panel').style.display='none'">&times;</span>
+    <span id="info-close" onclick="showLaOverview()">&times;</span>
   </div>
   <div id="info-body">
-    <div id="info-name">—</div>
-    <div id="info-sub">—</div>
-    <div id="info-stats"></div>
-    <div id="info-risk"></div>
-    <div id="info-narr"></div>
+    <div id="info-name">Los Angeles County</div>
+    <div id="info-sub">212 water systems · Public &amp; private utilities</div>
+    <div id="info-stats">
+      <div class="s-row"><span class="s-lbl">Population served</span><span class="s-val">14.0M</span></div>
+      <div class="s-row"><span class="s-lbl">Service connections</span><span class="s-val">2,108,870</span></div>
+      <div class="s-row"><span class="s-lbl">Total violations on record</span><span class="s-val" style="color:#c0392b">197</span></div>
+      <div class="s-row"><span class="s-lbl">High / Critical risk systems</span><span class="s-val" style="color:#e67e22">85 / 212</span></div>
+      <div class="s-row"><span class="s-lbl">Avg CalEnviroScreen pct.</span><span class="s-val">67th</span></div>
+      <div class="s-row"><span class="s-lbl">Avg poverty rate</span><span class="s-val">35.9%</span></div>
+    </div>
+    <div id="info-risk" style="background:#e67e2222;color:#e67e22;border:1px solid #e67e2255;margin-top:10px;padding:6px 10px;text-align:center;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;border-radius:3px;">⚠ 40% of systems rated High or Critical risk</div>
+    <div id="info-narr" style="margin-top:10px;font-family:'Palatino Linotype',serif;font-size:12.5px;color:#555;line-height:1.65;font-style:italic;">Click on a water system boundary to view individual system details.</div>
   </div>
 </div>
 
-<!-- Time slider -->
-<div id="time-bar">
-  <button id="play-btn" onclick="playPause()">▶</button>
-  <span id="time-label">WQP Monthly</span>
+<!-- Time slider (WQP, hidden) -->
+<div id="time-bar" style="display:none!important">
+  <button id="play-btn">▶</button>
   <input id="month-slider" type="range" min="0" max="0" value="0" oninput="onSlider(this.value)">
   <span id="month-display">—</span>
+</div>
+
+<!-- WQP chart panel -->
+<div id="wqp-chart">
+  <div id="wqp-chart-hdr">
+    <span>饮用水污染物监测 — Zipcode 月度分布</span>
+    <span id="wqp-chart-date">—</span>
+  </div>
+  <svg id="wqp-svg" style="display:block;width:100%;height:auto"></svg>
+  <div id="wqp-selector" style="margin-top:6px"></div>
+</div>
+
+<!-- AQS time slider (hidden, kept for internal logic) -->
+<div id="aqs-bar" style="display:none!important">
+  <button id="aqs-play-btn">▶</button>
+  <input id="aqs-slider" type="range" min="0" max="0" value="0" oninput="onAqsSlider(this.value)">
+  <span id="aqs-display">—</span>
+</div>
+
+<!-- AQS mini chart panel -->
+<div id="aqs-chart">
+  <div id="aqs-chart-hdr">
+    <span>PM2.5 AQI — 各监测站</span>
+    <span id="aqs-chart-date">—</span>
+  </div>
+  <svg id="aqs-svg" style="display:block;width:100%;height:auto"></svg>
+  <div id="aqs-legend"></div>
 </div>
 
 <script>
@@ -308,13 +418,11 @@ const map = new maplibregl.Map({
 map.addControl(new maplibregl.NavigationControl(),'top-left');
 map.addControl(new maplibregl.ScaleControl({unit:'imperial'}),'bottom-left');
 
-const popup = new maplibregl.Popup({closeButton:true,maxWidth:'260px'});
+const popup = new maplibregl.Popup({closeButton:true,maxWidth:'320px'});
 
 // ── Layer panel toggle ───────────────────────────────────────────────
 function togglePanel(){
   document.getElementById('layers-panel').classList.toggle('hidden');
-  // hide info panel if open
-  document.getElementById('info-panel').style.display='none';
 }
 
 // ── Layer visibility toggle ──────────────────────────────────────────
@@ -329,13 +437,31 @@ function tog(el,...ids){
   });
 }
 
+function stackCharts(){
+  const aqs=document.getElementById('aqs-chart');
+  const wqp=document.getElementById('wqp-chart');
+  const aqsOn=aqs.classList.contains('visible');
+  const wqpOn=wqp.classList.contains('visible');
+  if(aqsOn && wqpOn){
+    aqs.style.bottom='16px';
+    wqp.style.bottom=(aqs.offsetHeight+24)+'px';
+  } else {
+    aqs.style.bottom='16px';
+    wqp.style.bottom='16px';
+  }
+}
+
 function togMonthly(el){
   const on = !el.classList.contains('on');
   el.classList.toggle('on', on);
   const vis = on ? 'visible' : 'none';
-  try { map.setLayoutProperty('monthly-heat','visibility',vis); }
-  catch(e){ pendingToggles['monthly-heat']=vis; }
-  document.getElementById('time-bar').classList.toggle('visible', on);
+  ['wqp-fill','wqp-line','wqp-leaders-line'].forEach(id=>{
+    try { map.setLayoutProperty(id,'visibility',vis); }
+    catch(e){ pendingToggles[id]=vis; }
+  });
+  document.getElementById('wqp-chart').classList.toggle('visible', on);
+  showWqpMarkers(on);
+  requestAnimationFrame(stackCharts);
 }
 
 // ── System panel ─────────────────────────────────────────────────────
@@ -354,6 +480,24 @@ function fmt(v,sfx=''){
   return String(v);
 }
 
+function showLaOverview(){
+  document.getElementById('info-name').textContent='Los Angeles County';
+  document.getElementById('info-name').removeAttribute('style');
+  document.getElementById('info-sub').textContent='212 water systems · Public & private utilities';
+  document.getElementById('info-stats').innerHTML=`
+    <div class="s-row"><span class="s-lbl">Population served</span><span class="s-val">14.0M</span></div>
+    <div class="s-row"><span class="s-lbl">Service connections</span><span class="s-val">2,108,870</span></div>
+    <div class="s-row"><span class="s-lbl">Total violations on record</span><span class="s-val" style="color:#c0392b">197</span></div>
+    <div class="s-row"><span class="s-lbl">High / Critical risk systems</span><span class="s-val" style="color:#e67e22">85 / 212</span></div>
+    <div class="s-row"><span class="s-lbl">Avg CalEnviroScreen pct.</span><span class="s-val">67th</span></div>
+    <div class="s-row"><span class="s-lbl">Avg poverty rate</span><span class="s-val">35.9%</span></div>`;
+  const re=document.getElementById('info-risk');
+  re.textContent='⚠ 40% of systems rated High or Critical risk';
+  re.style='background:#e67e2222;color:#e67e22;border:1px solid #e67e2255;margin-top:10px;padding:6px 10px;text-align:center;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;border-radius:3px;';
+  document.getElementById('info-narr').textContent='Click on a water system boundary to view individual system details.';
+  document.getElementById('info-panel').style.display='block';
+}
+
 function showPanel(props){
   const id=props.SABL_PWSID, d=sysData[id]||{};
   const name=d.name||props.WATER_SYSTEM_NAME||id||'—';
@@ -368,7 +512,8 @@ function showPanel(props){
   const ast=d.asthma!=null?d.asthma.toFixed(1):'—';
   const risk=d.risk||'—';
   const rc={Low:'#27ae60',Moderate:'#f39c12',High:'#e67e22',Critical:'#c0392b'}[risk]||'#888';
-  document.getElementById('info-name').textContent=name;
+  const nameEl=document.getElementById('info-name');
+  nameEl.textContent=name; nameEl.removeAttribute('style');
   document.getElementById('info-sub').textContent=`${city} · ${owner}`;
   document.getElementById('info-stats').innerHTML=`
     <div class="s-row"><span class="s-lbl">Population served</span><span class="s-val">${fmt(d.population)}</span></div>
@@ -385,17 +530,280 @@ function showPanel(props){
   if(pct!=='—') n+=`CalEnviroScreen ranks at the ${pct}th percentile statewide. `;
   if(pov!=='—') n+=`About ${pov} of residents live below the poverty line.`;
   document.getElementById('info-narr').textContent=n;
-  // hide layers panel, show info panel
-  document.getElementById('layers-panel').classList.add('hidden');
   document.getElementById('info-panel').style.display='block';
 }
 
 // ── Time slider ───────────────────────────────────────────────────────
 let months=[], playing=false, playTimer=null;
+let aqsDates=[], aqsPlaying=false, aqsTimer=null;
+let aqsData=null, stationZcta={}, ztcaToSite={}, selectedStation=null;
+let wqpZctaData=null, wqpContaminant=null;
+const stationMarkerEls={};
+
+// ── WQP contaminant color palette (metallic/elemental tones) ─────────
+const CONTAMINANT_COLORS = {
+  'pH':              '#8a9ba8',  // neutral steel
+  '硝酸盐 Nitrate':  '#6a9e5c',  // agricultural green
+  '氨氮 Ammonia':    '#9da832',  // yellow-green
+  '溶解固体 TDS':    '#b8a87a',  // mineral tan
+  '铁 Iron':         '#b5512a',  // rust red
+  '锰 Manganese':    '#7a6a8e',  // manganese purple
+  '铬 Chromium':     '#4a8a6a',  // chromium green
+  '砷 Arsenic':      '#6a7a3a',  // arsenic olive
+  '铅 Lead':         '#5a5a6a',  // lead gray
+  '铜 Copper':       '#b87333',  // copper bronze
+  '锌 Zinc':         '#5a7a9a',  // zinc blue
+  '浊度 Turbidity':  '#8a6a4a',  // muddy brown
+  '氯化物 Chloride': '#4a8a9a',  // chloride teal
+  '硒 Selenium':     '#c47a3a',  // selenium orange
+  '钡 Barium':       '#3a5a8a',  // barium deep blue
+  '磷 Phosphorus':   '#b8a030',  // phosphorus gold
+};
+
+let wqpStationsData = null;
+const wqpMarkers = {};  // {station_id: {marker, valueEl}}
+
+function getWqpColor(){ return CONTAMINANT_COLORS[wqpContaminant]||'#5b7fa6'; }
+
+function darkenHex(hex, f=0.6){
+  const r=Math.round(parseInt(hex.slice(1,3),16)*f);
+  const g=Math.round(parseInt(hex.slice(3,5),16)*f);
+  const b=Math.round(parseInt(hex.slice(5,7),16)*f);
+  return `rgb(${r},${g},${b})`;
+}
+
+function luminance(hex){
+  const r=parseInt(hex.slice(1,3),16)/255;
+  const g=parseInt(hex.slice(3,5),16)/255;
+  const b=parseInt(hex.slice(5,7),16)/255;
+  return 0.299*r+0.587*g+0.114*b;
+}
+
+function updateWqpMarkers(month){
+  if(!wqpStationsData||!wqpContaminant) return;
+  // Only show markers if WQP layer is toggled on
+  const wqpOn=document.getElementById('monthly-item')?.classList.contains('on');
+  if(!wqpOn){ return; }
+  const stData=wqpStationsData.data[wqpContaminant]||{};
+  const monthData=stData[month]||{};
+  const color=getWqpColor();
+  const dark=darkenHex(color,0.62);
+  const lum=luminance(color);
+  const glow=lum>0.45
+    ? '0 0 3px rgba(255,255,255,1),0 0 7px rgba(255,255,255,0.95),0 0 13px rgba(255,255,255,0.85),0 0 20px rgba(255,255,255,0.7)'
+    : '0 0 3px rgba(255,255,255,0.9),0 0 6px rgba(255,255,255,0.7)';
+  const stZcta=wqpStationsData.station_zcta||{};
+  const centroids=wqpStationsData.zcta_centroids||{};
+  const coords=wqpStationsData.station_coords||{};
+  const leaderFeatures=[];
+  Object.entries(wqpMarkers).forEach(([sid,{marker,valueEl,dotEl}])=>{
+    const val=monthData[sid];
+    dotEl.style.background=dark;
+    if(val!=null){
+      valueEl.textContent=val<10?val.toFixed(2):val.toFixed(1);
+      valueEl.style.color=dark;
+      valueEl.style.textShadow=glow;
+      marker.getElement().style.display='flex';
+      // Build leader line from station to ZCTA centroid
+      const z=stZcta[sid];
+      const centroid=centroids[z];
+      const stCoord=coords[sid];
+      if(centroid&&stCoord){
+        leaderFeatures.push({
+          type:'Feature',
+          geometry:{type:'LineString',coordinates:[stCoord,centroid]},
+          properties:{color:dark}
+        });
+      }
+    } else {
+      marker.getElement().style.display='none';
+    }
+  });
+  if(map.getSource('wqp-leaders')){
+    map.getSource('wqp-leaders').setData({type:'FeatureCollection',features:leaderFeatures});
+  }
+}
+
+function showWqpMarkers(on){
+  Object.values(wqpMarkers).forEach(({marker})=>{
+    marker.getElement().style.display=on?'none':'none'; // toggled by updateWqpMarkers
+  });
+  if(on){
+    const sl=document.getElementById('month-slider');
+    updateWqpMarkers(months[+sl.value]||'');
+  } else {
+    Object.values(wqpMarkers).forEach(({marker})=>marker.getElement().style.display='none');
+    if(map.getSource('wqp-leaders'))
+      map.getSource('wqp-leaders').setData({type:'FeatureCollection',features:[]});
+  }
+}
+
+const STATION_COLORS = {
+  'Compton':                       '#08306b',
+  'Lancaster - Fairgrounds':        '#2171b5',
+  'Los Angeles-North Main Street':  '#6baed6',
+  'Signal Hill (LBSH)':             '#084594',
+  'Reseda':                         '#4292c6',
+  'Pasadena':                       '#9ecae1',
+  'Long Beach-Route 710 Near Road': '#2c7bb6',
+  'Pico Rivera #2':                 '#c6dbef',
+};
 function onSlider(i){
   const m=months[+i]||'';
   document.getElementById('month-display').textContent=m;
-  try{ map.setFilter('monthly-heat',['==',['get','month'],m]); }catch(e){}
+  const lbl=document.getElementById('wqp-chart-date');
+  if(lbl) lbl.textContent=m;
+  // Update WQP ZCTA choropleth
+  updateWqpZcta(m);
+  // Update WQP station markers
+  updateWqpMarkers(m);
+  // Move WQP chart cursor
+  const cursor=document.getElementById('wqp-cursor');
+  if(cursor && months.length>1){
+    const W=400,PL=42,PR=10;
+    const x=(PL+(+i/(months.length-1))*(W-PL-PR)).toFixed(1);
+    cursor.setAttribute('x1',x); cursor.setAttribute('x2',x);
+  }
+}
+
+function updateWqpZcta(month){
+  if(!wqpStationsData||!wqpContaminant||!map.getSource('aqs-zcta')) return;
+  const stMonthData=wqpStationsData.data[wqpContaminant]?.[month]||{};
+  const stZcta=wqpStationsData.station_zcta||{};
+  // Aggregate station values to ZCTAs (median per ZCTA)
+  const zctaVals={};
+  Object.entries(stMonthData).forEach(([sid,val])=>{
+    const z=stZcta[sid]; if(!z) return;
+    if(!zctaVals[z]) zctaVals[z]=[];
+    zctaVals[z].push(val);
+  });
+  const zctaMedian={};
+  Object.entries(zctaVals).forEach(([z,vals])=>{
+    vals.sort((a,b)=>a-b);
+    zctaMedian[z]=vals[Math.floor(vals.length/2)];
+  });
+  // Normalize to 95th percentile of current values
+  const sorted=Object.values(zctaMedian).sort((a,b)=>a-b);
+  const maxVal=sorted[Math.floor(sorted.length*0.95)]||sorted[sorted.length-1]||1;
+  // Apply to all ZCTAs (only colored if has station data)
+  if(!wqpZctaData) return;
+  Object.keys(wqpZctaData.zcta_id).forEach(zcta=>{
+    const raw=zctaMedian[zcta];
+    const norm=(raw!=null)?Math.min(1,raw/maxVal):null;
+    map.setFeatureState({source:'aqs-zcta',id:zcta},{wqp_val:norm});
+  });
+}
+
+function onWqpContaminant(val){
+  wqpContaminant=val;
+  const color=getWqpColor();
+  document.querySelectorAll('#wqp-selector .wqp-tag').forEach(t=>{
+    const active=t.dataset.val===val;
+    t.classList.toggle('active', active);
+    if(active){ t.style.background=color; t.style.borderColor=color; }
+    else { t.style.background=''; t.style.borderColor=''; t.style.color=''; }
+  });
+  // Update ZCTA fill color to match contaminant
+  updateWqpFillColor(color);
+  drawWqpChart();
+  const sl=document.getElementById('month-slider');
+  const m=months[+sl.value]||'';
+  updateWqpZcta(m);
+  updateWqpMarkers(m);
+}
+
+function updateWqpFillColor(color){
+  if(!map.getLayer('wqp-fill')) return;
+  // Parse hex to rgb
+  const r=parseInt(color.slice(1,3),16),g=parseInt(color.slice(3,5),16),b=parseInt(color.slice(5,7),16);
+  map.setPaintProperty('wqp-fill','fill-color',['case',
+    ['!=',['feature-state','wqp_val'],null],
+    ['interpolate',['linear'],['feature-state','wqp_val'],
+      0,`rgba(242,237,228,0)`,
+      0.1,`rgba(${r},${g},${b},0.18)`,
+      0.3,`rgba(${r},${g},${b},0.40)`,
+      0.6,`rgba(${r},${g},${b},0.65)`,
+      1,`rgba(${r},${g},${b},0.88)`],
+    'rgba(242,237,228,0)']);
+}
+
+function drawWqpChart(){
+  const svg=document.getElementById('wqp-svg');
+  if(!svg||!wqpZctaData||!wqpContaminant) return;
+  const contData=wqpZctaData.data[wqpContaminant]||{};
+  const wqpMonths=wqpZctaData.months;
+  const n=wqpMonths.length;
+  if(n<2) return;
+  const W=400,H=90,PL=42,PR=10,PT=10,PB=18;
+  const w=W-PL-PR, h=H-PT-PB;
+  // Average across ZCTAs per month
+  const series=wqpMonths.map(m=>{
+    const vals=Object.values(contData[m]||{});
+    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+  });
+  const defined=series.filter(v=>v!=null);
+  const maxY=Math.max(...defined,0.001);
+  // Nice round Y ticks
+  const rawStep=maxY/4;
+  const mag=Math.pow(10,Math.floor(Math.log10(rawStep)));
+  const step=Math.ceil(rawStep/mag)*mag;
+  const yTicks=[];
+  for(let v=step;v<=maxY*1.05;v+=step) yTicks.push(+v.toPrecision(3));
+  let html='';
+  // Grid lines + Y axis labels
+  yTicks.forEach(v=>{
+    const y=(PT+h-(v/maxY)*h);
+    if(y<PT) return;
+    html+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+w}" y2="${y.toFixed(1)}" stroke="#dedad4" stroke-width="0.6"/>`;
+    html+=`<text x="${PL-5}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="8.5" fill="#999" font-family="Arial,sans-serif">${v}</text>`;
+  });
+  // Filled area + line (skip null gaps)
+  const pts=wqpMonths.map((m,i)=>{
+    const v=series[i];
+    if(v==null) return null;
+    const x=(PL+(i/(n-1))*w).toFixed(1);
+    const y=(PT+h-(v/maxY)*h).toFixed(1);
+    return `${x},${y}`;
+  }).filter(Boolean);
+  if(pts.length){
+    const color=getWqpColor();
+    const r=parseInt(color.slice(1,3),16),g=parseInt(color.slice(3,5),16),b=parseInt(color.slice(5,7),16);
+    const first=pts[0].split(','), last=pts[pts.length-1].split(',');
+    html+=`<polygon points="${first[0]},${PT+h} ${pts.join(' ')} ${last[0]},${PT+h}" fill="rgba(${r},${g},${b},0.12)"/>`;
+    html+=`<polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.9"/>`;
+    // Dots for data points
+    wqpMonths.forEach((m,i)=>{
+      if(series[i]==null) return;
+      const x=(PL+(i/(n-1))*w).toFixed(1);
+      const y=(PT+h-(series[i]/maxY)*h).toFixed(1);
+      html+=`<circle cx="${x}" cy="${y}" r="2" fill="${color}" opacity="0.7"/>`;
+    });
+  }
+  // Year labels
+  wqpMonths.forEach((m,i)=>{
+    if(m.slice(5)==='01'){
+      const x=(PL+(i/(n-1))*w).toFixed(1);
+      html+=`<line x1="${x}" y1="${PT+h}" x2="${x}" y2="${PT+h+4}" stroke="#ccc" stroke-width="0.7"/>`;
+      html+=`<text x="${x}" y="${H-3}" text-anchor="middle" font-size="8.5" fill="#aaa" font-family="Arial,sans-serif">${m.slice(0,4)}</text>`;
+    }
+  });
+  // Cursor at current slider position
+  const sl=document.getElementById('month-slider');
+  const ci=wqpMonths.indexOf(months[+sl.value]||'');
+  const cxi=ci>=0?ci:n-1;
+  const cx=(PL+(cxi/(n-1))*w).toFixed(1);
+  html+=`<line id="wqp-cursor" x1="${cx}" y1="${PT}" x2="${cx}" y2="${PT+h}" stroke="#555" stroke-width="1.2" stroke-dasharray="4,3"/>`;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.innerHTML=html;
+  // Click to navigate
+  svg.addEventListener('click',e=>{
+    const rect=svg.getBoundingClientRect();
+    const frac=Math.max(0,Math.min(1,(e.clientX-rect.left-rect.width*(PL/W))/(rect.width*((W-PL-PR)/W))));
+    const idx=Math.round(frac*(months.length-1));
+    const sl=document.getElementById('month-slider');
+    sl.value=idx; onSlider(idx);
+    if(playing) playPause();
+  });
 }
 function playPause(){
   playing=!playing;
@@ -405,8 +813,185 @@ function playPause(){
       const sl=document.getElementById('month-slider');
       let v=(+sl.value+1)%(months.length||1);
       sl.value=v; onSlider(v);
-    },700);
+    },1400);
   } else clearInterval(playTimer);
+}
+
+function togAqs(el){
+  const on=!el.classList.contains('on');
+  el.classList.toggle('on',on);
+  const vis=on?'visible':'none';
+  ['aqs-fill','aqs-line'].forEach(id=>{
+    try{ map.setLayoutProperty(id,'visibility',vis); }catch(e){ pendingToggles[id]=vis; }
+  });
+  // Show/hide station HTML markers
+  Object.values(stationMarkerEls).forEach(els=>{
+    els.span.parentElement.style.display=on?'flex':'none';
+  });
+  document.getElementById('aqs-bar').classList.toggle('visible',on);
+  document.getElementById('aqs-chart').classList.toggle('visible',on);
+  requestAnimationFrame(stackCharts);
+}
+
+function onAqsSlider(i){
+  const d=aqsDates[+i]||'';
+  document.getElementById('aqs-display').textContent=d;
+  const chartDate=document.getElementById('aqs-chart-date');
+  if(chartDate) chartDate.textContent=d;
+  if(!aqsData||!map.getSource('aqs-zcta')) return;
+  const dayAqi=aqsData.aqi[d]||{};
+  // Update ZCTA choropleth colors (filter by selectedStation if set)
+  Object.keys(aqsData.zcta_id).forEach(zcta=>{
+    const aqi=(selectedStation && ztcaToSite[zcta]!==selectedStation) ? 0 : (dayAqi[zcta]||0);
+    map.setFeatureState({source:'aqs-zcta',id:zcta},{aqi});
+  });
+  // Move chart cursor
+  const cursor=document.getElementById('aqs-cursor');
+  if(cursor && aqsDates.length>1){
+    const W=400,PL=32,PR=10;
+    const x=(PL+(+i/(aqsDates.length-1))*(W-PL-PR)).toFixed(1);
+    cursor.setAttribute('x1',x); cursor.setAttribute('x2',x);
+  }
+  // Update station HTML marker AQI text
+  AQS_STATIONS.forEach(s=>{
+    const zcta=stationZcta[s.site];
+    const aqi=dayAqi[zcta]||0;
+    const els=stationMarkerEls[s.site];
+    if(!els) return;
+    const {span:el, dot}=els;
+    el.textContent=aqi>0?String(aqi):'—';
+    // Scale dot size with AQI (10px base, up to 26px at AQI 200)
+    const maxAqi=aqsData.max_aqi||200;
+    const sz=Math.round(10+Math.min(1,aqi/maxAqi)*16);
+    dot.style.width=sz+'px'; dot.style.height=sz+'px';
+    if(aqi>68){
+      el.style.textShadow='0 0 4px rgba(242,237,228,1),0 0 8px rgba(242,237,228,0.9),0 0 14px rgba(242,237,228,0.8),0 0 20px rgba(242,237,228,0.6)';
+    } else {
+      el.style.textShadow='none';
+    }
+  });
+}
+
+function drawAqsChart(aqsGeo){
+  const svg=document.getElementById('aqs-svg');
+  if(!svg||!aqsData) return;
+  const W=400,H=120,PL=32,PR=10,PT=18,PB=20;
+  const w=W-PL-PR, h=H-PT-PB, n=aqsDates.length;
+  const maxY=Math.max(aqsData.max_aqi||200,160);
+  let html='';
+  // Build stationZcta and ztcaToSite mappings
+  aqsGeo.features.forEach(f=>{
+    const {zcta,site}=f.properties;
+    if(!stationZcta[site]) stationZcta[site]=zcta;
+    ztcaToSite[zcta]=site;
+  });
+  // Fire period band
+  const fireStart='2025-01-07', fireEnd='2025-01-31';
+  const iS=aqsDates.indexOf(fireStart), iE=aqsDates.indexOf(fireEnd);
+  if(iS>=0&&iE>=0){
+    const x1=(PL+(iS/(n-1))*w);
+    const x2=(PL+(iE/(n-1))*w);
+    const mx=((x1+x2)/2).toFixed(1);
+    html+=`<rect x="${x1.toFixed(1)}" y="${PT}" width="${(x2-x1).toFixed(1)}" height="${h}" fill="rgba(220,80,40,0.13)" rx="1"/>`;
+    html+=`<line x1="${x1.toFixed(1)}" y1="${PT}" x2="${x1.toFixed(1)}" y2="${PT+h}" stroke="rgba(200,50,20,0.4)" stroke-width="1" stroke-dasharray="3,2"/>`;
+    html+=`<text x="${mx}" y="${PT-4}" text-anchor="middle" font-size="8" fill="rgba(180,40,10,0.85)" font-family="Arial,sans-serif">Palisades &amp; Eaton</text>`;
+  }
+  // Grid lines + Y labels
+  const gridVals = maxY>160 ? [50,100,150] : [50,100,150];
+  gridVals.forEach(v=>{
+    const y=(PT+h-(v/maxY)*h);
+    html+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+w}" y2="${y.toFixed(1)}" stroke="#dedad4" stroke-width="0.7"/>`;
+    html+=`<text x="${PL-4}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="8.5" fill="#aaa" font-family="Arial,sans-serif">${v}</text>`;
+  });
+  // Station polylines
+  Object.entries(stationZcta).forEach(([site,zcta])=>{
+    const color=STATION_COLORS[site]||'#999';
+    const pts=aqsDates.map((d,i)=>{
+      const aqi=aqsData.aqi[d]?.[zcta]||0;
+      const x=(PL+(i/(n-1))*w).toFixed(1);
+      const y=(PT+h-(aqi/maxY)*h).toFixed(1);
+      return `${x},${y}`;
+    }).join(' ');
+    html+=`<polyline data-site="${site}" points="${pts}" fill="none" stroke="${color}" stroke-width="1.4" opacity="0.85"/>`;
+  });
+  // X axis month labels
+  aqsDates.forEach((d,i)=>{
+    if(d.slice(8)==='01'){
+      const x=(PL+(i/(n-1))*w).toFixed(1);
+      html+=`<line x1="${x}" y1="${PT+h}" x2="${x}" y2="${PT+h+4}" stroke="#ccc" stroke-width="0.7"/>`;
+      html+=`<text x="${x}" y="${H-4}" text-anchor="middle" font-size="8.5" fill="#aaa" font-family="Arial,sans-serif">${d.slice(5,7)}/${d.slice(2,4)}</text>`;
+    }
+  });
+  // Initial cursor at last date
+  const cx=(PL+w).toFixed(1);
+  html+=`<line id="aqs-cursor" x1="${cx}" y1="${PT}" x2="${cx}" y2="${PT+h}" stroke="#555" stroke-width="1.2" stroke-dasharray="4,3"/>`;
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.innerHTML=html;
+
+  // SVG click → jump to that date + pause autoplay
+  svg.addEventListener('click', e=>{
+    const rect=svg.getBoundingClientRect();
+    const relX=e.clientX-rect.left;
+    const startX=rect.width*(PL/W);
+    const usableW=rect.width*((W-PL-PR)/W);
+    const frac=Math.max(0,Math.min(1,(relX-startX)/usableW));
+    const idx=Math.round(frac*(aqsDates.length-1));
+    const sl=document.getElementById('aqs-slider');
+    sl.value=idx; onAqsSlider(idx);
+    if(aqsPlaying) aqsPlayPause();
+  });
+
+  // Legend: clickable station filter
+  document.getElementById('aqs-legend').innerHTML=
+    Object.entries(STATION_COLORS).map(([site,c])=>{
+      const label=site.replace(' - Fairgrounds','').replace('-Route 710 Near Road','').replace('Los Angeles-','LA ');
+      return `<span class="aqs-li" data-site="${site}" style="color:${c};border-color:${c}">${label}</span>`;
+    }).join('');
+
+  document.querySelectorAll('#aqs-legend .aqs-li').forEach(el=>{
+    el.addEventListener('click', ()=>selectStation(el.dataset.site));
+  });
+}
+
+function selectStation(site){
+  selectedStation = (selectedStation===site) ? null : site;
+  // Update chart line opacities
+  const svg=document.getElementById('aqs-svg');
+  svg.querySelectorAll('polyline[data-site]').forEach(line=>{
+    const s=line.dataset.site;
+    const active=!selectedStation || s===selectedStation;
+    line.style.opacity = active ? '0.85' : '0.1';
+    line.style.strokeWidth = (s===selectedStation) ? '2.5' : '1.3';
+  });
+  // Update legend items
+  document.querySelectorAll('#aqs-legend .aqs-li').forEach(el=>{
+    const active=el.dataset.site===selectedStation;
+    el.classList.toggle('selected', active);
+    el.classList.toggle('dimmed', !!selectedStation && !active);
+    const c=STATION_COLORS[el.dataset.site]||'#08336e';
+    el.style.background=active?c:'rgba(255,255,255,0.7)';
+  });
+  // Update station markers opacity
+  AQS_STATIONS.forEach(s=>{
+    const els=stationMarkerEls[s.site];
+    if(!els) return;
+    const marker=els.span.parentElement;
+    if(marker) marker.style.opacity=(!selectedStation||s.site===selectedStation)?'1':'0.25';
+  });
+  // Re-run slider to refilter map choropleth
+  const sl=document.getElementById('aqs-slider');
+  onAqsSlider(sl.value);
+}
+function aqsPlayPause(){
+  aqsPlaying=!aqsPlaying;
+  document.getElementById('aqs-play-btn').textContent=aqsPlaying?'⏸':'▶';
+  if(aqsPlaying){
+    aqsTimer=setInterval(()=>{
+      const sl=document.getElementById('aqs-slider');
+      let v=(+sl.value+1)%(aqsDates.length||1);
+      sl.value=v; onAqsSlider(v);
+    },500);
+  } else clearInterval(aqsTimer);
 }
 
 // ── GeoJSON helper ────────────────────────────────────────────────────
@@ -416,8 +1001,76 @@ async function load(name,url){
   return data;
 }
 
+// ── Fire data inlined (avoids fetch/CORS issues entirely) ─────────────
+const FIRE_DATA = {"type":"FeatureCollection","features":[{"type":"Feature","id":1,"geometry":{"type":"MultiPolygon","coordinates":[[[[-118.5191732236814,34.03156288626087],[-118.52001927677895,34.02989220191503],[-118.52025072950852,34.02999984994606],[-118.52032610894064,34.03010786709914],[-118.5191732236814,34.03156288626087]]],[[[-118.52008300057024,34.03398100026006],[-118.51984199964751,34.03286899976904],[-118.52035899985644,34.0336960002172],[-118.52008300057024,34.03398100026006]]],[[[-118.51933700003245,34.03406300018385],[-118.51932900053484,34.03369500043216],[-118.51951599923427,34.03395999963134],[-118.51933700003245,34.03406300018385]]],[[[-118.5188479994126,34.03456699982669],[-118.51889399944334,34.03418800022382],[-118.51909000016025,34.034481999573956],[-118.5188479994126,34.03456699982669]]],[[[-118.51895499954271,34.03553900014701],[-118.5181930000097,34.03497500074761],[-118.51890600003723,34.035037999631115],[-118.51895499954271,34.03553900014701]]],[[[-118.54013000028338,34.03755999946027],[-118.53984999990092,34.037192999734074],[-118.54053499944102,34.03768000012361],[-118.54013000028338,34.03755999946027]]],[[[-118.51677500035058,34.03694099989916],[-118.51854100016423,34.0364169999489],[-118.51778100028105,34.03880200030749],[-118.51677500035058,34.03694099989916]]],[[[-118.51855100020997,34.03939600004496],[-118.51877999964054,34.03912000005271],[-118.51891200078332,34.039264999685926],[-118.51855100020997,34.03939600004496]]],[[[-118.55650300007895,34.04026199990842],[-118.55654800028479,34.04009299927478],[-118.55664399964596,34.04018900037637],[-118.55650300007895,34.04026199990842]]],[[[-118.55547500040716,34.04031299987052],[-118.55543200074945,34.03964999946001],[-118.55605999948983,34.040093999728796],[-118.55547500040716,34.04031299987052]]],[[[-118.56155199909966,34.04331099981554],[-118.56182900000742,34.04242700033413],[-118.56183400003026,34.04325699966181],[-118.56155199909966,34.04331099981554]]],[[[-118.56083900086877,34.04418999996371],[-118.56098000043575,34.0441200005661],[-118.56095300067156,34.04426600024384],[-118.56083900086877,34.04418999996371]]],[[[-118.56820699989709,34.047582999280934],[-118.56846499963996,34.047180999451236],[-118.56855699970146,34.04769500071223],[-118.56820699989709,34.047582999280934]]],[[[-118.57266283235253,34.08989144943821],[-118.56786724088695,34.08740202189759],[-118.56683799974344,34.08954799989471],[-118.55982400071746,34.091718999960584],[-118.56159700020379,34.09306700003019],[-118.55894099991228,34.0931530001362],[-118.56152939479217,34.09425490130905],[-118.55998600020084,34.09886800023798],[-118.56391200001349,34.097454000184186],[-118.56412689319913,34.10423141585696],[-118.559395151289,34.1095503916062],[-118.55801334744763,34.109374415675596],[-118.55899320730165,34.11949740337624],[-118.55420557041792,34.12544415348142],[-118.54515599973789,34.125889000288794],[-118.53700700001163,34.12882599966924],[-118.51350056657976,34.128979226937346],[-118.51209100030452,34.12508499981172],[-118.50842252053437,34.122859092605125],[-118.50878736140555,34.12076767288652],[-118.50484099948034,34.119566999885734],[-118.50099800040667,34.110706000035144],[-118.50345785894581,34.10741129804851],[-118.50292862008942,34.10589854640793],[-118.5049779997477,34.105950000013166],[-118.50546300016957,34.10433199987885],[-118.50393199963422,34.10002499979542],[-118.506197141149,34.09770498249963],[-118.50492640051776,34.09663224131258],[-118.50615941460202,34.09057621071933],[-118.5050303337995,34.08925879881988],[-118.50590900023342,34.08682000028358],[-118.50963399930632,34.08541800035869],[-118.50923999912101,34.083210999913774],[-118.51102800047263,34.0815839998893],[-118.51430300018205,34.081727999841306],[-118.50535699986438,34.07019899997463],[-118.50446600045991,34.06694299979624],[-118.50197199965179,34.06618599971186],[-118.50057200043432,34.06410099977364],[-118.50240600002006,34.0650679993689],[-118.5033189991658,34.06257200025547],[-118.50539799987224,34.061781999242704],[-118.50506699943614,34.05378599964813],[-118.50660300089268,34.05124399954454],[-118.5089500004894,34.05232000029769],[-118.50816500049187,34.049985000265124],[-118.51168999954821,34.05052699975313],[-118.51171100036292,34.04822600048055],[-118.50917800009505,34.04764399997913],[-118.51098999993947,34.046953999918216],[-118.51053199928175,34.04598400017595],[-118.51096199945208,34.04396599960377],[-118.51286600025634,34.04810500023716],[-118.51681800000826,34.04471999969537],[-118.51829799959168,34.04056100054812],[-118.52073999962298,34.040810999902924],[-118.51931100009318,34.03848500058744],[-118.52078699947863,34.03700700028277],[-118.52326099929697,34.0384370002025],[-118.52558389170473,34.03259386815903],[-118.5224473628048,34.029849271011926],[-118.53945099969276,34.037663000108196],[-118.53865299927641,34.039106999955415],[-118.55277300008485,34.038968000622866],[-118.55359300024253,34.04063900050927],[-118.55557400014135,34.04048499992528],[-118.55646799991884,34.0414890000357],[-118.55389100016833,34.041807999817344],[-118.55315099947833,34.0431039997839],[-118.55242900012828,34.04086099983433],[-118.55132299974036,34.04133500025072],[-118.55180599961413,34.05209399994989],[-118.55308899955403,34.052849000264516],[-118.55285799957537,34.049579000034974],[-118.55425100091678,34.0487090001193],[-118.55287900039008,34.04581900058117],[-118.55387699992465,34.04422399960775],[-118.55592099957269,34.04572699995946],[-118.55684599931232,34.04428000069936],[-118.55302499997995,34.04385400069061],[-118.55553300013348,34.041788000071634],[-118.55855799959762,34.04183500035982],[-118.55664399964596,34.04055799994695],[-118.55696800040937,34.03906100011047],[-118.5604260004169,34.04008599981828],[-118.56119200014784,34.04227900035578],[-118.55960799990905,34.04222600071817],[-118.55961900067801,34.043678000610974],[-118.56137599937257,34.045417999478886],[-118.56448399957569,34.04369300008642],[-118.56462099984307,34.04618299979693],[-118.56233199997264,34.04597800010158],[-118.56375800002769,34.046643000178015],[-118.56529100021288,34.04664699945195],[-118.56657599980262,34.043737000318885],[-118.56303100065479,34.04360500029737],[-118.56179099947425,34.04074000024743],[-118.56710000058258,34.04185100059452],[-118.5665389999927,34.0454909997205],[-118.56774100064008,34.04651699950625],[-118.56507299975468,34.04790700027841],[-118.56594899998882,34.04895399975803],[-118.5707009998069,34.04868200027682],[-118.56834199961631,34.0445499993558],[-118.56867799917697,34.042233999682466],[-118.58322199940966,34.0387730000935],[-118.60322700018833,34.039491998957885],[-118.6099069993035,34.036446000223975],[-118.62421400060805,34.03773900028204],[-118.63807699970192,34.03656699998121],[-118.66626494394815,34.04016193678156],[-118.66364223701768,34.041111133037],[-118.66196312764818,34.0442770999725],[-118.66344899951861,34.04819399943646],[-118.6597510002099,34.04805300013487],[-118.66297499986568,34.05150800016077],[-118.66348100020396,34.05635999964882],[-118.66819799986196,34.05798099968191],[-118.66992300056609,34.06222800010171],[-118.66861399978858,34.064230000120475],[-118.67607717711789,34.0617990241906],[-118.67667140369517,34.064567007362804],[-118.67894526246148,34.06429037266482],[-118.68587158142418,34.06855252524789],[-118.68551009126902,34.0710603373549],[-118.68103716387373,34.073664606908864],[-118.68376482097884,34.07618915953193],[-118.67584918649541,34.08115263768147],[-118.67013500027821,34.08151799998446],[-118.66686527098454,34.07926165128857],[-118.66384274458238,34.08090088011952],[-118.66458136186684,34.07744783726801],[-118.66000035815972,34.07733307972458],[-118.6578003076721,34.07904347646362],[-118.6515363291448,34.07844969351247],[-118.63730110862134,34.08463328790916],[-118.63493750725985,34.08321334055913],[-118.63498851270336,34.08143253863589],[-118.6327601104871,34.08119101596429],[-118.63347224633532,34.078902268810786],[-118.62985284691902,34.0773356459821],[-118.6278447780857,34.074130250126046],[-118.62445091599287,34.07535610454083],[-118.62259042598771,34.07328758723556],[-118.61681499982092,34.073470000189275],[-118.61640396488289,34.07182115282738],[-118.61563285912783,34.07168256057954],[-118.61605712086012,34.0734733768804],[-118.61216800048311,34.07542800009101],[-118.60937086677563,34.074296676086206],[-118.60712299986378,34.068018000566546],[-118.60309707684877,34.06971379218614],[-118.60109147209432,34.0688884504448],[-118.59899162777832,34.074758989786645],[-118.59397408416561,34.07696991890309],[-118.59494600021759,34.08044600007675],[-118.59971214580648,34.08528327454799],[-118.59997992281288,34.08826633873755],[-118.59538564200585,34.08748658520236],[-118.59640067719145,34.085751729388],[-118.59372951962614,34.082873184441176],[-118.58922789285417,34.089853780361864],[-118.58731099942894,34.089295999470366],[-118.58266900101233,34.09229099993204],[-118.57686431671675,34.08745437802429],[-118.57286486435825,34.088033757179595],[-118.57326050576556,34.08931875253596],[-118.57266283235253,34.08989144943821]]],[[[-118.56619800040916,34.07804400002553],[-118.56269799967056,34.07129499993171],[-118.5582450005015,34.068569999781595],[-118.5571479994361,34.07154799968902],[-118.56144699951767,34.07779000031516],[-118.56339300015472,34.07791699989353],[-118.56410399963411,34.078899000222556],[-118.55999900061963,34.07859199938976],[-118.5637019999512,34.080075000064916],[-118.56619800040916,34.07804400002553]]],[[[-118.54295899992898,34.06460299990889],[-118.54358599974277,34.06234900028038],[-118.54751400190021,34.060383003001704],[-118.54277799928069,34.05957799980526],[-118.54046299947102,34.055551999850145],[-118.54274999969161,34.05354200012681],[-118.5417289996925,34.05199500022034],[-118.53862800006036,34.05292500022634],[-118.53805000065036,34.05119799958424],[-118.53648800015286,34.05143200041723],[-118.53695699978292,34.04999000046299],[-118.53520899951258,34.05077500033268],[-118.53698699992013,34.04873100042566],[-118.53597000011901,34.0448509998165],[-118.53767699948312,34.04151399980525],[-118.53515800035728,34.04094399950651],[-118.53176799922352,34.05083800013326],[-118.5406230002029,34.05386999961366],[-118.53966200047824,34.05592799993349],[-118.54058700021787,34.05877199989244],[-118.54312799998337,34.06105800006563],[-118.54071699991422,34.060187999624134],[-118.53900599945383,34.05456399959974],[-118.53849599981586,34.0569800013606],[-118.53530799924677,34.05584300025057],[-118.536703000238,34.05784400051846],[-118.53884999981821,34.057779000224045],[-118.53788200042088,34.05824599965173],[-118.54143699961445,34.060906999981974],[-118.54112299979509,34.06313399956201],[-118.54295899992898,34.06460299990889]]]]},"properties":{"FIRE_NAME":"PALISADES","ALARM_DATE":"Tue, 07 Jan 2025 08:00:00 GMT","CONT_DATE":"Fri, 31 Jan 2025 08:00:00 GMT","GIS_ACRES":23448.88}},{"type":"Feature","id":2,"geometry":{"type":"MultiPolygon","coordinates":[[[[-118.10120299970325,34.16633399997568],[-118.10070799923561,34.16665200021369],[-118.10070399903766,34.166319998890536],[-118.10120299970325,34.16633399997568]]],[[[-118.13627700042115,34.176758000581565],[-118.1348292952722,34.1777603980772],[-118.1347946355736,34.177336449086106],[-118.13627700042115,34.176758000581565]]],[[[-118.15659100009799,34.18072200050958],[-118.15642499951832,34.18024299950901],[-118.15708599966732,34.18072200050958],[-118.15659100009799,34.18072200050958]]],[[[-118.0845000001948,34.181212000304846],[-118.0846711094935,34.1808476944032],[-118.08476899980832,34.18108499976058],[-118.0845000001948,34.181212000304846]]],[[[-118.15705613248076,34.18121718150921],[-118.15646999972417,34.18092599985711],[-118.15692206880605,34.18086963955671],[-118.15705613248076,34.18121718150921]]],[[[-118.10614100019251,34.183470000253635],[-118.10636728671089,34.18328683912188],[-118.10635299990462,34.18343900005531],[-118.10614100019251,34.183470000253635]]],[[[-118.11334636642518,34.184213498504874],[-118.11313699967516,34.18421199963542],[-118.11322799901345,34.1841060004418],[-118.11334636642518,34.184213498504874]]],[[[-118.10529099899931,34.184403000867746],[-118.1052427738416,34.18490615689145],[-118.10504799932505,34.18447200069693],[-118.10529099899931,34.184403000867746]]],[[[-118.13769900027825,34.185231999776626],[-118.13488399907976,34.18463999972192],[-118.1351206988689,34.18345488881022],[-118.13858899985779,34.183317999891344],[-118.13769900027825,34.185231999776626]]],[[[-118.15756500024143,34.186423000045394],[-118.15638464989071,34.18401466287317],[-118.15791184067095,34.18222493234173],[-118.15850340554005,34.185121853080474],[-118.15756500024143,34.186423000045394]]],[[[-118.15424199995314,34.18764699964591],[-118.15374099963769,34.18753099981913],[-118.15421704924611,34.187542750284486],[-118.15424199995314,34.18764699964591]]],[[[-118.16063699956126,34.19131300018774],[-118.15950300048254,34.19121899987806],[-118.15952300057405,34.190979000461894],[-118.16063699956126,34.19131300018774]]],[[[-118.15985499993674,34.192195000424455],[-118.16064599978208,34.19179300015139],[-118.16071199900601,34.1918940001008],[-118.15985499993674,34.192195000424455]]],[[[-118.15983599967018,34.19487799892978],[-118.15981099865749,34.193226000571975],[-118.16038913820468,34.19329453175688],[-118.16049099907308,34.19406199979893],[-118.15983599967018,34.19487799892978]]],[[[-118.05933599989227,34.21428699979368],[-118.05942299903259,34.214153999996164],[-118.0594579991927,34.21418400090717],[-118.05933599989227,34.21428699979368]]],[[[-118.09851900072094,34.22903599999473],[-118.09843900035501,34.22892399949871],[-118.09855900000561,34.22895299915734],[-118.09851900072094,34.22903599999473]]],[[[-118.09857520920657,34.22913387970704],[-118.09859287008507,34.22911448128434],[-118.09860514646175,34.22913348086517],[-118.09857520920657,34.22913387970704]]],[[[-118.08140299986233,34.23628599893686],[-118.07184499979945,34.232033999837455],[-118.0617628210902,34.22272638998886],[-118.05910799938833,34.21791000040098],[-118.06328799964422,34.217076000400056],[-118.06197209351711,34.21330971281045],[-118.05856800051149,34.21399200038929],[-118.05679400030188,34.215822999680626],[-118.05459499994485,34.21499100030808],[-118.05889349876648,34.212397656319595],[-118.0474249994866,34.20439699992191],[-118.0375849984931,34.20092200005322],[-118.0396959109517,34.197174046366435],[-118.0323182101183,34.18924340351597],[-118.02403979010907,34.18808238416506],[-118.02314796245793,34.18510942456127],[-118.01924680285951,34.183701418648155],[-118.01305199999895,34.18365299973001],[-118.01533100072193,34.18240799991474],[-118.01881499887209,34.1763669994867],[-118.02636115807579,34.17611687198907],[-118.03026639872054,34.17065769036176],[-118.03369400063717,34.172688999702665],[-118.03654044736221,34.170853706418036],[-118.0373338735571,34.17240395439207],[-118.03867100058616,34.170950000003884],[-118.04065307307344,34.17163365008862],[-118.04317900000677,34.17693300088193],[-118.0473417759654,34.16978871700477],[-118.05132268799476,34.172334696456986],[-118.05374400072337,34.17149699989168],[-118.05415310428354,34.174071054506335],[-118.05746127608145,34.17499394675589],[-118.05916081403882,34.173007734079874],[-118.06063176668903,34.17391894505326],[-118.0619752906212,34.17099991565396],[-118.06823597502637,34.173502955892694],[-118.06848138577885,34.17204363428353],[-118.07053111218681,34.17209981170011],[-118.07087599967888,34.169515000886],[-118.07193021129234,34.17025891865977],[-118.07003148719208,34.17452398255076],[-118.07404741195795,34.17474672482267],[-118.07500493699906,34.17129199519537],[-118.08027899993104,34.166584999339904],[-118.07961139536809,34.170444962855406],[-118.07617419135939,34.17247509336421],[-118.07783643485946,34.17375494544796],[-118.0764950004086,34.17790999982634],[-118.07982900056759,34.18307200026965],[-118.08528152550885,34.18343965326221],[-118.09348797070089,34.17613087516504],[-118.09314300056378,34.17246200002822],[-118.08819099983083,34.17262200064805],[-118.08186597000018,34.1637894584228],[-118.08171700057999,34.16194500057046],[-118.08534699921833,34.161892000012664],[-118.08207351945838,34.16250495969236],[-118.08860099901135,34.169829999066124],[-118.09682800035203,34.168010000127154],[-118.09549896624539,34.167284161093335],[-118.09652099930703,34.16602299947943],[-118.09794600043551,34.16686200055554],[-118.09631201344271,34.169174420332666],[-118.09829200004191,34.16972000023633],[-118.09816099962234,34.178410000433246],[-118.09667000016829,34.181900000076475],[-118.09926019078041,34.18399044310378],[-118.10290022090552,34.183773566916415],[-118.10285899991207,34.18758299968433],[-118.10546529192737,34.19047470142227],[-118.10737496199938,34.18919467940305],[-118.10952195439306,34.191107943324056],[-118.11092575707742,34.18946800324844],[-118.11293058389084,34.19012980428523],[-118.11191667609094,34.1877597327029],[-118.11372050396123,34.186959812130894],[-118.11431099983515,34.1818830000363],[-118.11789500023936,34.179751000194386],[-118.11758621783518,34.183676312986286],[-118.11716099939711,34.18170900060849],[-118.1163790752311,34.18242882921838],[-118.11720177482619,34.184001627061726],[-118.11874800000898,34.18483899959381],[-118.11900999994978,34.18352899913734],[-118.11903900116042,34.1852280003626],[-118.12079420502101,34.18550464983233],[-118.12190800009066,34.18290800061874],[-118.12413801298624,34.18277157898494],[-118.12620199925102,34.185436000108325],[-118.12797158334268,34.18323517175845],[-118.12529400012816,34.18140499995257],[-118.1273376072124,34.18239290017124],[-118.12843200046852,34.17860299905894],[-118.13041383310565,34.178261743223125],[-118.13155599966689,34.1796690008967],[-118.13049641073812,34.18031166906515],[-118.13321918549968,34.18026269752513],[-118.13429499979911,34.17860300054528],[-118.13710299952828,34.18167799976306],[-118.1319898554064,34.1837314177641],[-118.13404700010199,34.183727999400716],[-118.13526600046778,34.18746900016659],[-118.13772983764531,34.189255812106154],[-118.14048799974086,34.18618799994015],[-118.14362600008124,34.18557300002867],[-118.14375455708323,34.18708781666665],[-118.14610338744652,34.18782806323785],[-118.15043271914365,34.18763773779699],[-118.15246178519838,34.182839910588086],[-118.1556000002361,34.18079000009918],[-118.1561550009782,34.18331600013899],[-118.155055336408,34.18281777124688],[-118.15490233984038,34.18579514688728],[-118.15267631456632,34.18558320659223],[-118.15403100006591,34.18700800027817],[-118.15217845386283,34.18835610693444],[-118.15939821919117,34.18673476952204],[-118.15798706110127,34.196465275502604],[-118.15970029207851,34.20035540623903],[-118.15838954856937,34.20175585233809],[-118.15610002767609,34.198704223264315],[-118.15697899953719,34.20239800005916],[-118.1543932780436,34.204552176991136],[-118.15561752816396,34.20500460631274],[-118.158407301076,34.20224587481618],[-118.15886309277643,34.20354798196538],[-118.15939821919117,34.20217754333313],[-118.160589200205,34.20308975723067],[-118.16138005901483,34.20115258078639],[-118.16207000018731,34.20296499991387],[-118.15814146712556,34.20497179755319],[-118.15921899990214,34.206849999540644],[-118.15676754240751,34.207976962602785],[-118.1570989991878,34.2114320002152],[-118.15955000033824,34.21052200051194],[-118.15981099955582,34.20794599890057],[-118.16185100080251,34.20766099991962],[-118.16198300014868,34.20948500051741],[-118.1570219991949,34.21285899951805],[-118.1580070001073,34.21418099977655],[-118.15525800172601,34.21700216171889],[-118.15649900003649,34.219057000713136],[-118.15531146136685,34.220265875568174],[-118.14725700123942,34.22111599899823],[-118.14149200002153,34.217099999703144],[-118.13370499979523,34.21720100127617],[-118.13277300397615,34.21801699853436],[-118.13517000020833,34.21965399962287],[-118.13134300012986,34.21959900002964],[-118.12503342581368,34.22259331140868],[-118.12314099980185,34.22655799998322],[-118.12081107538205,34.223568402779705],[-118.11801149825698,34.22410937033583],[-118.1168270003846,34.22592600035254],[-118.11799399997355,34.22842799943745],[-118.1158990002719,34.231200000044524],[-118.12047199998986,34.230471999867454],[-118.11975800013741,34.234834000054605],[-118.10675899978547,34.23252399924408],[-118.10166672801923,34.225588290303726],[-118.09883214264921,34.22675227511096],[-118.0994390004377,34.228694000546305],[-118.0965312643558,34.22898979814633],[-118.09453000026079,34.23374600007734],[-118.09055000002144,34.232504000021336],[-118.08527699979643,34.23651200096676],[-118.08140299986233,34.23628599893686]]]]},"properties":{"FIRE_NAME":"EATON","ALARM_DATE":"Wed, 08 Jan 2025 08:00:00 GMT","CONT_DATE":"Fri, 31 Jan 2025 08:00:00 GMT","GIS_ACRES":14056.26}}]};
+
+// ── AQS station coords inlined ────────────────────────────────────────
+const AQS_STATIONS = [
+  {site:'Compton',                      lon:-118.205,    lat:33.901389},
+  {site:'Lancaster - Fairgrounds',      lon:-118.178601, lat:34.725389},
+  {site:'Los Angeles-North Main Street',lon:-118.22688,  lat:34.06659},
+  {site:'Signal Hill (LBSH)',           lon:-118.171019, lat:33.793713},
+  {site:'Reseda',                       lon:-118.53276,  lat:34.19925},
+  {site:'Pasadena',                     lon:-118.1272,   lat:34.1326},
+  {site:'Long Beach-Route 710 Near Road',lon:-118.200707,lat:33.859662},
+  {site:'Pico Rivera #2',               lon:-118.0685,   lat:34.01029},
+];
+
 // ── Apply NYT palette + add all layers ────────────────────────────────
 map.on('style.load', async()=>{
+
+  // ── Wildfire: use inlined data (no fetch needed) ──────────────────
+  const fd = FIRE_DATA;
+  if(fd && !map.getSource('fires')){
+    map.addSource('fires',{type:'geojson',data:fd});
+    map.addLayer({id:'fire-fill',type:'fill',source:'fires',
+      paint:{'fill-color':'#FF4500','fill-opacity':0.55}});
+    map.addLayer({id:'fire-line',type:'line',source:'fires',
+      paint:{'line-color':'#CC2200','line-width':4}});
+    map.addLayer({id:'fire-label',type:'symbol',source:'fires',
+      layout:{'text-field':['get','FIRE_NAME'],'text-size':12,
+              'text-offset':[0,1.2],'text-anchor':'top',
+              'text-font':['Open Sans Bold','Arial Unicode MS Bold']},
+      paint:{'text-color':'#CC2200','text-halo-color':'rgba(255,255,255,0.9)','text-halo-width':2}});
+    map.on('click','fire-fill',e=>{
+      const p=e.features[0].properties;
+      popup.setLngLat(e.lngLat)
+        .setHTML(`<b style="font-family:'Palatino Linotype',serif;color:#CC2200">🔥 ${p.FIRE_NAME||'Fire'}</b><br>
+                  <span style="font-size:12px">${(+(p.GIS_ACRES||0)).toLocaleString()} acres</span>`)
+        .addTo(map);
+    });
+    map.on('mouseenter','fire-fill',()=>map.getCanvas().style.cursor='pointer');
+    map.on('mouseleave','fire-fill',()=>map.getCanvas().style.cursor='');
+    console.log('🔥 Wildfire layers added');
+  }
+
+  // ── AQS stations: HTML markers (render above canvas, always visible) ──
+  if(Object.keys(stationMarkerEls).length===0){
+    AQS_STATIONS.forEach(s=>{
+      const el=document.createElement('div');
+      el.className='station-marker';
+      const dot=document.createElement('div');
+      dot.className='station-dot';
+      dot.style.background='#2171b5';
+      const span=document.createElement('span');
+      span.className='station-aqi';
+      span.textContent='—';
+      el.appendChild(dot);
+      el.appendChild(span);
+      el.addEventListener('click',()=>{
+        const aqi=span.textContent;
+        popup.setLngLat([s.lon,s.lat])
+          .setHTML(`<b style="font-family:'Palatino Linotype',serif">💨 ${s.site}</b><br>AQI: <b>${aqi}</b>`)
+          .addTo(map);
+      });
+      el.style.display='none'; // hidden until AQS layer is toggled on
+      new maplibregl.Marker({element:el,anchor:'center'})
+        .setLngLat([s.lon,s.lat])
+        .addTo(map);
+      stationMarkerEls[s.site]={span, dot};
+    });
+    console.log('📍 AQS station HTML markers added');
+  }
 
   // Override basemap colors
   const sp=(id,p,v)=>{ try{ if(map.getLayer(id)) map.setPaintProperty(id,p,v); }catch(e){} };
@@ -434,33 +1087,13 @@ map.on('style.load', async()=>{
     if(l.type==='symbol'){ sp(id,'text-color',PALETTE.label); sp(id,'text-halo-color',PALETTE.halo); }
   });
 
-  // ── 1. Wildfire perimeters ───────────────────────────────────────
-  await load('fires','data/fires.geojson');
-  map.addLayer({id:'fire-fill',type:'fill',source:'fires',
-    paint:{'fill-color':'#FF4500','fill-opacity':0.35}});
-  map.addLayer({id:'fire-line',type:'line',source:'fires',
-    paint:{'line-color':'#CC2200','line-width':2.5}});
-  map.addLayer({id:'fire-label',type:'symbol',source:'fires',
-    layout:{'text-field':['get','FIRE_NAME'],'text-size':11,'text-offset':[0,1.2],
-            'text-font':['Open Sans Bold','Arial Unicode MS Bold']},
-    paint:{'text-color':'#CC2200','text-halo-color':'rgba(255,255,255,0.85)','text-halo-width':1.5}});
-  map.on('click','fire-fill',e=>{
-    const p=e.features[0].properties;
-    popup.setLngLat(e.lngLat)
-      .setHTML(`<b style="font-family:'Palatino Linotype',serif;color:#CC2200">🔥 ${p.FIRE_NAME||'Fire'}</b><br>
-                <span style="font-size:12px">${(+(p.GIS_ACRES||0)).toLocaleString()} acres</span>`)
-      .addTo(map);
-  });
-  map.on('mouseenter','fire-fill',()=>map.getCanvas().style.cursor='pointer');
-  map.on('mouseleave','fire-fill',()=>map.getCanvas().style.cursor='');
-
-  // ── 2. Water system boundaries ───────────────────────────────────
+  // ── 1. Water system boundaries ───────────────────────────────────
   await load('ws','data/water_systems.geojson');
   map.addLayer({id:'ws-fill',type:'fill',source:'ws',
-    paint:{'fill-color':'#00AA44',
-           'fill-opacity':['case',['boolean',['feature-state','hover'],false],0.22,0.07]}});
+    paint:{'fill-color':'#555555',
+           'fill-opacity':['case',['boolean',['feature-state','hover'],false],0.10,0.03]}});
   map.addLayer({id:'ws-line',type:'line',source:'ws',
-    paint:{'line-color':'#007730',
+    paint:{'line-color':'#555555',
            'line-width':['case',['boolean',['feature-state','hover'],false],2.5,1.5]}});
   let hov=null;
   map.on('mousemove','ws-fill',e=>{
@@ -477,39 +1110,48 @@ map.on('style.load', async()=>{
 
   // ── 3. WQP contamination heatmap ────────────────────────────────
   await load('wqp','data/wqp_heatmap.geojson');
-  map.addLayer({id:'wqp-heat',type:'heatmap',source:'wqp',paint:{
+  map.addLayer({id:'wqp-heat',type:'heatmap',source:'wqp',layout:{'visibility':'none'},paint:{
     'heatmap-weight':['get','w'],
     'heatmap-intensity':['interpolate',['linear'],['zoom'],7,1,15,3],
     'heatmap-color':['interpolate',['linear'],['heatmap-density'],
-      0,'rgba(0,0,255,0)',0.3,'cyan',0.6,'yellow',0.9,'orange',1,'red'],
-    'heatmap-radius':['interpolate',['linear'],['zoom'],7,14,15,28],
-    'heatmap-opacity':0.75
+      0,'rgba(242,237,228,0)',
+      0.15,'rgba(225,200,175,0.40)',
+      0.4,'rgba(210,165,140,0.60)',
+      0.7,'rgba(190,130,115,0.78)',
+      1,'rgba(165,95,85,0.90)'],
+    'heatmap-radius':['interpolate',['linear'],['zoom'],7,16,15,32],
+    'heatmap-opacity':0.82
   }});
 
   // ── 4. GeoTracker heatmap ────────────────────────────────────────
   await load('geo','data/geotracker.geojson');
-  map.addLayer({id:'geo-heat',type:'heatmap',source:'geo',paint:{
+  map.addLayer({id:'geo-heat',type:'heatmap',source:'geo',layout:{'visibility':'none'},paint:{
     'heatmap-intensity':['interpolate',['linear'],['zoom'],7,1,15,2],
     'heatmap-color':['interpolate',['linear'],['heatmap-density'],
-      0,'rgba(0,0,0,0)',0.3,'#9b59b6',0.7,'#8B008B',1,'#4a0050'],
+      0,'rgba(242,237,228,0)',
+      0.3,'rgba(195,192,188,0.38)',
+      0.7,'rgba(160,157,153,0.55)',
+      1,'rgba(125,122,118,0.68)'],
     'heatmap-radius':['interpolate',['linear'],['zoom'],7,12,15,24],
-    'heatmap-opacity':0.65
+    'heatmap-opacity':0.68
   }});
 
   // ── 5. Groundwater heatmap ───────────────────────────────────────
   await load('gw','data/groundwater.geojson');
-  map.addLayer({id:'gw-heat',type:'heatmap',source:'gw',paint:{
+  map.addLayer({id:'gw-heat',type:'heatmap',source:'gw',layout:{'visibility':'none'},paint:{
     'heatmap-intensity':['interpolate',['linear'],['zoom'],7,0.5,15,2],
     'heatmap-color':['interpolate',['linear'],['heatmap-density'],
-      0,'rgba(0,170,255,0)',0.4,'rgba(0,170,255,0.4)',1,'rgba(0,80,200,0.8)'],
+      0,'rgba(242,237,228,0)',
+      0.4,'rgba(175,205,220,0.38)',
+      1,'rgba(130,170,200,0.65)'],
     'heatmap-radius':['interpolate',['linear'],['zoom'],7,10,15,20],
-    'heatmap-opacity':0.55
+    'heatmap-opacity':0.60
   }});
 
   // ── 6. TRI facilities ────────────────────────────────────────────
   await load('tri','data/tri.geojson');
-  map.addLayer({id:'tri-circle',type:'circle',source:'tri',paint:{
-    'circle-color':'#8B4513','circle-radius':4,'circle-opacity':0.8,
+  map.addLayer({id:'tri-circle',type:'circle',source:'tri',layout:{'visibility':'none'},paint:{
+    'circle-color':'#c49a6c','circle-radius':4,'circle-opacity':0.75,
     'circle-stroke-color':'#fff','circle-stroke-width':0.8
   }});
   map.on('click','tri-circle',e=>{
@@ -524,9 +1166,9 @@ map.on('style.load', async()=>{
 
   // ── 7. Superfund ─────────────────────────────────────────────────
   await load('sf','data/superfund.geojson');
-  map.addLayer({id:'sf-circle',type:'circle',source:'sf',paint:{
-    'circle-color':'#2c2c2c','circle-radius':5,'circle-opacity':0.85,
-    'circle-stroke-color':'#e74c3c','circle-stroke-width':1.5
+  map.addLayer({id:'sf-circle',type:'circle',source:'sf',layout:{'visibility':'none'},paint:{
+    'circle-color':'#c0392b','circle-radius':5,'circle-opacity':0.80,
+    'circle-stroke-color':'#fff','circle-stroke-width':1
   }});
   map.on('click','sf-circle',e=>{
     const p=e.features[0].properties;
@@ -540,65 +1182,113 @@ map.on('style.load', async()=>{
 
   // ── 8. School lead ───────────────────────────────────────────────
   await load('schools','data/schools.geojson');
-  map.addLayer({id:'school-circle',type:'circle',source:'schools',paint:{
-    'circle-color':['case',['get','exceed'],'#c0392b','#27ae60'],
-    'circle-radius':['interpolate',['linear'],['get','max_ppb'],0,3,50,9],
-    'circle-opacity':0.85,
-    'circle-stroke-color':'#fff','circle-stroke-width':1
+  map.addLayer({id:'school-circle',type:'circle',source:'schools',layout:{'visibility':'none'},paint:{
+    'circle-color':['interpolate',['linear'],['get','max_ppb'],
+      0,'#d8d5d0', 1,'#c4c0ba', 2,'#b0aca6', 3,'#9c9892', 5,'#88847e',
+      8,'#74706a', 12,'#605c56', 20,'#4a4642', 30,'#333030'],
+    'circle-radius':['interpolate',['linear'],['get','max_ppb'],
+      0,2, 1,3, 2,4, 3,5, 5,6, 8,8, 12,10, 20,13, 30,16, 50,20],
+    'circle-opacity':0.80,
+    'circle-stroke-width':0
   }});
   map.on('click','school-circle',e=>{
     const p=e.features[0].properties;
     popup.setLngLat(e.lngLat)
       .setHTML(`<b style="font-family:'Palatino Linotype',serif">🏫 ${p.name}</b><br>
-                Max lead: <b style="color:${p.exceed?'#c0392b':'#27ae60'}">${(+p.max_ppb||0).toFixed(1)} ppb</b><br>
+                Max lead: <b style="color:#c0392b">${(+p.max_ppb||0).toFixed(1)} ppb</b><br>
                 <small>Avg ${(+p.avg_ppb||0).toFixed(1)} ppb · ${p.n} samples</small>`)
       .addTo(map);
   });
   map.on('mouseenter','school-circle',()=>map.getCanvas().style.cursor='pointer');
   map.on('mouseleave','school-circle',()=>map.getCanvas().style.cursor='');
 
-  // ── 9. AQS air quality ───────────────────────────────────────────
-  await load('aqs','data/aqs.geojson');
-  map.addLayer({id:'aqs-circle',type:'circle',source:'aqs',paint:{
-    'circle-color':['interpolate',['linear'],['get','aqi'],0,'#2ecc71',50,'#f1c40f',100,'#e67e22',200,'#c0392b'],
-    'circle-radius':8,'circle-opacity':0.9,
-    'circle-stroke-color':'#fff','circle-stroke-width':1.5
-  }});
-  map.on('click','aqs-circle',e=>{
-    const p=e.features[0].properties;
-    popup.setLngLat(e.lngLat)
-      .setHTML(`<b style="font-family:'Palatino Linotype',serif">💨 ${p.name||'AQS Station'}</b><br>
-                Peak AQI: <b>${p.aqi}</b>`)
-      .addTo(map);
-  });
-  map.on('mouseenter','aqs-circle',()=>map.getCanvas().style.cursor='pointer');
-  map.on('mouseleave','aqs-circle',()=>map.getCanvas().style.cursor='');
+  // ── 9. AQS air quality (ZCTA zipcode choropleth + time slider) ──────
+  const [aqsGeo, aqsRaw] = await Promise.all([
+    fetch('data/aqs_zcta_geo.geojson').then(r=>r.json()),
+    fetch('data/aqs_zcta_data.json').then(r=>r.json()),
+  ]);
+  aqsData   = aqsRaw;
+  aqsDates  = aqsRaw.dates;
+  map.addSource('aqs-zcta',{type:'geojson', data:aqsGeo, promoteId:'zcta'});
+  map.addLayer({id:'aqs-fill',type:'fill',source:'aqs-zcta',
+    layout:{'visibility':'none'},
+    paint:{
+      'fill-color':['interpolate',['linear'],['feature-state','aqi'],
+        0,  'rgba(242,237,228,0)',
+        12, 'rgba(220,232,240,0.18)',
+        25, 'rgba(195,218,232,0.34)',
+        38, 'rgba(165,200,222,0.48)',
+        52, 'rgba(130,178,210,0.58)',
+        68, 'rgba(95,155,196,0.67)',
+        85, 'rgba(65,130,182,0.75)',
+        105,'rgba(40,105,165,0.82)',
+        128,'rgba(20,78,145,0.87)',
+        155,'rgba(8,52,120,0.92)',
+        185,'rgba(2,28,90,0.95)'],
+      'fill-opacity':1
+    }});
+  map.addLayer({id:'aqs-line',type:'line',source:'aqs-zcta',
+    layout:{'visibility':'none'},
+    paint:{'line-color':'rgba(180,170,160,0.30)','line-width':0.4}});
+  drawAqsChart(aqsGeo);
+  const aqsSl=document.getElementById('aqs-slider');
+  aqsSl.max=aqsDates.length-1; aqsSl.value=0;
+  onAqsSlider(0);
+  // Auto-play from the beginning
+  aqsPlayPause();
 
   // ── 10. CalEnviroScreen ──────────────────────────────────────────
   await load('ej','data/ejscreen.geojson');
-  map.addLayer({id:'ej-heat',type:'heatmap',source:'ej',paint:{
+  map.addLayer({id:'ej-heat',type:'heatmap',source:'ej',layout:{'visibility':'none'},paint:{
     'heatmap-weight':['interpolate',['linear'],['get','ces'],0,0,100,1],
-    'heatmap-intensity':['interpolate',['linear'],['zoom'],7,0.5,15,1.8],
+    'heatmap-intensity':['interpolate',['linear'],['zoom'],7,1.2,15,3.5],
     'heatmap-color':['interpolate',['linear'],['heatmap-density'],
-      0,'rgba(255,255,200,0)',0.4,'#f39c12',0.8,'#e67e22',1,'#8e3000'],
-    'heatmap-radius':['interpolate',['linear'],['zoom'],7,18,15,36],
-    'heatmap-opacity':0.5
+      0,   'rgba(242,237,228,0)',
+      0.15,'rgba(255,235,150,0.45)',
+      0.4, 'rgba(240,155,50,0.68)',
+      0.7, 'rgba(210,75,25,0.82)',
+      1,   'rgba(150,15,5,0.92)'],
+    'heatmap-radius':['interpolate',['linear'],['zoom'],7,20,15,40],
+    'heatmap-opacity':0.78
   }});
 
-  // ── 11. CDC PLACES asthma ────────────────────────────────────────
-  await load('cdc','data/cdc_places.geojson');
-  map.addLayer({id:'cdc-heat',type:'heatmap',source:'cdc',paint:{
-    'heatmap-weight':['interpolate',['linear'],['get','asthma'],0,0,50,1],
-    'heatmap-intensity':['interpolate',['linear'],['zoom'],7,0.4,15,1.5],
-    'heatmap-color':['interpolate',['linear'],['heatmap-density'],
-      0,'rgba(192,57,43,0)',0.4,'rgba(192,57,43,0.4)',1,'rgba(100,0,0,0.85)'],
-    'heatmap-radius':['interpolate',['linear'],['zoom'],7,20,15,40],
-    'heatmap-opacity':0.45
+
+
+  // ── 11c. PFAS 饮用水污染 ─────────────────────────────────────────
+  await load('pfas','data/pfas.geojson');
+  map.addLayer({id:'pfas-circle',type:'circle',source:'pfas',layout:{'visibility':'none'},paint:{
+    // 大小：检出种类数（1种→6px，8种以上→18px）
+    'circle-radius':['interpolate',['linear'],['get','pfas_count'],1,6,4,11,8,18],
+    // 颜色：最高超标倍数（浅蓝→深蓝）
+    'circle-color':['interpolate',['linear'],['get','worst_factor'],
+      0,   '#d0e8f2',
+      10,  '#8bbdd6',
+      50,  '#4a90ba',
+      200, '#1f5e8a',
+      1000,'#08336e'],
+    'circle-opacity':0.85,
+    'circle-stroke-color':'#fff','circle-stroke-width':1.2
   }});
+  map.on('click','pfas-circle',e=>{
+    const p=e.features[0].properties;
+    const factor=p.worst_factor>0?`${Number(p.worst_factor).toLocaleString()}x`:'—';
+    const types=(p.pfas_types||'').split(', ').filter(Boolean)
+      .map(t=>`<div style="padding:3px 0;border-bottom:1px solid #f0f0f0;line-height:1.35">${t}</div>`).join('');
+    popup.setLngLat(e.lngLat)
+      .setHTML(`<div style="font-family:'Palatino Linotype',serif;font-size:13px;font-weight:bold;margin-bottom:6px">⚗ ${p.system}</div>
+                <div style="font-family:Arial,sans-serif;font-size:11px;color:#444;margin-bottom:6px">${types}</div>
+                <div style="font-family:Arial,sans-serif;font-size:11px;padding-top:4px;border-top:1px solid #eee">
+                  检出 <b>${p.pfas_count}</b> 种 &nbsp;·&nbsp;
+                  最高超标 <b style="color:#c0392b">${factor} 超健康基准</b>
+                </div>`)
+      .addTo(map);
+  });
+  map.on('mouseenter','pfas-circle',()=>map.getCanvas().style.cursor='pointer');
+  map.on('mouseleave','pfas-circle',()=>map.getCanvas().style.cursor='');
 
   // ── 12. USGS gauges ──────────────────────────────────────────────
   await load('usgs','data/usgs.geojson');
-  map.addLayer({id:'usgs-circle',type:'circle',source:'usgs',minzoom:10,paint:{
+  map.addLayer({id:'usgs-circle',type:'circle',source:'usgs',minzoom:10,layout:{'visibility':'none'},paint:{
     'circle-color':'#1565C0','circle-radius':3,'circle-opacity':0.7,
     'circle-stroke-color':'#42A5F5','circle-stroke-width':1
   }});
@@ -612,31 +1302,84 @@ map.on('style.load', async()=>{
   map.on('mouseenter','usgs-circle',()=>map.getCanvas().style.cursor='pointer');
   map.on('mouseleave','usgs-circle',()=>map.getCanvas().style.cursor='');
 
-  // ── 13. WQP monthly slider ───────────────────────────────────────
-  const mo=await fetch('data/wqp_monthly.json').then(r=>r.json());
-  months=mo.months;
-  map.addSource('monthly',{type:'geojson',data:{type:'FeatureCollection',features:mo.features}});
-  map.addLayer({id:'monthly-heat',type:'heatmap',source:'monthly',
+  // ── 13. WQP monthly ZCTA choropleth ─────────────────────────────
+  const [mo, wqpRaw, wqpSt] = await Promise.all([
+    fetch('data/wqp_monthly.json').then(r=>r.json()),
+    fetch('data/wqp_zcta_data.json').then(r=>r.json()),
+    fetch('data/wqp_stations.json').then(r=>r.json()),
+  ]);
+  wqpStationsData = wqpSt;
+
+  // Create WQP station HTML markers (hidden by default)
+  Object.entries(wqpSt.station_coords).forEach(([sid,[lon,lat]])=>{
+    const el=document.createElement('div');
+    el.style.cssText='display:none;align-items:center;gap:4px;pointer-events:none;';
+    const dot=document.createElement('div');
+    dot.style.cssText='width:9px;height:9px;border-radius:50%;flex-shrink:0;box-shadow:0 1px 3px rgba(0,0,0,0.3);';
+    const valEl=document.createElement('span');
+    valEl.style.cssText='font-size:11px;font-weight:bold;font-family:Arial,sans-serif;line-height:1;';
+    el.appendChild(dot); el.appendChild(valEl);
+    const marker=new maplibregl.Marker({element:el,anchor:'left'}).setLngLat([lon,lat]).addTo(map);
+    wqpMarkers[sid]={marker,valueEl:valEl,dotEl:dot};
+  });
+  months = wqpRaw.months;  // use WQP ZCTA months (wider date range)
+  wqpZctaData = wqpRaw;
+
+  // WQP ZCTA fill layer (reuses aqs-zcta source, different feature-state key)
+  map.addLayer({id:'wqp-fill',type:'fill',source:'aqs-zcta',
     layout:{'visibility':'none'},
-    filter:['==',['get','month'],months.at(-1)||''],
     paint:{
-      'heatmap-weight':['get','norm'],
-      'heatmap-intensity':['interpolate',['linear'],['zoom'],7,1,15,3],
-      'heatmap-color':['interpolate',['linear'],['heatmap-density'],
-        0,'rgba(0,0,255,0)',0.3,'cyan',0.6,'yellow',0.9,'orange',1,'red'],
-      'heatmap-radius':['interpolate',['linear'],['zoom'],7,14,15,28],
-      'heatmap-opacity':0.85
+      'fill-color':['case',
+        ['!=',['feature-state','wqp_val'],null],
+        ['interpolate',['linear'],['feature-state','wqp_val'],
+          0,'rgba(242,237,228,0)',
+          0.1,'rgba(200,215,230,0.3)',
+          0.3,'rgba(155,185,210,0.5)',
+          0.6,'rgba(91,127,166,0.7)',
+          1,'rgba(55,85,120,0.88)'],
+        'rgba(242,237,228,0)'],
+      'fill-opacity':1
     }});
+  map.addLayer({id:'wqp-line',type:'line',source:'aqs-zcta',
+    layout:{'visibility':'none'},
+    paint:{'line-color':'rgba(180,170,160,0.25)','line-width':0.4}});
+
+  // WQP leader lines: station → ZCTA centroid
+  map.addSource('wqp-leaders',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+  map.addLayer({id:'wqp-leaders-line',type:'line',source:'wqp-leaders',
+    layout:{'visibility':'none'},
+    paint:{'line-color':['get','color'],'line-width':1,'line-dasharray':[3,3],'line-opacity':0.55}});
+
+  // Populate contaminant tags
+  const sel=document.getElementById('wqp-selector');
+  wqpRaw.contaminants.forEach(c=>{
+    const tag=document.createElement('span');
+    tag.className='wqp-tag'; tag.textContent=c; tag.dataset.val=c;
+    tag.addEventListener('click',()=>onWqpContaminant(c));
+    sel.appendChild(tag);
+  });
+  wqpContaminant=wqpRaw.contaminants[0];
+  const firstTag=sel.querySelector('[data-val="'+wqpContaminant+'"]');
+  if(firstTag){ const c=getWqpColor(); firstTag.classList.add('active'); firstTag.style.background=c; firstTag.style.borderColor=c; }
+  updateWqpFillColor(getWqpColor());
+
   const sl=document.getElementById('month-slider');
-  sl.max=months.length-1; sl.value=months.length-1;
-  onSlider(months.length-1);
+  sl.max=months.length-1; sl.value=0;
+  onSlider(0);
+  drawWqpChart();
+  playPause(); // 自动开始播放
 
   // Apply any pending visibility toggles
   Object.entries(pendingToggles).forEach(([id,vis])=>{
     try{ map.setLayoutProperty(id,'visibility',vis); }catch(e){}
   });
 
-  console.log('✅ All 13 layers loaded');
+  // Move fire layers to top of stack
+  ['fire-fill','fire-line','fire-label'].forEach(id=>{
+    try{ if(map.getLayer(id)) map.moveLayer(id); }catch(e){}
+  });
+
+  console.log('✅ All layers loaded');
 });
 </script>
 </body>
