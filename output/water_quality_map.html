@@ -179,6 +179,18 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 }
 #wqp-chart-date { font-family:var(--palatino); font-size:10px; color:var(--dark); font-weight:bold; }
 #wqp-svg { cursor:crosshair; }
+#wqp-city-row {
+  display:flex; align-items:center; gap:6px; margin-bottom:5px;
+}
+#wqp-city-row label {
+  font-family:var(--sans); font-size:9px; color:var(--gray);
+  text-transform:uppercase; letter-spacing:.8px; white-space:nowrap;
+}
+#wqp-city-select {
+  font-family:var(--sans); font-size:10px; color:var(--dark);
+  border:1px solid #ddd; border-radius:3px; background:#f7f5f1;
+  padding:2px 5px; cursor:pointer; flex:1; min-width:0;
+}
 #wqp-selector {
   display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px;
 }
@@ -192,6 +204,14 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 .wqp-tag.active {
   background:var(--dark); color:#fff; border-color:var(--dark);
 }
+#wqp-legend {
+  display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:4px;
+}
+.wqp-legend-item {
+  display:flex; align-items:center; gap:4px;
+  font-family:var(--sans); font-size:9px; color:var(--gray);
+}
+.wqp-legend-swatch { width:18px; height:2px; border-radius:1px; }
 
 #aqs-chart-hdr {
   font-family:var(--sans); font-size:9px; color:var(--gray);
@@ -378,10 +398,17 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 <!-- WQP chart panel -->
 <div id="wqp-chart">
   <div id="wqp-chart-hdr">
-    <span>饮用水污染物监测 — Zipcode 月度分布</span>
+    <span>饮用水污染物监测</span>
     <span id="wqp-chart-date">—</span>
   </div>
+  <div id="wqp-city-row">
+    <label>城市</label>
+    <select id="wqp-city-select" onchange="onWqpCityChange(this.value)">
+      <option value="__all__">所有城市</option>
+    </select>
+  </div>
   <svg id="wqp-svg" style="display:block;width:100%;height:auto"></svg>
+  <div id="wqp-legend"></div>
   <div id="wqp-selector" style="margin-top:6px"></div>
 </div>
 
@@ -537,7 +564,34 @@ function showPanel(props){
 let months=[], playing=false, playTimer=null;
 let aqsDates=[], aqsPlaying=false, aqsTimer=null;
 let aqsData=null, stationZcta={}, ztcaToSite={}, selectedStation=null;
-let wqpZctaData=null, wqpContaminant=null;
+let wqpZctaData=null, wqpContaminant=null, wqpSelectedCity='__all__';
+
+// ZCTA → city name mapping (only ZCTAs that have WQP data)
+const ZCTA_CITY = {
+  '90024':'Los Angeles','90064':'Los Angeles','90066':'Los Angeles',
+  '90073':'Los Angeles','90094':'Los Angeles',
+  '90212':'Beverly Hills',
+  '90220':'Compton',
+  '90263':'Malibu','90265':'Malibu',
+  '90270':'Maywood',
+  '90280':'South Gate',
+  '90301':'Inglewood',
+  '90401':'Santa Monica','90404':'Santa Monica','90405':'Santa Monica',
+  '90601':'Whittier',
+  '90640':'Montebello',
+  '90660':'Pico Rivera',
+  '90703':'Cerritos',
+  '90723':'Paramount',
+  '90731':'San Pedro','90732':'San Pedro',
+  '90744':'Wilmington',
+  '90755':'Signal Hill',
+  '90802':'Long Beach','90803':'Long Beach','90808':'Long Beach',
+  '90810':'Long Beach','90813':'Long Beach','90814':'Long Beach','90815':'Long Beach',
+  '91010':'Duarte',
+  '91030':'South Pasadena',
+  '91390':'Santa Clarita',
+  '91750':'La Verne',
+};
 const stationMarkerEls={};
 
 // ── WQP contaminant color palette (metallic/elemental tones) ─────────
@@ -725,28 +779,66 @@ function updateWqpFillColor(color){
     'rgba(242,237,228,0)']);
 }
 
+function onWqpCityChange(val){
+  wqpSelectedCity=val;
+  drawWqpChart();
+}
+
 function drawWqpChart(){
   const svg=document.getElementById('wqp-svg');
+  const legendEl=document.getElementById('wqp-legend');
   if(!svg||!wqpZctaData||!wqpContaminant) return;
   const contData=wqpZctaData.data[wqpContaminant]||{};
   const wqpMonths=wqpZctaData.months;
   const n=wqpMonths.length;
   if(n<2) return;
-  const W=400,H=90,PL=42,PR=10,PT=10,PB=18;
+  const W=400,H=100,PL=42,PR=10,PT=10,PB=18;
   const w=W-PL-PR, h=H-PT-PB;
-  // Average across ZCTAs per month
-  const series=wqpMonths.map(m=>{
-    const vals=Object.values(contData[m]||{});
-    return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+
+  // Build city → [zctas] for ZCTAs that have any data
+  const cityZctas={};
+  Object.keys(contData).forEach(m=>{
+    Object.keys(contData[m]).forEach(zcta=>{
+      const city=ZCTA_CITY[zcta]||zcta;
+      if(!cityZctas[city]) cityZctas[city]=new Set();
+      cityZctas[city].add(zcta);
+    });
   });
-  const defined=series.filter(v=>v!=null);
-  const maxY=Math.max(...defined,0.001);
+  const allCities=Object.keys(cityZctas).sort();
+
+  // Populate city dropdown (once, idempotent)
+  const sel=document.getElementById('wqp-city-select');
+  if(sel.options.length<=1){
+    allCities.forEach(c=>{
+      const o=document.createElement('option');
+      o.value=c; o.textContent=c; sel.appendChild(o);
+    });
+  }
+
+  // Which cities to draw
+  const citiesToDraw=(wqpSelectedCity==='__all__')?allCities:[wqpSelectedCity];
+
+  // Build series per city: mean of its ZCTAs per month
+  const citySeriesMap={};
+  citiesToDraw.forEach(city=>{
+    const zctas=[...cityZctas[city]||[]];
+    citySeriesMap[city]=wqpMonths.map(m=>{
+      const vals=zctas.map(z=>(contData[m]||{})[z]).filter(v=>v!=null);
+      return vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:null;
+    });
+  });
+
+  // Global maxY across all shown series
+  const allVals=Object.values(citySeriesMap).flat().filter(v=>v!=null);
+  const maxY=Math.max(...allVals,0.001);
+
   // Nice round Y ticks
   const rawStep=maxY/4;
   const mag=Math.pow(10,Math.floor(Math.log10(rawStep)));
   const step=Math.ceil(rawStep/mag)*mag;
   const yTicks=[];
   for(let v=step;v<=maxY*1.05;v+=step) yTicks.push(+v.toPrecision(3));
+
   let html='';
   // Grid lines + Y axis labels
   yTicks.forEach(v=>{
@@ -755,28 +847,45 @@ function drawWqpChart(){
     html+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+w}" y2="${y.toFixed(1)}" stroke="#dedad4" stroke-width="0.6"/>`;
     html+=`<text x="${PL-5}" y="${(y+3.5).toFixed(1)}" text-anchor="end" font-size="8.5" fill="#999" font-family="Arial,sans-serif">${v}</text>`;
   });
-  // Filled area + line (skip null gaps)
-  const pts=wqpMonths.map((m,i)=>{
-    const v=series[i];
-    if(v==null) return null;
-    const x=(PL+(i/(n-1))*w).toFixed(1);
-    const y=(PT+h-(v/maxY)*h).toFixed(1);
-    return `${x},${y}`;
-  }).filter(Boolean);
-  if(pts.length){
-    const color=getWqpColor();
-    const r=parseInt(color.slice(1,3),16),g=parseInt(color.slice(3,5),16),b=parseInt(color.slice(5,7),16);
-    const first=pts[0].split(','), last=pts[pts.length-1].split(',');
-    html+=`<polygon points="${first[0]},${PT+h} ${pts.join(' ')} ${last[0]},${PT+h}" fill="rgba(${r},${g},${b},0.12)"/>`;
-    html+=`<polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.5" opacity="0.9"/>`;
-    // Dots for data points
+
+  // Color shades: vary brightness from 40% (dark) to 90% (light) across cities
+  const baseColor=getWqpColor();
+  const baseR=parseInt(baseColor.slice(1,3),16);
+  const baseG=parseInt(baseColor.slice(3,5),16);
+  const baseB=parseInt(baseColor.slice(5,7),16);
+
+  function cityColor(idx,total){
+    // Interpolate from dark (0.35) to lighter (0.85) as idx increases
+    const t=total===1?0:idx/(total-1);
+    const f=0.35+t*0.5;
+    const r=Math.round(baseR+(255-baseR)*t*0.3);
+    const g=Math.round(baseG+(255-baseG)*t*0.3);
+    const b=Math.round(baseB+(255-baseB)*t*0.3);
+    return `rgb(${r},${g},${b})`;
+  }
+
+  const cityColors={};
+  citiesToDraw.forEach((city,i)=>{
+    cityColors[city]=cityColor(i,citiesToDraw.length);
+  });
+
+  // Draw lines per city
+  citiesToDraw.forEach((city,ci)=>{
+    const series=citySeriesMap[city];
+    const color=cityColors[city];
+    const pts=wqpMonths.map((m,i)=>{
+      const v=series[i];
+      if(v==null) return null;
+      return `${(PL+(i/(n-1))*w).toFixed(1)},${(PT+h-(v/maxY)*h).toFixed(1)}`;
+    }).filter(Boolean);
+    if(!pts.length) return;
+    html+=`<polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="1.6" opacity="0.9"/>`;
     wqpMonths.forEach((m,i)=>{
       if(series[i]==null) return;
-      const x=(PL+(i/(n-1))*w).toFixed(1);
-      const y=(PT+h-(series[i]/maxY)*h).toFixed(1);
-      html+=`<circle cx="${x}" cy="${y}" r="2" fill="${color}" opacity="0.7"/>`;
+      html+=`<circle cx="${(PL+(i/(n-1))*w).toFixed(1)}" cy="${(PT+h-(series[i]/maxY)*h).toFixed(1)}" r="1.8" fill="${color}" opacity="0.8"/>`;
     });
-  }
+  });
+
   // Year labels
   wqpMonths.forEach((m,i)=>{
     if(m.slice(5)==='01'){
@@ -785,21 +894,34 @@ function drawWqpChart(){
       html+=`<text x="${x}" y="${H-3}" text-anchor="middle" font-size="8.5" fill="#aaa" font-family="Arial,sans-serif">${m.slice(0,4)}</text>`;
     }
   });
+
   // Cursor at current slider position
   const sl=document.getElementById('month-slider');
-  const ci=wqpMonths.indexOf(months[+sl.value]||'');
-  const cxi=ci>=0?ci:n-1;
+  const ci2=wqpMonths.indexOf(months[+sl.value]||'');
+  const cxi=ci2>=0?ci2:n-1;
   const cx=(PL+(cxi/(n-1))*w).toFixed(1);
   html+=`<line id="wqp-cursor" x1="${cx}" y1="${PT}" x2="${cx}" y2="${PT+h}" stroke="#555" stroke-width="1.2" stroke-dasharray="4,3"/>`;
   svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
   svg.innerHTML=html;
+
+  // Legend
+  if(legendEl){
+    if(citiesToDraw.length>1){
+      legendEl.innerHTML=citiesToDraw.map(city=>`
+        <span class="wqp-legend-item">
+          <span class="wqp-legend-swatch" style="background:${cityColors[city]}"></span>
+          ${city}
+        </span>`).join('');
+    } else { legendEl.innerHTML=''; }
+  }
+
   // Click to navigate
   svg.addEventListener('click',e=>{
     const rect=svg.getBoundingClientRect();
     const frac=Math.max(0,Math.min(1,(e.clientX-rect.left-rect.width*(PL/W))/(rect.width*((W-PL-PR)/W))));
     const idx=Math.round(frac*(months.length-1));
-    const sl=document.getElementById('month-slider');
-    sl.value=idx; onSlider(idx);
+    const sl2=document.getElementById('month-slider');
+    sl2.value=idx; onSlider(idx);
     if(playing) playPause();
   });
 }
