@@ -1,0 +1,12 @@
+requests
+python-dotenv
+pandas
+beautifulsoup4
+pdfplumber
+causalml
+scikit-learn
+xgboost
+shap
+prophet
+folium
+plotly

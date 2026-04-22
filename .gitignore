@@ -1,9 +1,6 @@
 # Only the final HTML is tracked — everything else is ignored
 data/
-output/data/
-output/maplibre_test.html
-output/water_quality_map_v*.html
-requirements.txt
+output/
 
 # API keys / secrets
 .env
