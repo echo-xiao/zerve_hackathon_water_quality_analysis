@@ -10,16 +10,14 @@ In the map: load geometry once, use setFeatureState() to update colors per date.
 import json, math, os, urllib.request, urllib.parse
 import geopandas as gpd
 from shapely.geometry import mapping
+from config import DATA_DIR, OUT_DIR, CENSUS_DIR, AQS_DIR
 
 # ── Paths ──────────────────────────────────────────────────────────────
-ROOT       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DATA_DIR   = os.path.join(ROOT, 'data', 'raw_data')
-OUT_DIR    = os.path.join(ROOT, 'output', 'data')
-ZCTA_CACHE = os.path.join(DATA_DIR, 'census', 'la_zcta_boundaries.geojson')
+ZCTA_CACHE = os.path.join(CENSUS_DIR, 'la_zcta_boundaries.geojson')
 
 # ── 1. Load AQS daily PM2.5 data ──────────────────────────────────────
 print("Loading AQS data...")
-with open(os.path.join(DATA_DIR, 'aqs', 'wildfire_period_aqi.json')) as f:
+with open(os.path.join(AQS_DIR, 'wildfire_period_aqi.json')) as f:
     raw = json.load(f)
 
 pm_records  = raw['PM2.5']
@@ -41,7 +39,7 @@ all_dates = sorted({d for s in site_dates.values() for d in s})
 print(f"  {len(site_coords)} stations, {len(all_dates)} dates")
 
 # ── 2. Load ZCTA list ─────────────────────────────────────────────────
-with open(os.path.join(DATA_DIR, 'census', 'la_zcta_income.json')) as f:
+with open(os.path.join(CENSUS_DIR, 'la_zcta_income.json')) as f:
     zcta_list = [r['zcta'] for r in json.load(f)]
 print(f"  {len(zcta_list)} LA County ZCTAs")
 

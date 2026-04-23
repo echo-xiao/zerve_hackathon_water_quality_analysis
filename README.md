@@ -365,10 +365,10 @@ GET /map?contaminant=lead&date_range=2024-2025   → 地图热力数据
 | CDPR 农药使用 | 散点（圆圈大小∝使用量，COMTRS空间转换）| `data/pesticide.geojson` |
 | PFAS 污染点 | 散点 | `data/pfas.geojson` |
 
-**本地运行**（Stadia Maps / Stamen Watercolor 底图需 localhost）：
+**本地运行**：
 ```bash
 cd output && python -m http.server 8000
-# 访问 http://localhost:8000/water_quality_maplibre.html
+# 访问 http://localhost:8000/water_quality_map.html
 ```
 
 **关键实现**：`data/system_panel.json`（供水系统预聚合统计）在构建时通过空间连接生成，以 JSON 文件形式加载。点击任何供水系统边界即可触发浮动信息面板，展示：人口规模、服务连接数、违规记录数、CalEnviroScreen 环境公正评分、贫困率、哮喘发病率及综合风险等级（Low / Moderate / High / Critical）。
@@ -534,6 +534,61 @@ data/raw_data/
 
 ---
 
+### Zerve 项目结构（推荐）
+
+**核心问题：LA 哪些区域水质最差，根本原因是什么？**
+
+#### 推荐分析顺序
+
+| 优先级 | 分析 | 方法 | 产出 |
+|--------|------|------|------|
+| **⭐ 1** | **多因素回归 + SHAP 根因排序** | RandomForest + SHAP | 特征重要性图，回答"哪个因素贡献最大" |
+| **⭐ 2** | **野火对水/空气质量的因果冲击** | ITS（中断时序） | 前后污染物变化 + 置信区间 |
+| **3** | **环境正义分析** | 空间相关 + 分组检验 | 低收入 vs 富裕社区污染暴露差异 |
+
+> 建议从**分析 1（多因素回归 + SHAP）** 开始——它最清楚地回答"根因"问题，SHAP 图天然是好的 storytelling 材料，直接对应 Analytical Depth 35% 权重。
+
+#### Zerve Notebook 结构
+
+```
+Notebook 1: 数据整合
+  输入：wqp_zcta_data.json, ejscreen.geojson, superfund.geojson,
+        pesticide.geojson, pfas.geojson, fires_simple.geojson
+  操作：按 ZCTA 合并成宽表（一行 = 一个 ZCTA）
+  输出：zcta_features.csv（因变量 + 所有特征）
+
+Notebook 2: 多因素回归 + SHAP（⭐ 核心）
+  因变量：各 ZCTA 的平均重金属/微生物浓度
+  自变量：
+    - 距 Superfund/TRI 设施距离
+    - 距野火边界距离
+    - EJScreen 环境不公指数（CES 评分）
+    - 农药使用量（lbs_used）
+    - PFAS 检出种类数
+  模型：sklearn RandomForest → shap.TreeExplainer
+  输出：SHAP 特征重要性图 + Top-5 根因排名
+
+Notebook 3: ITS 野火因果分析
+  断点：2025-01-07（Palisades 点火）
+  数据：AQS 空气质量时序 + WQP 水质时序（月度面板）
+  模型：statsmodels segmented regression
+  输出：野火前后污染物浓度结构性变化 + p-value + 置信区间图
+
+Notebook 4: 环境正义 + 结论摘要
+  分析：按 EJScreen 分位数分组 → 箱线图 + Mann-Whitney 检验
+  输出：结论段落 + 政策建议表 → 直接用于 300 字摘要
+```
+
+#### 现有数据就绪状态
+
+| 分析 | 所需数据 | 状态 |
+|------|---------|------|
+| ZCTA 多因素回归 | `wqp_zcta_data.json` + `ejscreen.geojson` + `superfund.geojson` + `pesticide.geojson` + `pfas.geojson` | ✅ 全部就绪 |
+| ITS 野火冲击 | AQS 时序（`aqs/wildfire_period_aqi.json`）+ WQP 站点月度数据 | ✅ 就绪 |
+| 环境正义 | `ejscreen.geojson`（含 CES 分数）+ WQP ZCTA 均值 | ✅ 就绪 |
+
+---
+
 ## 分析报告框架
 
 ### 核心议题
@@ -673,18 +728,34 @@ from econml.dml import CausalForestDML
 
 ```bash
 pip install -r requirements.txt
+```
 
-# 运行所有数据源
-python src/fetch_all.py
+### 构建管道
 
-# 只运行指定数据源
-python src/fetch_all.py census noaa fire
+```
+src/
+├── config.py              # 共享路径常量（所有脚本从此导入）
+├── fetch_all.py           # Step 1：从 22 个数据源下载原始数据
+├── build_aqs_zipcode.py   # Step 2：Census TIGER API → ZCTA 边界（首次或边界变化时运行）
+└── build.py               # Step 3：所有 WQP + GeoJSON 数据 → output/data/
+```
 
-# 全量 EWG（300+ 系统，约10分钟）
-python src/fetch_all.py ewg_all
+```bash
+# Step 1：下载原始数据（首次或需要更新时）
+python src/fetch_all.py          # 下载全部数据源
+python src/fetch_all.py census noaa fire   # 只下载指定数据源
+python src/fetch_all.py ewg_all  # 全量 EWG（300+ 系统，约10分钟）
+python src/fetch_all.py --list   # 查看所有可用数据源
 
-# 查看所有可用数据源
-python src/fetch_all.py --list
+# Step 2：构建 ZCTA 边界（首次或 ZCTA 边界变化时）
+python src/build_aqs_zipcode.py
+
+# Step 3：重建地图数据
+python src/build.py
+
+# 本地预览地图
+cd output && python -m http.server 8000
+# 访问 http://localhost:8000/water_quality_map.html
 ```
 
 所需 API Key（均免费）：

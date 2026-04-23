@@ -253,7 +253,7 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 
     <div class="layer-group">
       <div class="group-label">事件</div>
-      <div class="layer-item on" onclick="tog(this,'fire-fill','fire-line','fire-label')">
+      <div class="layer-item on" onclick="tog(this,'fire-fill','fire-line')">
         <div class="layer-item-left">
           <span class="l-dot" style="background:#FF4500"></span>
           <span>2025 野火边界</span>
@@ -1145,22 +1145,7 @@ const AQS_STATIONS = [
 ];
 
 // ── Apply NYT palette + add all layers ────────────────────────────────
-map.on('style.load', async()=>{
-
-  // ── Wildfire source (added early; layers added last to stay on top) ──
-  const fd = FIRE_DATA;
-  if(fd && !map.getSource('fires')){
-    map.addSource('fires',{type:'geojson',data:fd});
-    map.on('click','fire-fill',e=>{
-      const p=e.features[0].properties;
-      popup.setLngLat(e.lngLat)
-        .setHTML(`<b style="font-family:'Palatino Linotype',serif;color:#CC2200">🔥 ${p.FIRE_NAME||'Fire'}</b><br>
-                  <span style="font-size:12px">${(+(p.GIS_ACRES||0)).toLocaleString()} acres</span>`)
-        .addTo(map);
-    });
-    map.on('mouseenter','fire-fill',()=>map.getCanvas().style.cursor='pointer');
-    map.on('mouseleave','fire-fill',()=>map.getCanvas().style.cursor='');
-  }
+map.once('style.load', async()=>{
 
   // ── AQS stations: HTML markers (render above canvas, always visible) ──
   if(Object.keys(stationMarkerEls).length===0){
@@ -1204,6 +1189,24 @@ map.on('style.load', async()=>{
       sp(id,'line-color',/major|motorway|primary/.test(id)?PALETTE.roadMj:PALETTE.roadMn);
     if(l.type==='symbol'){ sp(id,'text-color',PALETTE.label); sp(id,'text-halo-color',PALETTE.halo); }
   });
+
+  // ── 0. 野火边界（优先加载，确保不被后续 await 失败影响）───────────
+  await load('fires','data/fires_simple.geojson');
+  map.addLayer({id:'fire-fill',type:'fill',source:'fires',
+    layout:{'visibility':'visible'},
+    paint:{'fill-color':'#FF4500','fill-opacity':0.6}});
+  map.addLayer({id:'fire-line',type:'line',source:'fires',
+    layout:{'visibility':'visible'},
+    paint:{'line-color':'#CC2200','line-width':2}});
+  map.on('click','fire-fill',e=>{
+    const p=e.features[0].properties;
+    popup.setLngLat(e.lngLat)
+      .setHTML(`<b style="font-family:'Palatino Linotype',serif;color:#CC2200">🔥 ${p.FIRE_NAME||'Fire'}</b><br>
+                <span style="font-size:12px">${(+(p.GIS_ACRES||0)).toLocaleString()} acres</span>`)
+      .addTo(map);
+  });
+  map.on('mouseenter','fire-fill',()=>map.getCanvas().style.cursor='pointer');
+  map.on('mouseleave','fire-fill',()=>map.getCanvas().style.cursor='');
 
   // ── 1. Water system boundaries ───────────────────────────────────
   await load('ws','data/water_systems.geojson');
@@ -1269,8 +1272,7 @@ map.on('style.load', async()=>{
   // ── 6. TRI facilities ────────────────────────────────────────────
   await load('tri','data/tri.geojson');
   map.addLayer({id:'tri-circle',type:'circle',source:'tri',layout:{'visibility':'none'},paint:{
-    'circle-color':'#c49a6c','circle-radius':4,'circle-opacity':0.75,
-    'circle-stroke-color':'#fff','circle-stroke-width':0.8
+    'circle-color':'#c49a6c','circle-radius':4,'circle-opacity':0.9
   }});
   map.on('click','tri-circle',e=>{
     const p=e.features[0].properties;
@@ -1285,8 +1287,7 @@ map.on('style.load', async()=>{
   // ── 7. Superfund ─────────────────────────────────────────────────
   await load('sf','data/superfund.geojson');
   map.addLayer({id:'sf-circle',type:'circle',source:'sf',layout:{'visibility':'none'},paint:{
-    'circle-color':'#c0392b','circle-radius':5,'circle-opacity':0.80,
-    'circle-stroke-color':'#fff','circle-stroke-width':1
+    'circle-color':'#c0392b','circle-radius':5,'circle-opacity':0.90
   }});
   map.on('click','sf-circle',e=>{
     const p=e.features[0].properties;
@@ -1384,8 +1385,7 @@ map.on('style.load', async()=>{
       50,  '#4a90ba',
       200, '#1f5e8a',
       1000,'#08336e'],
-    'circle-opacity':0.85,
-    'circle-stroke-color':'#fff','circle-stroke-width':1.2
+    'circle-opacity':0.9
   }});
   map.on('click','pfas-circle',e=>{
     const p=e.features[0].properties;
@@ -1409,8 +1409,7 @@ map.on('style.load', async()=>{
   // ── 新增：Beach / HAB / NPDES ────────────────────────────────────
   await load('beach','data/beach.geojson');
   map.addLayer({id:'beach-circle',type:'circle',source:'beach',layout:{'visibility':'none'},paint:{
-    'circle-color':'#00bcd4','circle-radius':4,'circle-opacity':0.8,
-    'circle-stroke-color':'#fff','circle-stroke-width':1
+    'circle-color':'#00bcd4','circle-radius':4,'circle-opacity':0.9
   }});
   map.on('click','beach-circle',e=>{
     const p=e.features[0].properties;
@@ -1424,8 +1423,7 @@ map.on('style.load', async()=>{
 
   await load('hab','data/hab.geojson');
   map.addLayer({id:'hab-circle',type:'circle',source:'hab',layout:{'visibility':'none'},paint:{
-    'circle-color':'#8bc34a','circle-radius':7,'circle-opacity':0.85,
-    'circle-stroke-color':'#fff','circle-stroke-width':1.5
+    'circle-color':'#8bc34a','circle-radius':7,'circle-opacity':0.9
   }});
   map.on('click','hab-circle',e=>{
     const p=e.features[0].properties;
@@ -1480,8 +1478,7 @@ map.on('style.load', async()=>{
 
   await load('npdes','data/npdes.geojson');
   map.addLayer({id:'npdes-circle',type:'circle',source:'npdes',layout:{'visibility':'none'},paint:{
-    'circle-color':'#9c27b0','circle-radius':4,'circle-opacity':0.75,
-    'circle-stroke-color':'#fff','circle-stroke-width':1
+    'circle-color':'#9c27b0','circle-radius':4,'circle-opacity':0.9
   }});
   map.on('click','npdes-circle',e=>{
     const p=e.features[0].properties;
@@ -1500,8 +1497,7 @@ map.on('style.load', async()=>{
   map.addLayer({id:'pesticide-circle',type:'circle',source:'pesticide',layout:{'visibility':'none'},paint:{
     'circle-color':'#ff9800',
     'circle-radius':['interpolate',['linear'],['get','lbs_used'],0,4,100,8,1000,14],
-    'circle-opacity':0.75,
-    'circle-stroke-color':'#fff','circle-stroke-width':1
+    'circle-opacity':0.9
   }});
   map.on('click','pesticide-circle',e=>{
     const p=e.features[0].properties;
@@ -1518,8 +1514,7 @@ map.on('style.load', async()=>{
   map.on('mouseleave','pesticide-circle',()=>map.getCanvas().style.cursor='');
 
   map.addLayer({id:'usgs-circle',type:'circle',source:'usgs',minzoom:10,layout:{'visibility':'none'},paint:{
-    'circle-color':'#1565C0','circle-radius':3,'circle-opacity':0.7,
-    'circle-stroke-color':'#42A5F5','circle-stroke-width':1
+    'circle-color':'#1565C0','circle-radius':3,'circle-opacity':0.9
   }});
   map.on('click','usgs-circle',e=>{
     const p=e.features[0].properties;
@@ -1660,24 +1655,9 @@ map.on('style.load', async()=>{
     try{ map.setLayoutProperty(id,'visibility',vis); }catch(e){}
   });
 
-  // Add fire layers last so they render on top of everything
-  if(map.getSource('fires') && !map.getLayer('fire-fill')){
-    map.addLayer({id:'fire-fill',type:'fill',source:'fires',
-      layout:{'visibility':'visible'},
-      paint:{'fill-color':'#FF4500','fill-opacity':0.55}});
-    map.addLayer({id:'fire-line',type:'line',source:'fires',
-      layout:{'visibility':'visible'},
-      paint:{'line-color':'#CC2200','line-width':3}});
-    map.addLayer({id:'fire-label',type:'symbol',source:'fires',
-      layout:{'visibility':'visible','text-field':['get','FIRE_NAME'],'text-size':13,
-              'text-offset':[0,1],'text-anchor':'top',
-              'text-font':['Open Sans Bold','Arial Unicode MS Bold']},
-      paint:{'text-color':'#CC2200','text-halo-color':'rgba(255,255,255,0.95)','text-halo-width':2}});
-    console.log('🔥 Wildfire layers added (top of stack)');
-  }
-
   console.log('✅ All layers loaded');
 });
+
 </script>
 </body>
 </html>
