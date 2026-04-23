@@ -27,7 +27,8 @@ build.py — 构建 MapLibre 地图所需的所有数据文件
   python src/build.py
 """
 
-import os, json, shutil, random
+import os, sys, json, shutil, random
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import pandas as pd
 import numpy as np
 from shapely.geometry import Point, shape

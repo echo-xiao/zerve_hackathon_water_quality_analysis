@@ -777,30 +777,40 @@ from econml.dml import CausalForestDML
 pip install -r requirements.txt
 ```
 
-### 构建管道
+### 目录结构
 
 ```
 src/
-├── config.py              # 共享路径常量（所有脚本从此导入）
-├── fetch_all.py           # Step 1：从 22 个数据源下载原始数据
-├── build_aqs_zipcode.py   # Step 2：Census TIGER API → ZCTA 边界（首次或边界变化时运行）
-└── build.py               # Step 3：所有 WQP + GeoJSON 数据 → output/data/
+├── build/                     # 数据构建管道
+│   ├── config.py              #   共享路径常量
+│   ├── fetch_all.py           #   Step 1：从 22 个数据源下载原始数据
+│   ├── build_aqs_zipcode.py   #   Step 2：Census TIGER → ZCTA 边界（首次运行）
+│   └── build.py               #   Step 3：WQP + GeoJSON → output/data/
+└── analysis/                  # Zerve 分析 pipeline
+    ├── 01_build_features.py   #   构建 ZCTA 特征宽表 → zcta_features.csv
+    ├── 02_shap_analysis.py    #   RandomForest + SHAP → zcta_rootcause.json + 图表
+    ├── 03_its_analysis.py     #   ITS 野火因果分析 → 时序断点图
+    └── 04_ej_analysis.py      #   环境正义分析 → 箱线图 + 政策建议
 ```
 
+### 运行顺序
+
 ```bash
-# Step 1：下载原始数据（首次或需要更新时）
-python src/fetch_all.py          # 下载全部数据源
-python src/fetch_all.py census noaa fire   # 只下载指定数据源
-python src/fetch_all.py ewg_all  # 全量 EWG（300+ 系统，约10分钟）
-python src/fetch_all.py --list   # 查看所有可用数据源
+# ── 数据构建（首次或数据更新时）──────────────────────────────────
+python src/build/fetch_all.py          # 下载全部数据源
+python src/build/fetch_all.py census noaa fire  # 只下载指定数据源
+python src/build/fetch_all.py --list   # 查看所有可用数据源
 
-# Step 2：构建 ZCTA 边界（首次或 ZCTA 边界变化时）
-python src/build_aqs_zipcode.py
+python src/build/build_aqs_zipcode.py  # 构建 ZCTA 边界（首次运行）
+python src/build/build.py              # 构建地图所需 GeoJSON 数据
 
-# Step 3：重建地图数据
-python src/build.py
+# ── 分析 pipeline（在 Zerve Notebook 中运行）─────────────────────
+python src/analysis/01_build_features.py  # → output/data/zcta_features.csv
+python src/analysis/02_shap_analysis.py   # → zcta_rootcause.json + 根因图表
+python src/analysis/03_its_analysis.py    # → 野火 ITS 因果图
+python src/analysis/04_ej_analysis.py     # → 环境正义箱线图 + 政策建议
 
-# 本地预览地图
+# ── 本地预览地图 ──────────────────────────────────────────────────
 cd output && python -m http.server 8000
 # 访问 http://localhost:8000/water_quality_map.html
 ```

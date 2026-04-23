@@ -6,7 +6,8 @@
 import os
 
 # ── 基础路径 ────────────────────────────────────────────────────────────────
-ROOT_DIR  = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ROOT_DIR  = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+BUILD_DIR = os.path.join(ROOT_DIR, "src", "build")
 SRC_DIR   = os.path.join(ROOT_DIR, "src")
 DATA_DIR  = os.path.join(ROOT_DIR, "data", "raw_data")
 OUT_DIR   = os.path.join(ROOT_DIR, "output")

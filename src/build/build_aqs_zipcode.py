@@ -7,7 +7,8 @@ Output:
 In the map: load geometry once, use setFeatureState() to update colors per date.
 """
 
-import json, math, os, urllib.request, urllib.parse
+import json, math, os, sys, urllib.request, urllib.parse
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import geopandas as gpd
 from shapely.geometry import mapping
 from config import DATA_DIR, OUT_DIR, CENSUS_DIR, AQS_DIR
