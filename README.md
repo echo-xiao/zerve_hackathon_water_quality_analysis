@@ -193,7 +193,7 @@ GET /map?contaminant=lead&date_range=2024-2025   → 地图热力数据
 ├── LADWP PDFs                → 21年历史年报（2004-2024）
 ├── EPA ECHO / SDWIS          → 672 个供水设施 + 违规执法记录
 ├── CA SAFER Risk Assessment  → 204 个 LA County 系统风险评估
-├── CA Open Data 地下水        → 37,103 个 LA County 地下水站点
+├── CA Open Data 地下水（DWR）→ 37,103 个 LA County 地下水站点
 ├── US Census ACS             → 2,498 Tract 人口/收入/住房年代
 ├── NOAA Climate              → 5站日气候数据（2023-2025）
 ├── CAL FIRE GeoJSON          → Palisades + Eaton 火灾边界 + 全量历史
@@ -204,7 +204,12 @@ GET /map?contaminant=lead&date_range=2024-2025   → 地图热力数据
 ├── CalEnviroScreen 4.0       → 2,343 个 Tract 综合环境负担指标
 ├── 水系服务区边界（GIS）      → 213 个供水系统地理边界多边形
 ├── LA Open Data              → 本地水质检测记录
-└── CA 学校铅水采样            → 5,979 条 LA County 学校铅采样记录
+├── CA 学校铅水采样（DDW）     → 5,979 条 LA County 学校铅采样记录
+├── USGS NWIS 水文站          → 11,115 个 LA County 水文/水质站点
+├── Heal the Bay 海滩水质     → 1,200 个 WQP 海岸/海洋监测站点
+├── CA FHAB 有害藻华          → 212 个藻华事件（水体类型、蓝藻毒素、预警等级）
+├── EPA ECHO NPDES 废水排放   → 86 个排放设施 + 月均流量时序（effluent chart API）
+└── CDPR 农药使用（PUR 2023） → 153,048 条记录；132个COMTRS地块空间化
 
 分析层
 ├── 数据清洗与特征工程   (pandas, geopandas)
@@ -280,24 +285,29 @@ GET /map?contaminant=lead&date_range=2024-2025   → 地图热力数据
 - **NYT 配色方案**：`background:#f2ede4`、`water:#c9dfe8`、`park:#dde8d4`、`building:#ddd8cc`，道路米灰色，标注 `#6b6860`，通过 `style.load` 事件覆盖底图样式层
 - **字体**：全站使用 `Palatino Linotype, Book Antiqua, Palatino, Georgia, serif`（NYT 社论衬线字体）
 - **布局**：全屏地图（`inset:0`），浮动标题（顶部居中）、浮动 ☰ 图层面板（右上角，可折叠）、浮动信息面板（右侧，点击水系边界时弹出）
-- **数据加载**：13 个图层全部通过 `fetch()` 异步加载预导出的 GeoJSON 文件（`output/data/`）
+- **数据加载**：18 个图层全部通过 `fetch()` 异步加载预导出的 GeoJSON 文件（`output/data/`）
 
-**13个图层**：
+**18个图层**：
 | 图层 | 类型 | 数据源 |
 |------|------|--------|
 | 2025野火边界 | fill + line + label | `data/fires.geojson` |
 | 供水系统边界 | fill + line（点击弹出信息面板）| `data/water_systems.geojson` |
 | WQP污染物热力图 | MapLibre heatmap（WebGL）| `data/wqp_heatmap.geojson` |
-| WQP月度时间轴 | 散点 + 底部时间滑块 | `data/wqp_monthly.json` |
+| WQP月度时间轴（WQP 污染物监测站）| 散点 + 底部时间滑块 | `data/wqp_monthly.json` |
 | TRI工业设施 | 散点 | `data/tri.geojson` |
 | GeoTracker污染点 | heatmap | `data/geotracker.geojson` |
-| 学校铅采样 | 散点（铅浓度着色）| `data/schools.geojson` |
-| 地下水站点 | heatmap（采样3000点）| `data/groundwater.geojson` |
+| DDW 学校饮用水铅含量 | 散点（铅浓度着色）| `data/schools.geojson` |
+| DWR 地下水监测站 | heatmap（采样3000点）| `data/groundwater.geojson` |
 | AQS空气质量 | 散点（PM2.5着色）| `data/aqs.geojson` |
 | EJScreen 环境公正 | fill（CES评分着色）| `data/ejscreen.geojson` |
 | CDC健康结果 | fill（癌症率着色）| `data/cdc_places.geojson` |
 | Superfund污染场地 | 散点 | `data/superfund.geojson` |
 | USGS水文站 | 散点（采样2000点）| `data/usgs.geojson` |
+| HAB 有害藻华 | 散点（绿色，点击查看水体/预警状态）| `data/hab.geojson` |
+| Heal the Bay 海滩水质 | 散点（WQP 海岸/海洋站点）| `data/beach.geojson` |
+| NPDES 废水排放点 | 散点（紫色，弹窗含月均流量柱状图）| `data/npdes.geojson` |
+| CDPR 农药使用 | 散点（圆圈大小∝使用量，COMTRS空间转换）| `data/pesticide.geojson` |
+| PFAS 污染点 | 散点 | `data/pfas.geojson` |
 
 **本地运行**（Stadia Maps / Stamen Watercolor 底图需 localhost）：
 ```bash
@@ -333,11 +343,16 @@ cd output && python -m http.server 8000
 | **Water Quality Portal (WQP)** | `data/raw_data/wqp/` | 133,254 条检测记录，5,660 个监测站 | `fetch_all.py wqp` |
 | **EWG Tap Water Database** | `data/raw_data/ewg/` | 200 个供水系统（293个文件含 HTML）| `fetch_all.py ewg_all` |
 | **LADWP PDF 报告** | `data/raw_data/ladwp_pdf/` | 21 份年报（2004-2024，共 106MB）| `fetch_all.py ladwp` |
-| **California Open Data 地下水** | `data/raw_data/ca_open_data/` | 37,103 个 LA County 地下水站点 | `fetch_all.py ca`（filter: `gm_gis_county=LOS ANGELES`）|
+| **California Open Data 地下水（DWR）** | `data/raw_data/ca_open_data/` | 37,103 个 LA County 地下水站点 | `fetch_all.py ca`（filter: `gm_gis_county=LOS ANGELES`）|
 | **CA SAFER 违规/风险评估** | `data/raw_data/ca_open_data/` | 204 个 LA County 供水系统风险评估（含违规类型）| CA Open Data resource `255887bb` |
 | **EPA ECHO 供水设施** | `data/raw_data/epa_echo/` | 672 个 LA County 供水系统（SDWIS WATER_SYSTEM 表）| `fetch_all.py epa_echo`（ECHO SDW API 已下线，改用 Envirofacts）|
 | **EPA SDWIS** | `data/raw_data/epa_sdwis/` | 75 个 LA 城区供水系统详情 | `fetch_all.py epa_sdwis` |
 | **LA Open Data** | `data/raw_data/la_open_data/` | 本地水质检测记录 | `fetch_all.py la` |
+| **USGS NWIS 水文站** | `data/raw_data/usgs/` | 11,115 个 LA County 水文/水质站点 | `fetch_all.py usgs_measurements` |
+| **Heal the Bay 海滩水质** | `data/raw_data/beach/` | 1,200 个 WQP 海岸/海洋站点 | `fetch_all.py heal_the_bay` |
+| **CA FHAB 有害藻华** | `data/raw_data/hab/` | 212 个藻华事件点（含水体、预警状态、蓝藻毒素）| `fetch_all.py hab`（CA Open Data 3个资源：Bloom Reports / HAB Cases / HAB Results）|
+| **EPA ECHO NPDES 废水排放** | `data/raw_data/npdes/` | 86 个 LA County 排放设施（含月均流量历史）| `fetch_all.py npdes`（两步查询：get_facilities → get_qid；月流量时序用 effluent chart API）|
+| **CDPR 农药使用记录（PUR 2023）** | `data/raw_data/cdpr/` | 153,048 条 LA County 记录；9,313 条含 COMTRS 坐标 | `fetch_all.py cdpr_pesticides`（bulk ZIP: files.cdpr.ca.gov/pub/outgoing/pur_archives/pur2023.zip）|
 
 ### 根因分析特征数据
 
@@ -417,11 +432,28 @@ data/raw_data/
 │   └── la_water_system_boundaries.geojson  # 213 个 LA County 供水系统服务区地理边界
 │                                           # 来源：CA Water Board GIS FeatureServer
 │                                           # 用途：Census Tract → 供水系统空间叠加的关键桥梁
-└── school_lead/
-    ├── la_school_lead_sampling.json    # 5,979 条 LA County 学校铅水采样记录
-    │                                   # 字段：学校名、PWS ID、采样日期、铅浓度、是否超标、整改状态
-    │                                   # 来源：CA Open Data（CA State Water Board）
-    └── la_school_lead_geocoded.json    # 1,164 所学校（US Census 批量地理编码，含铅浓度统计）
+├── school_lead/
+│   ├── la_school_lead_sampling.json    # 5,979 条 LA County 学校铅水采样记录
+│   │                                   # 来源：CA DDW（CA State Water Board）
+│   └── la_school_lead_geocoded.json    # 1,164 所学校（US Census 批量地理编码）
+├── usgs/
+│   ├── realtime.json                   # USGS 水文实时数据
+│   └── la_water_gauges.json            # 11,115 个 LA County 水文站（NWIS）
+├── beach/
+│   └── la_beach_stations.json          # 1,200 个 WQP 海岸/海洋监测站点
+│                                        # 来源：waterqualitydata.us（siteType=Ocean,Estuary,Coastal）
+├── hab/
+│   └── la_hab_events.json              # 212 个 LA County 藻华事件
+│                                        # 来源：CA FHAB data.ca.gov（3个资源ID）
+│                                        # Bloom Reports / HAB Cases / HAB Results
+├── npdes/
+│   ├── la_npdes_facilities.json        # 86 个 LA County NPDES 排放设施
+│   ├── la_npdes_dmr.json               # EPA ECHO DMR 查询结果（QueryID）
+│   └── la_npdes_dmr_multi.json         # 多年 DMR 查询结果（2020-2024，LA County 过滤有问题）
+└── cdpr/
+    └── la_pesticide_use.json           # 153,048 条 LA County 农药施用记录（PUR 2023）
+                                         # 来源：CDPR bulk ZIP（files.cdpr.ca.gov/pub/outgoing/pur_archives/pur2023.zip）
+                                         # 9,313 条含 COMTRS 地理坐标（Township-Range-Section）
 ```
 
 ---
@@ -570,7 +602,7 @@ from econml.dml import CausalForestDML
 | 阶段 | 任务 | 状态 |
 |------|------|------|
 | ✅ 数据采集 | 15+数据源抓取、坐标修复、地理编码 | 完成 |
-| ✅ 交互地图 | MapLibre GL JS 13层地图，NYT Palatino 配色，浮动图层面板 + 浮动信息面板 + 底部时间滑块 | 完成 |
+| ✅ 交互地图 | MapLibre GL JS 18层地图，NYT Palatino 配色，浮动图层面板 + 浮动信息面板 + 底部时间滑块；NPDES弹窗含月均流量柱状图；农药层圆圈大小∝施用量 | 完成 |
 | 🔄 分析第一章 | EDA + 平行趋势验证 + 描述统计图 | 进行中 |
 | ⬜ 分析第三章 | DiD + 事件研究图 + ITS | 待开始 |
 | ⬜ 分析第三章 | 空间回归 + CATE 因果森林 | 待开始 |
