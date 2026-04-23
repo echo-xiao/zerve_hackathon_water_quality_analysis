@@ -1456,6 +1456,36 @@ map.on('style.load', async()=>{
   map.on('mouseenter','hab-circle',()=>map.getCanvas().style.cursor='pointer');
   map.on('mouseleave','hab-circle',()=>map.getCanvas().style.cursor='');
 
+  const npdests = await fetch('data/npdes_timeseries.json').then(r=>r.json()).catch(()=>({}));
+
+  function makeFlowChart(series){
+    if(!series||series.length<2) return '';
+    const W=280,H=80,PL=30,PR=8,PT=6,PB=20;
+    const cW=W-PL-PR, cH=H-PT-PB;
+    const vals=series.map(s=>s.flow);
+    const dates=series.map(s=>s.date);
+    const minV=Math.min(...vals), maxV=Math.max(...vals);
+    const rng=maxV-minV||1;
+    const xs=i=>PL+i*(cW/(series.length-1));
+    const ys=v=>PT+cH-(v-minV)/rng*cH;
+    const pts=series.map((s,i)=>`${xs(i).toFixed(1)},${ys(s.flow).toFixed(1)}`).join(' ');
+    // x-axis labels: first, mid, last
+    const lbls=[0,Math.floor(series.length/2),series.length-1].map(i=>{
+      const d=dates[i]; const parts=d.split('-'); const mo={JAN:'1',FEB:'2',MAR:'3',APR:'4',MAY:'5',JUN:'6',JUL:'7',AUG:'8',SEP:'9',OCT:'10',NOV:'11',DEC:'12'};
+      const label=`${mo[parts[1]]||parts[1]}/${parts[2].slice(2)}`;
+      return `<text x="${xs(i).toFixed(1)}" y="${H-4}" font-size="8" fill="#999" text-anchor="middle">${label}</text>`;
+    }).join('');
+    const yLbls=[minV,maxV].map((v,i)=>`<text x="${PL-3}" y="${ys(v).toFixed(1)}" font-size="8" fill="#999" text-anchor="end" dominant-baseline="middle">${v<10?v.toFixed(2):v.toFixed(0)}</text>`).join('');
+    return `<svg width="${W}" height="${H}" style="display:block;margin-top:6px">
+      <line x1="${PL}" y1="${PT}" x2="${PL}" y2="${PT+cH}" stroke="#ccc" stroke-width="1"/>
+      <line x1="${PL}" y1="${PT+cH}" x2="${PL+cW}" y2="${PT+cH}" stroke="#ccc" stroke-width="1"/>
+      <polyline points="${pts}" fill="none" stroke="#9c27b0" stroke-width="1.5" stroke-linejoin="round"/>
+      ${series.map((s,i)=>`<circle cx="${xs(i).toFixed(1)}" cy="${ys(s.flow).toFixed(1)}" r="2" fill="#9c27b0"/>`).join('')}
+      ${lbls}${yLbls}
+      <text x="${W/2}" y="${H-1}" font-size="7" fill="#aaa" text-anchor="middle">流量 (MGD) 月均值</text>
+    </svg>`;
+  }
+
   await load('npdes','data/npdes.geojson');
   map.addLayer({id:'npdes-circle',type:'circle',source:'npdes',layout:{'visibility':'none'},paint:{
     'circle-color':'#9c27b0','circle-radius':4,'circle-opacity':0.75,
@@ -1464,10 +1494,11 @@ map.on('style.load', async()=>{
   map.on('click','npdes-circle',e=>{
     const p=e.features[0].properties;
     const flow=p.flow?`排放量：<b>${p.flow}</b> MGD<br>`:'';
+    const chart=makeFlowChart(npdests[p.permit]);
     popup.setLngLat(e.lngLat)
       .setHTML(`<b style="font-family:'Palatino Linotype',serif">🏭 ${p.name||'NPDES设施'}</b><br>
                 <small style="color:#666">${p.city||''} · ${p.permit||''}</small><br>
-                ${flow}<small>状态：${p.status||'—'}</small>`)
+                ${flow}<small>状态：${p.status||'—'}</small>${chart}`)
       .addTo(map);
   });
   map.on('mouseenter','npdes-circle',()=>map.getCanvas().style.cursor='pointer');
