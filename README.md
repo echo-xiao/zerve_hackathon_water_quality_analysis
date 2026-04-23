@@ -538,35 +538,72 @@ data/raw_data/
 
 **核心问题：LA 哪些区域水质最差，根本原因是什么？**
 
+#### 根因分析设计
+
+**方法：RandomForest + SHAP**，产出两层结果：
+
+**全局层**（整体特征重要性）
+```
+影响 LA 水质的因素排名（对所有 ZCTA）：
+  1. CalEnviroScreen 评分      ████████████ 34%
+  2. 距野火边界距离             ████████     22%
+  3. TRI 工业设施密度           ██████       17%
+  4. PFAS 检出种类数            ████         12%
+  5. 农药使用量                 ███           9%
+  6. Superfund 场地密度         ██            6%
+```
+
+**每个 ZCTA 独立输出**（SHAP waterfall 分解）
+```
+90001（Compton）铅均值：2.3 ppb
+  基准值                  0.4 ppb
+  + TRI 工业密度高       +1.1 ppb  ██████
+  + CES 评分 78（高）    +0.6 ppb  ████
+  + 距野火 8km           +0.3 ppb  ██
+  - 农药使用量低         -0.1 ppb  █
+  预测值                  2.3 ppb
+```
+
+点击地图任意邮编区 → 弹出该区的 SHAP 分解 → 实现"点哪里知道哪里为什么差"的交互工具。
+
+**数据结构：一行 = 一个 ZCTA**
+
+| 列 | 来源 |
+|----|------|
+| 因变量：各污染物月均值 | `wqp_zcta_data.json` |
+| 距野火边界距离 | `fires_simple.geojson` + shapely |
+| CES 综合评分 | `ejscreen.geojson` |
+| TRI 工业设施密度（个/km²）| `tri.geojson` |
+| Superfund 场地密度 | `superfund.geojson` |
+| PFAS 检出种类数 | `pfas.geojson` |
+| 农药使用量（lbs）| `pesticide.geojson` |
+
 #### 推荐分析顺序
 
 | 优先级 | 分析 | 方法 | 产出 |
 |--------|------|------|------|
-| **⭐ 1** | **多因素回归 + SHAP 根因排序** | RandomForest + SHAP | 特征重要性图，回答"哪个因素贡献最大" |
-| **⭐ 2** | **野火对水/空气质量的因果冲击** | ITS（中断时序） | 前后污染物变化 + 置信区间 |
+| **⭐ 1** | **多因素回归 + SHAP 根因排序** | RandomForest + SHAP | 全局特征重要性图 + 每个 ZCTA 的 SHAP 分解 JSON |
+| **⭐ 2** | **野火对水/空气质量的因果冲击** | ITS（中断时序） | 前后污染物变化 + 置信区间（因果验证） |
 | **3** | **环境正义分析** | 空间相关 + 分组检验 | 低收入 vs 富裕社区污染暴露差异 |
 
-> 建议从**分析 1（多因素回归 + SHAP）** 开始——它最清楚地回答"根因"问题，SHAP 图天然是好的 storytelling 材料，直接对应 Analytical Depth 35% 权重。
+> 两者组合：SHAP 做主体展示（可视化强、故事清晰），ITS 做因果验证（防止评委追问"这是相关还是因果"）。
 
 #### Zerve Notebook 结构
 
 ```
 Notebook 1: 数据整合
   输入：wqp_zcta_data.json, ejscreen.geojson, superfund.geojson,
-        pesticide.geojson, pfas.geojson, fires_simple.geojson
-  操作：按 ZCTA 合并成宽表（一行 = 一个 ZCTA）
-  输出：zcta_features.csv（因变量 + 所有特征）
+        tri.geojson, pesticide.geojson, pfas.geojson, fires_simple.geojson
+  操作：按 ZCTA 空间合并成宽表（一行 = 一个 ZCTA）
+  输出：output/data/zcta_features.csv
 
-Notebook 2: 多因素回归 + SHAP（⭐ 核心）
+Notebook 2: RandomForest + SHAP（⭐ 核心）
   因变量：各 ZCTA 的平均重金属/微生物浓度
-  自变量：
-    - 距 Superfund/TRI 设施距离
-    - 距野火边界距离
-    - EJScreen 环境不公指数（CES 评分）
-    - 农药使用量（lbs_used）
-    - PFAS 检出种类数
   模型：sklearn RandomForest → shap.TreeExplainer
-  输出：SHAP 特征重要性图 + Top-5 根因排名
+  输出1：SHAP 全局特征重要性图（bar plot）
+  输出2：output/data/zcta_rootcause.json
+         格式：{zcta: {score, top_cause, shap: {feature: value}}}
+         → 地图点击时加载，渲染每个 ZCTA 的根因条形图
 
 Notebook 3: ITS 野火因果分析
   断点：2025-01-07（Palisades 点火）
@@ -579,13 +616,23 @@ Notebook 4: 环境正义 + 结论摘要
   输出：结论段落 + 政策建议表 → 直接用于 300 字摘要
 ```
 
+#### 为何满足 Zerve Hackathon 要求
+
+| 评分维度 | 权重 | 如何满足 |
+|---------|------|---------|
+| **Analytical Depth** | 35% | RandomForest + SHAP（多数据源特征工程）+ ITS 因果验证，双重回答根因问题，远超描述统计 |
+| **End-to-End Workflow** | 30% | `fetch_all.py` → `build.py` → Zerve Notebook → `zcta_rootcause.json` → 地图交互，全链路数据到可视化 |
+| **Storytelling** | 20% | "为什么 Compton 的铅是 Highland Park 的5倍？" 一张 SHAP waterfall 图讲清楚，天然叙事结构 |
+| **Creativity** | 15% | 点击地图任意 ZCTA → 弹出该区个性化根因分解，没有现有工具做到这个交互 |
+
 #### 现有数据就绪状态
 
 | 分析 | 所需数据 | 状态 |
 |------|---------|------|
-| ZCTA 多因素回归 | `wqp_zcta_data.json` + `ejscreen.geojson` + `superfund.geojson` + `pesticide.geojson` + `pfas.geojson` | ✅ 全部就绪 |
-| ITS 野火冲击 | AQS 时序（`aqs/wildfire_period_aqi.json`）+ WQP 站点月度数据 | ✅ 就绪 |
-| 环境正义 | `ejscreen.geojson`（含 CES 分数）+ WQP ZCTA 均值 | ✅ 就绪 |
+| ZCTA 宽表构建 | `wqp_zcta_data.json` + 所有 `output/data/*.geojson` | ✅ 全部就绪 |
+| RandomForest + SHAP | `zcta_features.csv`（Notebook 1 输出）| ✅ 构建后即可 |
+| ITS 野火冲击 | `aqs/wildfire_period_aqi.json` + WQP 月度数据 | ✅ 就绪 |
+| 环境正义 | `ejscreen.geojson` + WQP ZCTA 均值 | ✅ 就绪 |
 
 ---
 
