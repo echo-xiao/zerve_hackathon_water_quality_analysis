@@ -1147,19 +1147,10 @@ const AQS_STATIONS = [
 // ── Apply NYT palette + add all layers ────────────────────────────────
 map.on('style.load', async()=>{
 
-  // ── Wildfire: use inlined data (no fetch needed) ──────────────────
+  // ── Wildfire source (added early; layers added last to stay on top) ──
   const fd = FIRE_DATA;
   if(fd && !map.getSource('fires')){
     map.addSource('fires',{type:'geojson',data:fd});
-    map.addLayer({id:'fire-fill',type:'fill',source:'fires',
-      paint:{'fill-color':'#FF4500','fill-opacity':0.55}});
-    map.addLayer({id:'fire-line',type:'line',source:'fires',
-      paint:{'line-color':'#CC2200','line-width':4}});
-    map.addLayer({id:'fire-label',type:'symbol',source:'fires',
-      layout:{'text-field':['get','FIRE_NAME'],'text-size':12,
-              'text-offset':[0,1.2],'text-anchor':'top',
-              'text-font':['Open Sans Bold','Arial Unicode MS Bold']},
-      paint:{'text-color':'#CC2200','text-halo-color':'rgba(255,255,255,0.9)','text-halo-width':2}});
     map.on('click','fire-fill',e=>{
       const p=e.features[0].properties;
       popup.setLngLat(e.lngLat)
@@ -1169,7 +1160,6 @@ map.on('style.load', async()=>{
     });
     map.on('mouseenter','fire-fill',()=>map.getCanvas().style.cursor='pointer');
     map.on('mouseleave','fire-fill',()=>map.getCanvas().style.cursor='');
-    console.log('🔥 Wildfire layers added');
   }
 
   // ── AQS stations: HTML markers (render above canvas, always visible) ──
@@ -1670,10 +1660,21 @@ map.on('style.load', async()=>{
     try{ map.setLayoutProperty(id,'visibility',vis); }catch(e){}
   });
 
-  // Move fire layers to top of stack
-  ['fire-fill','fire-line','fire-label'].forEach(id=>{
-    try{ if(map.getLayer(id)) map.moveLayer(id); }catch(e){}
-  });
+  // Add fire layers last so they render on top of everything
+  if(map.getSource('fires') && !map.getLayer('fire-fill')){
+    map.addLayer({id:'fire-fill',type:'fill',source:'fires',
+      layout:{'visibility':'visible'},
+      paint:{'fill-color':'#FF4500','fill-opacity':0.55}});
+    map.addLayer({id:'fire-line',type:'line',source:'fires',
+      layout:{'visibility':'visible'},
+      paint:{'line-color':'#CC2200','line-width':3}});
+    map.addLayer({id:'fire-label',type:'symbol',source:'fires',
+      layout:{'visibility':'visible','text-field':['get','FIRE_NAME'],'text-size':13,
+              'text-offset':[0,1],'text-anchor':'top',
+              'text-font':['Open Sans Bold','Arial Unicode MS Bold']},
+      paint:{'text-color':'#CC2200','text-halo-color':'rgba(255,255,255,0.95)','text-halo-width':2}});
+    console.log('🔥 Wildfire layers added (top of stack)');
+  }
 
   console.log('✅ All layers loaded');
 });
