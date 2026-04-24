@@ -2039,7 +2039,7 @@ map.once('style.load', async()=>{
   map.once('idle', ()=>updateWqpZcta(months[+sl.value]||''));
 
   // ── LADWP 20-year trend ──────────────────────────────────────────
-  const ladwpText = await fetch('data/ladwp_trend.json').then(r=>r.text());
+  const ladwpText = await fetch('data/ladwp_trend.json?v=3').then(r=>r.text());
   ladwpData = JSON.parse(ladwpText.replace(/\bNaN\b/g,'null'));
   const ldSel = document.getElementById('ladwp-selector');
   Object.keys(ladwpData.meta.contaminants).forEach(key=>{
