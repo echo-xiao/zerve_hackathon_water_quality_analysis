@@ -174,7 +174,7 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 }
 
 /* Chart panels */
-#aqs-chart, #wqp-chart, #ladwp-chart {
+#aqs-chart, #wqp-chart {
   position:absolute; right:16px;
   width:clamp(280px, 28vw, 480px);
   background:rgba(255,255,255,0.96); border:1px solid var(--line);
@@ -183,7 +183,14 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 }
 #aqs-chart { bottom:16px; }
 #wqp-chart { bottom:16px; }
-#ladwp-chart { bottom:16px; }
+#ladwp-chart {
+  position:absolute; left:50%; transform:translateX(-50%);
+  top:70px;
+  width:clamp(360px, 38vw, 580px);
+  background:rgba(255,255,255,0.96); border:1px solid var(--line);
+  border-radius:3px; box-shadow:0 2px 16px rgba(0,0,0,0.14);
+  padding:10px 16px 10px; display:none; z-index:18;
+}
 #aqs-chart.visible { display:block; }
 #wqp-chart.visible { display:block; }
 #ladwp-chart.visible { display:block; }
@@ -536,7 +543,6 @@ function stackCharts(){
   const panels=[
     document.getElementById('aqs-chart'),
     document.getElementById('wqp-chart'),
-    document.getElementById('ladwp-chart'),
   ];
   let offset=16;
   panels.forEach(p=>{
