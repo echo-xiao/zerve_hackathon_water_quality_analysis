@@ -973,7 +973,7 @@ function drawLadwpChart(){
     if(+y%4===0)
       html+=`<text x="${xOf(i).toFixed(1)}" y="${PT+h+14}" text-anchor="middle" font-size="7.5" fill="#bbb" font-family="Arial,sans-serif">${y}</text>`;
   });
-  // data line (segments between non-null points)
+  // Solid line through actual data points
   let pathParts=[]; let inPath=false;
   years.forEach((y,i)=>{
     if(vals[i]==null){inPath=false;return;}
@@ -983,6 +983,15 @@ function drawLadwpChart(){
   });
   if(pathParts.length>1)
     html+=`<path d="${pathParts.join(' ')}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
+  // Dashed bridge across null gaps (linear interpolation)
+  for(let i=0;i<n-1;i++){
+    if(vals[i]==null) continue;
+    // Find next non-null after a gap
+    let j=i+1;
+    while(j<n && vals[j]==null) j++;
+    if(j>=n || j===i+1) continue; // no gap
+    html+=`<line x1="${xOf(i).toFixed(1)}" y1="${yOf(vals[i]).toFixed(1)}" x2="${xOf(j).toFixed(1)}" y2="${yOf(vals[j]).toFixed(1)}" stroke="${color}" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>`;
+  }
   // dots
   years.forEach((y,i)=>{
     if(vals[i]==null) return;
@@ -2039,7 +2048,7 @@ map.once('style.load', async()=>{
   map.once('idle', ()=>updateWqpZcta(months[+sl.value]||''));
 
   // ── LADWP 20-year trend ──────────────────────────────────────────
-  const ladwpText = await fetch('data/ladwp_trend.json?v=4').then(r=>r.text());
+  const ladwpText = await fetch('data/ladwp_trend.json?v=5').then(r=>r.text());
   ladwpData = JSON.parse(ladwpText.replace(/\bNaN\b/g,'null'));
   const ldSel = document.getElementById('ladwp-selector');
   Object.keys(ladwpData.meta.contaminants).forEach(key=>{
