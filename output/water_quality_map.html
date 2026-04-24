@@ -1312,7 +1312,10 @@ map.once('style.load', async()=>{
     if(/building/.test(id)){ sp(id,'fill-color',PALETTE.bld); sp(id,'fill-extrusion-color',PALETTE.bld); }
     if(l.type==='line'&&/road|highway|street/.test(id))
       sp(id,'line-color',/major|motorway|primary/.test(id)?PALETTE.roadMj:PALETTE.roadMn);
-    if(l.type==='symbol'){ sp(id,'text-color',PALETTE.label); sp(id,'text-halo-color',PALETTE.halo); }
+    if(l.type==='symbol'){
+      sp(id,'text-color',PALETTE.label); sp(id,'text-halo-color',PALETTE.halo);
+      try{ map.setLayoutProperty(id,'icon-image',''); }catch(e){}
+    }
   });
 
   // ── 0. 野火边界（优先加载，确保不被后续 await 失败影响）───────────
@@ -1338,6 +1341,7 @@ map.once('style.load', async()=>{
   map.addSource('ws',{type:'geojson', data:wsData, promoteId:'SABL_PWSID'});
 
   map.addLayer({id:'ws-fill',type:'fill',source:'ws',
+    filter:['!=',['get','BOUNDARY_TYPE'],'POINT_BUFFER_1KM'],
     paint:{
       'fill-color':['case',
         ['!=',['feature-state','ewg_score'],null],
@@ -1351,6 +1355,7 @@ map.once('style.load', async()=>{
     }});
 
   map.addLayer({id:'ws-line',type:'line',source:'ws',
+    filter:['!=',['get','BOUNDARY_TYPE'],'POINT_BUFFER_1KM'],
     paint:{
       'line-color':['case',
         ['boolean',['feature-state','hover'],false],'#fff',
