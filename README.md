@@ -51,7 +51,7 @@
 | 地址级精度查询 | ✗ | ✗ | ✗ | ✗ | ✅ |
 | 解释污染根本成因 | ✗ | ✗ | ✗ | ✗ | ✅ |
 | 因果推断（DiD/ITS/合成控制）| ✗ | ✗ | ✗ | ✗ | ✅ |
-| SHAP 根因贡献度排序 | ✗ | ✗ | ✗ | ✗ | ✅ |
+| 根因贡献度排序（线性分解/SHAP）| ✗ | ✗ | ✗ | ✗ | ✅ |
 | 个性化行动建议（滤芯型号/沸水时机/投诉渠道）| ✗ | ✗ | ✗ | ✗ | ✅ |
 | 环境正义量化（低收入社区系统性更差？）| ✗ | ✗ | ✗ | ✗ | ✅ |
 | 消费者可读报告 | 部分 | ✗ | ✗ | ✗ | ✅ |
@@ -150,10 +150,48 @@ GET /map?contaminant=lead&date_range=2024-2025   → 地图热力数据
 
 **核心问题**：2025年1月 Palisades + Eaton 大火对 LA 饮用水质量的因果影响是多少？
 
-- 方法：DiD（处理组 vs 对照组）+ ITS（时序断点）双重验证
-- 处理组：火灾边界内供水系统（已获取 GeoJSON）
-- 对照组：地理相近但未受灾的供水系统
-- 关键污染物：苯、三卤甲烷（THMs）、铅、砷、浊度
+#### 两条污染路径（机制不同，检测方法也不同）
+
+**路径 A：水源污染**（常规认知）
+```
+野火 → 灰烬/焦土径流 → 水库/地表水源 → 处理厂进水变差
+```
+处理厂加强过滤可应对，影响相对短期。
+
+**路径 B：管网内部污染**（更隐蔽、影响更持久）
+```
+野火高温 → 管道外壁 PVC/HDPE 塑料涂层热解
+         → 释放苯（benzene）、苯乙烯、氯乙烯等 VOC
+         → 渗入管内水体 → 出龙头时仍超标（处理厂检测不到）
+```
+关键特点：
+- 火灭之后**数月仍在持续释放**（管道缓慢降解）
+- 污染发生在配水末端，**处理厂无法截获**
+- 2018年 Paradise（Camp Fire）已有记录：EPA 检出居民家中苯浓度高达 40,000 ppb（MCL 为 5 ppb）
+
+#### 2025年受影响的供水系统（空间分析确认）
+
+经 GeoJSON 空间叠加分析，11个供水系统服务区与2025年野火边界直接重叠：
+
+| 火灾 | 供水系统 | PWSID |
+|------|---------|-------|
+| **Palisades Fire**（23,449 acres）| LADWP | CA1910067 |
+| | Las Virgenes MWD | CA1910225 |
+| | LA CWWD 29 & 80-Malibu | CA1910204 |
+| **Eaton Fire**（14,056 acres）| Pasadena Water and Power | CA1910124 |
+| | City of Arcadia | CA1910003 |
+| | Monrovia Water Dept. | CA1910090 |
+| | Sierra Madre Water Dept. | CA1910148 |
+| | Kinneloa Irrigation Dist. | CA1910035 |
+| | Lincoln Avenue Water Co. | CA1910063 |
+| | Las Flores Water Co. | CA1910061 |
+| | Rubio Canon Land & Water Assoc. | CA1910140 |
+
+#### 分析方案
+
+- **Step 1（SDWIS 违规记录）**：抓取 CA DDW 2025年1月后11个受灾系统的新增违规记录，直接验证野火后管网污染
+- **Step 2（EPA UCMR5 数据）**：2023-2025年 LADWP、Pasadena Water & Power 等大系统强制检测 benzene/VOC，做真正的野火前后 ITS 对比
+- **识别策略**：ITS 断点 = 2025-01-07（点火日）；处理组 = 上述11个系统；对照组 = LA 其余 260+ 个系统
 - 控制变量：NOAA 气候数据（排除季节/干旱干扰）
 - **深度扩展**：中介分析（Mediation Analysis）打通完整机制链——野火 → PM2.5 飙升（AQS）→ 酸性沉降 → 管道腐蚀 → 铅/铜溶出（WQP），量化 AQS 作为中介变量的贡献比例
 
@@ -176,11 +214,64 @@ GET /map?contaminant=lead&date_range=2024-2025   → 地图热力数据
 
 ### 议题四：供水系统风险评分 + 污染物级根因
 
-**核心问题**：LA County 200+ 供水系统中，谁是系统性高风险？各污染物的根因是否不同？
+**核心问题**：LA County 273个供水系统中，谁是系统性高风险？各系统水质差的主因是什么？
 
-- 方法：综合评分模型 + 分污染物 XGBoost + SHAP
-- 数据：EWG 200+ JSON + CA SAFER violations + CalEnviroScreen + Census + TRI 设施临近度
-- **深度扩展**：针对苯、铅、THMs、硝酸盐分别建模，每种污染物输出独立的 SHAP 根因排序——用户能看到"我家铅高"和"我家 THMs 高"的根因是完全不同的特征驱动的
+- 方法：**Ridge 线性回归 + 标准化系数贡献度分解**（非 SHAP，是线性贡献分解）
+- 贡献度定义：`contribution_i = β_i × (x_i - μ_i) / σ_i`，即该特征使该系统评分偏离全县均值多少分
+- 数据：EWG 273个系统 + CalEnviroScreen + Census（poverty_pct）+ TRI/Superfund/GeoTracker 设施密度 + PFAS + 学校铅含量 + 管网处理工艺
+- **当前模型结果**（209个有完整数据的系统）：CV R²=0.534，top 驱动因素：PFAS 超标倍数（+130.4）、铅暴露风险评分（-11.5）、贫困率（-11.2，负系数 → 控制其他变量后低收入 ≠ 水质更差，支持污染不是贫困成因的假设）
+- **19个特征**：TRI工业密度、Superfund密度、农药密度、GeoTracker密度、学校铅含量最大值、进口水/地下水标记、地下水砷铅硝酸盐TDS、PFAS超标倍数、铅风险评分、住房负担、高级处理工艺、软化处理、处理步骤数、铅管占比、**贫困率**
+- **深度扩展**：针对苯、铅、THMs、硝酸盐分别建模，每种污染物输出独立根因排序
+
+---
+
+## 水质相关研究议题总览
+
+### 正在做
+
+| 议题 | 方法 | 数据状态 |
+|------|------|---------|
+| 野火→水源污染（灰烬径流）| ITS / DiD | ✅ fires.geojson + WQP 时序 |
+| 野火→管网内部污染（苯/VOC）| ITS（断点=2025-01-07）| 🔄 需补 SDWIS 2025违规 + UCMR5 |
+| 供水系统根因分析（Ridge 贡献度分解）| 线性回归 + 标准化系数 | ✅ 273 个系统，CV R²=0.534 |
+| 环境正义（贫困率 vs 水质）| 回归控制 + 空间叠加 | ✅ poverty_pct 已入模型 |
+
+### 现有数据能做、尚未做
+
+| 议题 | 核心问题 | 可用数据 |
+|------|---------|---------|
+| 铅管 RD 分析 | 1986年禁令为断点，前后建造学校铅浓度差异 | schools.geojson + Census建房年代 |
+| 干旱→地下水硝酸盐 | 蒸发浓缩效应，干旱年浓度更高？ | wqp 硝酸盐时序 + NOAA |
+| NPDES 废水排放→下游WQP | 排放量月变化 → 下游站点同月水质 | npdes_timeseries.json + WQP |
+| 农药径流→地下水硝酸盐 | 施用地块缓冲区回归（0-1km vs 1-3km）| pesticide.geojson + groundwater.geojson |
+| 污染暴露→健康结果 | 水质指数 → 哮喘/肾病率 | ejscreen + cdc_places |
+
+### 有意思但需补数据
+
+| 议题 | 缺什么 | 数据来源 |
+|------|-------|---------|
+| 水价公平性 | 各供水系统费率（tier rates）| CA Water Boards SAFER 价格数据库 |
+| 水质→房价 | 房产交易价格时序 | Zillow/Redfin API / Zillow Research Data |
+| 水质→出生结果 | 出生体重/早产（ZCTA 粒度）| CA Department of Public Health |
+| 极端降雨→处理厂超负荷 | 每日供水 VOC/浊度检测值 | CA DDW 日报（部分公开）|
+| 热浪→消毒副产品 | 出厂水 THM 时序检测 | CA DDW PFAS/DBP 数据库 |
+
+### 因果方法关系图
+
+```
+观测到相关性
+      ↓
+能找到"准实验"（外生冲击）吗？
+      ↓
+冲击是时间点？→ DiD / ITS（有无对照组的区别）
+冲击是地理边界/阈值？→ RD
+找不到自然实验？→ IV（找只影响X不直接影响Y的工具变量）
+      ↓
+因果链是什么？→ Mediation（总效应 = 直接效应 + 间接效应）
+有空间溢出？→ Spatial Causal（给 DiD/IV 加空间扰动控制）
+```
+
+在本项目中的串联逻辑：**ITS 发现效应 → Mediation 拆路径 → IV 验证外生性 → RD 做稳健性检验**
 
 ---
 
@@ -258,7 +349,7 @@ GET /map?contaminant=lead&date_range=2024-2025   → 地图热力数据
 ├── EPA AQS                   → 33,827 条野火前后空气质量日均值
 ├── CA GeoTracker             → 14,379 个 LUST/UST 污染清理地点
 ├── CalEnviroScreen 4.0       → 2,343 个 Tract 综合环境负担指标
-├── 水系服务区边界（GIS）      → 213 个供水系统地理边界多边形
+├── 水系服务区边界（GIS）      → 273 个供水系统地理边界多边形（213原始 + 60个Census地理编码1km缓冲区）
 ├── LA Open Data              → 本地水质检测记录
 ├── CA 学校铅水采样（DDW）     → 5,979 条 LA County 学校铅采样记录
 ├── USGS NWIS 水文站          → 11,115 个 LA County 水文/水质站点
@@ -422,7 +513,7 @@ cd output && python -m http.server 8000
 | **EPA AQS 空气质量** | `data/raw_data/aqs/` | 33,827 条野火前后日均记录（PM2.5/CO/NO2/Ozone/SO2）+ 年度统计 2020-2025 | 野火→空气→水质因果链中间环节 | `fetch_all.py aqs`（需 `AQS_EMAIL` + `AQS_KEY`）|
 | **CA GeoTracker** | `data/raw_data/geotracker/` | 14,379 个 LA County LUST/UST 污染清理地点（苯/MTBE 等）| 石油衍生物污染根因 | CA Open Data resource `dc042197`（官方 API 被 Cloudflare 拦截，改用 CA Open Data）|
 | **CalEnviroScreen 4.0** | `data/raw_data/ejscreen/` | 2,343 个 LA County Census Tract 综合环境负担指标 | ML 直接特征：PM2.5、Ozone、清理地点临近度、污染负担分、贫困率、哮喘率等 | CA Open Data resource `9a90474a` XLSX（替代 EPA EJScreen，后者网站已下线）|
-| **水系服务区边界（GIS）** | `data/raw_data/water_system_boundaries/` | 213 个 LA County 供水系统地理边界多边形 | 空间分析核心：Census Tract → 供水系统空间叠加，计算每系统服务的人口/收入分布 | CA Water Board GIS FeatureServer |
+| **水系服务区边界（GIS）** | `data/raw_data/water_system_boundaries/` | 273 个 LA County 供水系统地理边界多边形（213原始 + 60个地理编码1km缓冲区）| 空间分析核心：Census Tract → 供水系统空间叠加，计算每系统服务的人口/收入分布 | CA Water Board GIS FeatureServer + Census Geocoder |
 | **CA 学校铅水采样** | `data/raw_data/school_lead/` | 5,979 条 LA County 学校铅采样记录（含超标标记、整改状态）| 铅污染根因验证；学校 PWS ID 可关联供水系统 | CA Open Data resource `5ebb2d68` |
 
 ---
@@ -485,7 +576,8 @@ data/raw_data/
 │                                       #     Groundwater Threats、Pollution Burden、
 │                                       #     Asthma、Low Birth Weight、Poverty、Housing Burden 等
 ├── water_system_boundaries/
-│   └── la_water_system_boundaries.geojson  # 213 个 LA County 供水系统服务区地理边界
+│   └── la_water_system_boundaries.geojson  # 273 个 LA County 供水系统服务区地理边界
+│                                           # （213原始多边形 + 60个地理编码后的1km缓冲区）
 │                                           # 来源：CA Water Board GIS FeatureServer
 │                                           # 用途：Census Tract → 供水系统空间叠加的关键桥梁
 ├── school_lead/

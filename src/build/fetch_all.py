@@ -34,6 +34,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 
@@ -843,23 +844,100 @@ def fetch_epa_tri():
     print(f"  ✓ tri_facilities.json — {len(all_facilities)} 个工业设施")
     time.sleep(1)
 
-    # 获取排放量数据（EPA Envirofacts TRI_BASIC_DATA 表）
+    # 获取排放量数据
+    # 正确表名：TRI_REPORTING_FORM（含 doc_ctrl_num）+ TRI_RELEASE_QTY（含排放量）
+    # 原用的 TRI_BASIC_DATA 表已不存在
     print("  获取 TRI 排放量数据（2020-2024）...")
-    all_releases = []
+    la_facility_ids = {fac["tri_facility_id"] for fac in all_facilities}
+
+    # Step 1: 分页拉取 TRI_REPORTING_FORM，过滤出 LA 设施的 doc_ctrl_num
+    doc_ctrl_map = {}  # doc_ctrl_num -> 元数据
     for year in range(2020, 2025):
-        r = requests.get(
-            f"https://data.epa.gov/efservice/TRI_BASIC_DATA"
-            f"/REPORTING_YEAR/{year}/STATE_ABBR/CA/COUNTY/LOS%20ANGELES"
-            f"/ROWS/0:5000/JSON",
-            timeout=60
-        )
-        if r.status_code == 200:
+        year_count = 0
+        for offset in range(0, 500_000, 1000):
+            r = requests.get(
+                f"https://data.epa.gov/efservice/TRI_REPORTING_FORM"
+                f"/REPORTING_YEAR/{year}/ROWS/{offset}:{offset+1000}/JSON",
+                timeout=60
+            )
+            if r.status_code != 200:
+                break
             batch = r.json()
-            all_releases.extend(batch)
-            print(f"    {year}: {len(batch)} 条排放记录")
-        else:
-            print(f"    {year}: ✗ {r.status_code}")
-        time.sleep(0.5)
+            if not batch or isinstance(batch, dict):
+                break
+            for row in batch:
+                fid = row.get("tri_facility_id", "")
+                if fid in la_facility_ids:
+                    dcn = row.get("doc_ctrl_num")
+                    if dcn:
+                        doc_ctrl_map[dcn] = {
+                            "tri_facility_id": fid,
+                            "tri_chem_id":     row.get("tri_chem_id"),
+                            "cas_chem_name":   row.get("cas_chem_name"),
+                            "reporting_year":  year,
+                        }
+                        year_count += 1
+            if len(batch) < 1000:
+                break
+            time.sleep(0.1)
+        print(f"    {year}: {year_count} 条 LA 设施报告表单")
+    print(f"  → 共 {len(doc_ctrl_map)} 个报告单据，开始并发获取排放量...")
+
+    # Step 2: 并发获取每个 doc_ctrl_num 对应的排放量
+    def _fetch_release_qty(dcn):
+        try:
+            r = requests.get(
+                f"https://data.epa.gov/efservice/TRI_RELEASE_QTY/DOC_CTRL_NUM/{dcn}/JSON",
+                timeout=30
+            )
+            if r.status_code == 200:
+                return dcn, r.json()
+        except Exception:
+            pass
+        return dcn, []
+
+    release_map = {}
+    done = 0
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        futures = {executor.submit(_fetch_release_qty, dcn): dcn for dcn in doc_ctrl_map}
+        for fut in as_completed(futures):
+            dcn, rows = fut.result()
+            release_map[dcn] = rows if isinstance(rows, list) else []
+            done += 1
+            if done % 500 == 0:
+                print(f"    {done}/{len(doc_ctrl_map)} 完成...")
+
+    # 合并：报告元数据 + 各介质排放量
+    all_releases = []
+    for dcn, meta in doc_ctrl_map.items():
+        total_air = total_water = total_land = total_all = 0.0
+        media_breakdown = []
+        for row in release_map.get(dcn, []):
+            qty = row.get("total_release")
+            if qty is None:
+                continue
+            try:
+                qty = float(qty)
+            except (ValueError, TypeError):
+                continue
+            medium = (row.get("environmental_medium") or "").upper()
+            total_all += qty
+            if "AIR" in medium:
+                total_air += qty
+            elif "WATER" in medium or "STREAM" in medium:
+                total_water += qty
+            elif "LAND" in medium or "SOIL" in medium or "GROUND" in medium:
+                total_land += qty
+            media_breakdown.append({"medium": medium, "qty_lbs": qty})
+        all_releases.append({
+            **meta,
+            "doc_ctrl_num": dcn,
+            "total_lbs":    total_all,
+            "air_lbs":      total_air,
+            "water_lbs":    total_water,
+            "land_lbs":     total_land,
+            "media_breakdown": media_breakdown,
+        })
 
     with open(os.path.join(out_dir, "tri_releases.json"), "w") as f:
         json.dump(all_releases, f, indent=2)
@@ -1387,7 +1465,63 @@ def fetch_cdpr_pesticides():
 
 
 # ══════════════════════════════════════════════════════════════
-# 22. NPDES 排放监测值（EPA ECHO）
+# 22. EPA SDWIS 水源类型（per-system primary_source_code）
+# ══════════════════════════════════════════════════════════════
+def fetch_sdwis_source_type():
+    """逐个查询每个供水系统的 primary_source_code，输出 data/raw_data/sdwis/source_type.csv"""
+    import csv
+    out_dir = os.path.join(BASE_DIR, "sdwis")
+    os.makedirs(out_dir, exist_ok=True)
+
+    feat_path = os.path.join(os.path.dirname(BASE_DIR), "output", "data", "system_features.csv")
+    if not os.path.exists(feat_path):
+        print(f"  ⚠ 未找到 {feat_path}，请先运行 01_build_features.py")
+        return
+
+    import pandas as pd
+    df = pd.read_csv(feat_path)
+    pwsids = df["pwsid"].tolist()
+    print(f"  需要查询 {len(pwsids)} 个供水系统水源类型...")
+
+    records, failed = [], []
+    for i, pwsid in enumerate(pwsids):
+        url = f"https://data.epa.gov/efservice/WATER_SYSTEM/PWSID/{pwsid}/JSON"
+        try:
+            r = requests.get(url, timeout=10)
+            if r.status_code == 200:
+                data = r.json()[0]
+                records.append({
+                    "pwsid":               pwsid,
+                    "gw_sw_code":          data.get("gw_sw_code", ""),
+                    "primary_source_code": data.get("primary_source_code", ""),
+                })
+            else:
+                failed.append(pwsid)
+            if (i + 1) % 20 == 0:
+                print(f"    {i+1}/{len(pwsids)} ...")
+            time.sleep(0.15)
+        except Exception as e:
+            print(f"    ⚠ {pwsid} 失败: {e}")
+            failed.append(pwsid)
+            time.sleep(0.5)
+
+    label_map = {
+        "GW": "地下水", "SW": "地表水", "GU": "受影响地下水",
+        "GWP": "购买地下水", "SWP": "购买地表水（进口）", "": "未知",
+    }
+    result = pd.DataFrame(records)
+    result["source_label"] = result["primary_source_code"].map(label_map).fillna("其他")
+
+    out_path = os.path.join(out_dir, "source_type.csv")
+    result.to_csv(out_path, index=False)
+    print(f"  ✓ {out_path}  ({len(result)} 条)")
+    print(result["primary_source_code"].value_counts().to_string())
+    if failed:
+        print(f"  ⚠ 失败 {len(failed)} 个：{failed}")
+
+
+# ══════════════════════════════════════════════════════════════
+# 23. NPDES 排放监测值（EPA ECHO）
 # ══════════════════════════════════════════════════════════════
 def fetch_npdes():
     out_dir = os.path.join(BASE_DIR, "npdes")
@@ -1504,12 +1638,13 @@ SOURCES = {
     "hab":       ("CA Water Board 有害藻华事件（HAB）",              fetch_hab),
     "cdpr":      ("CDPR 农药使用报告（LA County）",                  fetch_cdpr_pesticides),
     "npdes":     ("EPA ECHO NPDES 废水排放监测值",                   fetch_npdes),
+    "sdwis_src": ("EPA SDWIS 水源类型（per-system primary_source_code）", fetch_sdwis_source_type),
 }
 
 DEFAULT_ORDER = ["wqp", "usgs", "usgs_meas", "ca", "la", "epa_echo", "epa_sdwis",
                  "ewg", "ladwp", "census", "noaa", "fire",
                  "cdc", "tri", "aqs", "geotracker", "ejscreen",
-                 "beach", "hab", "cdpr", "npdes"]
+                 "beach", "hab", "cdpr", "npdes", "sdwis_src"]
 
 if __name__ == "__main__":
     args = sys.argv[1:]

@@ -92,18 +92,31 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
   position:absolute; top:14px; right:14px; width:290px; z-index:22;
   background:#fff; border:1px solid #ddd; border-radius:3px;
   box-shadow:0 4px 20px rgba(0,0,0,0.15); display:block; overflow:hidden;
+  max-height:88vh; display:flex; flex-direction:column;
 }
 #info-header {
   background:var(--dark); color:#fff; padding:9px 32px 9px 14px;
   font-family:var(--sans); font-size:9px; letter-spacing:2px;
-  text-transform:uppercase; position:relative;
+  text-transform:uppercase; position:relative; flex-shrink:0;
 }
 #info-close {
   position:absolute; top:7px; right:11px; color:#aaa;
   cursor:pointer; font-size:17px; line-height:1; font-family:var(--sans);
 }
 #info-close:hover { color:#fff; }
-#info-body { padding:14px 16px 16px; }
+#info-body { padding:14px 16px 16px; overflow-y:auto; flex:1; }
+
+/* EWG legend */
+#ewg-legend {
+  position:absolute; bottom:36px; right:14px; z-index:21;
+  background:rgba(255,255,255,0.93); border:1px solid #ddd; border-radius:3px;
+  padding:8px 10px; font-family:Arial,sans-serif; font-size:10px;
+  box-shadow:0 2px 8px rgba(0,0,0,0.12); display:none;
+}
+#ewg-legend .leg-title { font-weight:bold; letter-spacing:1px; text-transform:uppercase; color:#444; margin-bottom:5px; }
+#ewg-legend .leg-bar { display:flex; align-items:center; gap:6px; margin:2px 0; }
+#ewg-legend .leg-swatch { width:16px; height:10px; border-radius:2px; flex-shrink:0; }
+#ewg-legend .leg-lbl { color:#555; }
 #info-name {
   font-family:var(--palatino); font-size:15px; font-weight:bold;
   color:var(--dark); margin-bottom:2px; line-height:1.35;
@@ -265,8 +278,8 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
       <div class="group-label">供水基础设施</div>
       <div class="layer-item on" onclick="tog(this,'ws-fill','ws-line')">
         <div class="layer-item-left">
-          <span class="l-line" style="background:#555555"></span>
-          <span>供水系统边界</span>
+          <span class="l-line" style="background:linear-gradient(to right,#27ae60,#e67e22,#c0392b)"></span>
+          <span>供水系统 EWG 污染评分</span>
         </div><div class="sw"></div>
       </div>
     </div>
@@ -372,23 +385,35 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 <!-- Info panel -->
 <div id="info-panel">
   <div id="info-header">
-    Water System Profile
+    供水系统档案
     <span id="info-close" onclick="showLaOverview()">&times;</span>
   </div>
   <div id="info-body">
-    <div id="info-name">Los Angeles County</div>
-    <div id="info-sub">212 water systems · Public &amp; private utilities</div>
+    <div id="info-name">洛杉矶县</div>
+    <div id="info-sub">212 个供水系统 · 公营与私营水务</div>
     <div id="info-stats">
-      <div class="s-row"><span class="s-lbl">Population served</span><span class="s-val">14.0M</span></div>
-      <div class="s-row"><span class="s-lbl">Service connections</span><span class="s-val">2,108,870</span></div>
-      <div class="s-row"><span class="s-lbl">Total violations on record</span><span class="s-val" style="color:#c0392b">197</span></div>
-      <div class="s-row"><span class="s-lbl">High / Critical risk systems</span><span class="s-val" style="color:#e67e22">85 / 212</span></div>
-      <div class="s-row"><span class="s-lbl">Avg CalEnviroScreen pct.</span><span class="s-val">67th</span></div>
-      <div class="s-row"><span class="s-lbl">Avg poverty rate</span><span class="s-val">35.9%</span></div>
+      <div class="s-row"><span class="s-lbl">服务人口</span><span class="s-val">1,400 万</span></div>
+      <div class="s-row"><span class="s-lbl">服务连接数</span><span class="s-val">2,108,870</span></div>
+      <div class="s-row"><span class="s-lbl">累计违规次数</span><span class="s-val" style="color:#c0392b">197</span></div>
+      <div class="s-row"><span class="s-lbl">高风险 / 严重风险系统</span><span class="s-val" style="color:#e67e22">85 / 212</span></div>
+      <div class="s-row"><span class="s-lbl">平均 CalEnviroScreen 百分位</span><span class="s-val">第 67 百分位</span></div>
+      <div class="s-row"><span class="s-lbl">平均贫困率</span><span class="s-val">35.9%</span></div>
     </div>
-    <div id="info-risk" style="background:#e67e2222;color:#e67e22;border:1px solid #e67e2255;margin-top:10px;padding:6px 10px;text-align:center;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;border-radius:3px;">⚠ 40% of systems rated High or Critical risk</div>
-    <div id="info-narr" style="margin-top:10px;font-family:'Palatino Linotype',serif;font-size:12.5px;color:#555;line-height:1.65;font-style:italic;">Click on a water system boundary to view individual system details.</div>
+    <div id="info-risk" style="background:#e67e2222;color:#e67e22;border:1px solid #e67e2255;margin-top:10px;padding:6px 10px;text-align:center;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;border-radius:3px;">⚠ 40% 的供水系统评级为高风险或严重风险</div>
+    <div id="info-narr" style="margin-top:10px;font-family:'Palatino Linotype',serif;font-size:12.5px;color:#555;line-height:1.65;font-style:italic;">点击地图上的供水系统边界查看详细档案。</div>
+    <div id="info-shap" style="display:none"></div>
   </div>
+</div>
+
+<!-- EWG Score Legend -->
+<div id="ewg-legend">
+  <div class="leg-title">EWG 污染评分</div>
+  <div class="leg-bar"><div class="leg-swatch" style="background:#27ae60"></div><span class="leg-lbl">≤ 50× 健康标准</span></div>
+  <div class="leg-bar"><div class="leg-swatch" style="background:#f1c40f"></div><span class="leg-lbl">50–150×</span></div>
+  <div class="leg-bar"><div class="leg-swatch" style="background:#e67e22"></div><span class="leg-lbl">150–300×</span></div>
+  <div class="leg-bar"><div class="leg-swatch" style="background:#c0392b"></div><span class="leg-lbl">300–500×</span></div>
+  <div class="leg-bar"><div class="leg-swatch" style="background:#7b0000"></div><span class="leg-lbl">&gt; 500× 严重超标</span></div>
+  <div class="leg-bar" style="margin-top:4px"><div class="leg-swatch" style="background:#cccccc"></div><span class="leg-lbl">无数据</span></div>
 </div>
 
 <!-- Time slider (WQP, hidden) -->
@@ -504,6 +529,11 @@ fetch('data/system_panel.json').then(r=>r.text()).then(t=>{
   sysData = JSON.parse(t.replace(/\bNaN\b/g,'null'));
 });
 
+let rootcauseData = {};
+fetch('data/system_rootcause.json').then(r=>r.json()).then(d=>{
+  rootcauseData = d;
+}).catch(()=>{});
+
 function fmt(v,sfx=''){
   if(v==null) return '—';
   if(typeof v==='number'){
@@ -515,20 +545,21 @@ function fmt(v,sfx=''){
 }
 
 function showLaOverview(){
-  document.getElementById('info-name').textContent='Los Angeles County';
+  document.getElementById('info-name').textContent='洛杉矶县';
   document.getElementById('info-name').removeAttribute('style');
-  document.getElementById('info-sub').textContent='212 water systems · Public & private utilities';
+  document.getElementById('info-sub').textContent='212 个供水系统 · 公营与私营水务';
   document.getElementById('info-stats').innerHTML=`
-    <div class="s-row"><span class="s-lbl">Population served</span><span class="s-val">14.0M</span></div>
-    <div class="s-row"><span class="s-lbl">Service connections</span><span class="s-val">2,108,870</span></div>
-    <div class="s-row"><span class="s-lbl">Total violations on record</span><span class="s-val" style="color:#c0392b">197</span></div>
-    <div class="s-row"><span class="s-lbl">High / Critical risk systems</span><span class="s-val" style="color:#e67e22">85 / 212</span></div>
-    <div class="s-row"><span class="s-lbl">Avg CalEnviroScreen pct.</span><span class="s-val">67th</span></div>
-    <div class="s-row"><span class="s-lbl">Avg poverty rate</span><span class="s-val">35.9%</span></div>`;
+    <div class="s-row"><span class="s-lbl">服务人口</span><span class="s-val">1,400 万</span></div>
+    <div class="s-row"><span class="s-lbl">服务连接数</span><span class="s-val">2,108,870</span></div>
+    <div class="s-row"><span class="s-lbl">累计违规次数</span><span class="s-val" style="color:#c0392b">197</span></div>
+    <div class="s-row"><span class="s-lbl">高风险 / 严重风险系统</span><span class="s-val" style="color:#e67e22">85 / 212</span></div>
+    <div class="s-row"><span class="s-lbl">平均 CalEnviroScreen 百分位</span><span class="s-val">第 67 百分位</span></div>
+    <div class="s-row"><span class="s-lbl">平均贫困率</span><span class="s-val">35.9%</span></div>`;
   const re=document.getElementById('info-risk');
-  re.textContent='⚠ 40% of systems rated High or Critical risk';
+  re.textContent='⚠ 40% 的供水系统评级为高风险或严重风险';
   re.style='background:#e67e2222;color:#e67e22;border:1px solid #e67e2255;margin-top:10px;padding:6px 10px;text-align:center;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;border-radius:3px;';
-  document.getElementById('info-narr').textContent='Click on a water system boundary to view individual system details.';
+  document.getElementById('info-narr').textContent='点击地图上的供水系统边界查看详细档案。';
+  document.getElementById('info-shap').style.display='none';
   document.getElementById('info-panel').style.display='block';
 }
 
@@ -537,33 +568,127 @@ function showPanel(props){
   const name=d.name||props.WATER_SYSTEM_NAME||id||'—';
   const city=d.city||'—';
   const ot=(d.owner_type||'').trim();
-  const owner=ot==='L'?'Public utility':ot==='P'?'Private utility':'Other';
-  const viols=d.violations??'—';
-  const vc=(typeof viols==='number'&&viols>0)?'#c0392b':'#27ae60';
+  const owner=ot==='L'?'公营水务':ot==='P'?'私营水务':'其他';
+  // 从 rootcauseData 取检出超标污染物数（比 violations 字段更准确）
+  const rc_sys_pre=rootcauseData&&rootcauseData.system&&rootcauseData.system[id];
+  const nContam=rc_sys_pre&&rc_sys_pre.n_contaminants!=null?rc_sys_pre.n_contaminants:'—';
+  const vc=(typeof nContam==='number'&&nContam>0)?'#c0392b':'#27ae60';
   const ces=d.ces_score!=null?d.ces_score.toFixed(1):'—';
   const pct=d.ces_pct!=null?d.ces_pct.toFixed(0):'—';
   const pov=d.poverty!=null?d.poverty.toFixed(1)+'%':'—';
   const ast=d.asthma!=null?d.asthma.toFixed(1):'—';
   const risk=d.risk||'—';
+  const riskZh={Low:'低',Moderate:'中',High:'高',Critical:'严重'}[risk]||risk;
   const rc={Low:'#27ae60',Moderate:'#f39c12',High:'#e67e22',Critical:'#c0392b'}[risk]||'#888';
   const nameEl=document.getElementById('info-name');
   nameEl.textContent=name; nameEl.removeAttribute('style');
   document.getElementById('info-sub').textContent=`${city} · ${owner}`;
   document.getElementById('info-stats').innerHTML=`
-    <div class="s-row"><span class="s-lbl">Population served</span><span class="s-val">${fmt(d.population)}</span></div>
-    <div class="s-row"><span class="s-lbl">Service connections</span><span class="s-val">${fmt(d.connections)}</span></div>
-    <div class="s-row"><span class="s-lbl">Violations on record</span><span class="s-val" style="color:${vc}">${viols}</span></div>
-    <div class="s-row"><span class="s-lbl">CalEnviroScreen</span><span class="s-val">${ces} (${pct}th pct.)</span></div>
-    <div class="s-row"><span class="s-lbl">Poverty rate</span><span class="s-val">${pov}</span></div>
-    <div class="s-row"><span class="s-lbl">Asthma (per 10k)</span><span class="s-val">${ast}</span></div>`;
+    <div class="s-row"><span class="s-lbl">服务人口</span><span class="s-val">${fmt(d.population)}</span></div>
+    <div class="s-row"><span class="s-lbl">服务连接数</span><span class="s-val">${fmt(d.connections)}</span></div>
+    <div class="s-row"><span class="s-lbl">检出超标污染物数</span><span class="s-val" style="color:${vc}">${nContam}${typeof nContam==='number'?' 种':''}</span></div>
+    <div class="s-row"><span class="s-lbl">CalEnviroScreen 评分</span><span class="s-val">${ces}（第 ${pct} 百分位）</span></div>
+    <div class="s-row"><span class="s-lbl">贫困率</span><span class="s-val">${pov}</span></div>
+    <div class="s-row"><span class="s-lbl">哮喘率（每万人）</span><span class="s-val">${ast}</span></div>`;
   const re=document.getElementById('info-risk');
-  re.textContent=`⚠ Risk Level: ${risk}`;
+  re.textContent=`⚠ 风险等级：${riskZh}`;
   re.style=`background:${rc}22;color:${rc};border:1px solid ${rc}55;margin-top:10px;padding:6px 10px;text-align:center;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;border-radius:3px;`;
-  let n=`${name} serves ${fmt(d.population)} people in ${city}. `;
-  if(typeof viols==='number'&&viols>0) n+=`${viols} regulatory violation${viols>1?'s':''} on record. `;
-  if(pct!=='—') n+=`CalEnviroScreen ranks at the ${pct}th percentile statewide. `;
-  if(pov!=='—') n+=`About ${pov} of residents live below the poverty line.`;
-  document.getElementById('info-narr').textContent=n;
+  let n=`${name} 为 ${city} 的 ${fmt(d.population)} 名居民供水。`;
+  if(typeof nContam==='number'&&nContam>0) n+=`共检出 ${nContam} 种超出健康标准的污染物。`;
+  if(pct!=='—') n+=` CalEnviroScreen 综合环境负担位于全州第 ${pct} 百分位。`;
+  if(pov!=='—') n+=` 约 ${pov} 的居民生活在贫困线以下。`;
+  document.getElementById('info-narr').textContent='';
+
+  // ── Root Cause SHAP section ─────────────────────────────────────────
+  const rcEl=document.getElementById('info-shap');
+  const rc_sys=rootcauseData.system&&rootcauseData.system[id];
+  if(rc_sys){
+    const labels=rootcauseData.meta&&rootcauseData.meta.feature_labels||{};
+    const baseVal=rootcauseData.meta&&rootcauseData.meta.base_value||0;
+    const shap=rc_sys.contribution||{};
+    const feats=rc_sys.features||{};
+    const ewgRaw=rc_sys.ewg_score!=null?rc_sys.ewg_score:null;
+    const ewg=ewgRaw!=null?ewgRaw.toFixed(1)+'×':'—';
+    const CONTAM_ZH={
+      'Arsenic':'砷','Arsenic*':'砷',
+      'Lead':'铅','Nitrate':'硝酸盐','Nitrate and nitrite':'硝酸盐/亚硝酸盐',
+      'Uranium':'铀','Chromium (hexavalent)':'六价铬',
+      'Bromodichloromethane':'溴二氯甲烷',
+      'Dibromoacetic acid':'二溴乙酸',
+      'Haloacetic acids (HAA5)':'卤乙酸（HAA5）','Haloacetic acids (HAA5)*':'卤乙酸（HAA5）',
+      'Total trihalomethanes (TTHMs)':'总三卤甲烷',
+      'Radium, combined (-226 and -228)':'镭（综合）',
+      'Perfluorohexane sulfonate (PFHXS)':'全氟己烷磺酸（PFAS）',
+      'Perfluorohexane sulfonate (PFHXS)*':'全氟己烷磺酸（PFAS）',
+    };
+    const worstRaw=rc_sys.worst_contaminant||'';
+    const worst=CONTAM_ZH[worstRaw]||worstRaw;
+    const domLabel=rc_sys.dominant_label||rc_sys.dominant_cause||'—';
+
+    // 偏离量：该系统比全县均值高/低多少
+    const deviation=ewgRaw!=null?ewgRaw-baseVal:null;
+    const devSign=deviation!=null?(deviation>=0?'高于':'低于'):'';
+    const devAbs=deviation!=null?Math.abs(deviation).toFixed(1):'';
+    const devColor=deviation!=null&&deviation>=0?'#c0392b':'#2980b9';
+
+    // ── SHAP 贡献条形图（按|SHAP|排序取前6）──
+    const entries=Object.entries(shap)
+      .sort((a,b)=>Math.abs(b[1])-Math.abs(a[1]))
+      .slice(0,6);
+    const maxAbs=Math.max(...entries.map(e=>Math.abs(e[1])),0.001);
+
+    const bars=entries.map(([feat,val])=>{
+      const lbl=labels[feat]||feat;
+      const pct=(Math.abs(val)/maxAbs*100).toFixed(0);
+      const col=val>0?'#c0392b':'#2980b9';
+      const dir=val>0?'↑ 推高评分':'↓ 拉低评分';
+      return `<div style="margin:4px 0">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:10px;color:#555;margin-bottom:1px">
+          <span>${lbl}</span>
+          <span style="color:${col};font-weight:bold;font-size:10px">${val>0?'+':''}${val.toFixed(1)}</span>
+        </div>
+        <div style="background:#eee;border-radius:2px;height:6px">
+          <div style="width:${pct}%;background:${col};height:6px;border-radius:2px"></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    const pctRows='';
+
+    rcEl.innerHTML=`
+      <div style="margin-top:12px;border-top:1px solid #ddd;padding-top:10px">
+
+        <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:#666;margin-bottom:6px">
+          评分偏离分析
+        </div>
+
+        <div style="font-family:Arial,sans-serif;font-size:11px;color:#333;margin-bottom:4px">
+          EWG 评分：<b style="color:#c0392b">${ewg}</b>
+          ${worst?` · 最严重污染物：<b>${worst}</b>`:''}
+        </div>
+
+        ${deviation!=null?`<div style="font-family:Arial,sans-serif;font-size:11px;margin-bottom:6px;padding:4px 8px;background:#f9f9f9;border-radius:4px;border-left:3px solid ${devColor}">
+          比全县均值（${baseVal.toFixed(0)}×）<b style="color:${devColor}">${devSign} ${devAbs} 分</b>，
+          主因：<b>${domLabel}</b>
+        </div>`:''}
+
+        <div style="font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:#888;margin:8px 0 4px">
+          各因素贡献（线性回归分解，正 = 推高评分，负 = 拉低评分）
+        </div>
+        ${bars}
+        <div style="font-family:Arial,sans-serif;font-size:9px;color:#aaa;margin-top:4px">
+          红色 = 使评分高于全县均值 · 蓝色 = 使评分低于全县均值 · 单位：评分分值
+        </div>
+
+
+
+      </div>`;
+    rcEl.style.display='block';
+  } else {
+    rcEl.innerHTML='';
+    rcEl.style.display='none';
+  }
+
   document.getElementById('info-panel').style.display='block';
 }
 
@@ -1208,14 +1333,42 @@ map.once('style.load', async()=>{
   map.on('mouseenter','fire-fill',()=>map.getCanvas().style.cursor='pointer');
   map.on('mouseleave','fire-fill',()=>map.getCanvas().style.cursor='');
 
-  // ── 1. Water system boundaries ───────────────────────────────────
-  await load('ws','data/water_systems.geojson');
+  // ── 1. Water system boundaries (EWG choropleth) ──────────────────
+  const wsData = await fetch('data/water_systems.geojson').then(r=>r.json());
+  map.addSource('ws',{type:'geojson', data:wsData, promoteId:'SABL_PWSID'});
+
   map.addLayer({id:'ws-fill',type:'fill',source:'ws',
-    paint:{'fill-color':'#555555',
-           'fill-opacity':['case',['boolean',['feature-state','hover'],false],0.10,0.03]}});
+    paint:{
+      'fill-color':['case',
+        ['!=',['feature-state','ewg_score'],null],
+        ['interpolate',['linear'],['feature-state','ewg_score'],
+          0,'#27ae60', 50,'#f1c40f', 150,'#e67e22', 300,'#c0392b', 500,'#7b0000'],
+        '#cccccc'],
+      'fill-opacity':['case',
+        ['boolean',['feature-state','hover'],false], 0.75,
+        ['!=',['feature-state','ewg_score'],null], 0.55,
+        0.08]
+    }});
+
   map.addLayer({id:'ws-line',type:'line',source:'ws',
-    paint:{'line-color':'#555555',
-           'line-width':['case',['boolean',['feature-state','hover'],false],2.5,1.5]}});
+    paint:{
+      'line-color':['case',
+        ['boolean',['feature-state','hover'],false],'#fff',
+        '#888888'],
+      'line-width':['case',['boolean',['feature-state','hover'],false],2.0,0.8],
+      'line-opacity':0.7
+    }});
+
+  // Set EWG feature states from rootcause data
+  fetch('data/system_rootcause.json').then(r=>r.json()).then(rc=>{
+    if(!rc||!rc.system) return;
+    Object.entries(rc.system).forEach(([pwsid,d])=>{
+      map.setFeatureState({source:'ws',id:pwsid},{ewg_score:d.ewg_score,dominant:d.dominant_cause});
+    });
+    document.getElementById('ewg-legend').style.display='block';
+    console.log(`EWG choropleth: ${Object.keys(rc.system).length} systems colored`);
+  }).catch(e=>console.warn('rootcause load failed',e));
+
   let hov=null;
   map.on('mousemove','ws-fill',e=>{
     map.getCanvas().style.cursor='pointer';
