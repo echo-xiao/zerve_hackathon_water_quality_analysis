@@ -1347,7 +1347,7 @@ map.once('style.load', async()=>{
       'fill-opacity':['case',
         ['boolean',['feature-state','hover'],false], 0.75,
         ['!=',['feature-state','ewg_score'],null], 0.55,
-        0.08]
+        0]
     }});
 
   map.addLayer({id:'ws-line',type:'line',source:'ws',
@@ -1356,7 +1356,10 @@ map.once('style.load', async()=>{
         ['boolean',['feature-state','hover'],false],'#fff',
         '#888888'],
       'line-width':['case',['boolean',['feature-state','hover'],false],2.0,0.8],
-      'line-opacity':0.7
+      'line-opacity':['case',
+        ['boolean',['feature-state','hover'],false], 0.9,
+        ['!=',['feature-state','ewg_score'],null], 0.7,
+        0]
     }});
 
   // Set EWG feature states from rootcause data
