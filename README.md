@@ -171,18 +171,47 @@ GET /map?contaminant=lead&date_range=2024-2025
 - **规模**：133,254条检测记录 / 5,660个监测站
 - **关键字段**：`MonitoringLocationIdentifier` `ActivityStartDate` `CharacteristicName`（污染物名，数百种） `ResultMeasureValue` `ResultMeasure/MeasureUnitCode` `ResultStatusIdentifier` `DetectionQuantitationLimitMeasure/MeasureValue`
 - **站点字段**：`MonitoringLocationTypeName`（水源类型） `HUCEightDigitCode`（流域编码） `LatitudeMeasure` `LongitudeMeasure`
+- **潜在洞见**：
+  - `DetectionQuantitationLimitMeasure` 揭示隐藏污染——"未检出"不是"不存在"，是"低于设备检测限"。把所有未检出记录的检测下限可视化，可以发现某些流域的"清洁"记录其实来自精度极差的仪器
+  - `HUCEightDigitCode` 流域聚合后按上下游排列站点，对同一污染物做时序对比，可以看到污染事件在流域里"传播"的时间差，进而识别中间污染源
+  - `ResultStatusIdentifier` 的分布揭示数据生产的政治——对比不同机构在同一地点的 `Rejected` 率，如果某机构的异常高值系统性被标记为拒绝，本身就是一条线索
+  - 多污染物"指纹"聚类比单指标更能反推污染源类型：BTEX 同升→石油泄漏；硝酸盐+磷酸盐同升→农业径流；铅+铜同升→管网腐蚀
+  - 2020–2025 横跨疫情（工业骤降）和2025野火两个天然对照实验，足够做 ITS 分析
+  - 监测站空间密度与社区收入高度相关——所有基于 WQP 的"水质地图"都在结构性低估弱势社区的污染程度
+  - **未被充分挖掘的字段层**：
+    - `HydrologicEvent = "Storm"`（704条）：暴雨期间专项采样，可直接量化"月度采样漏掉了多少"——同站点暴雨 vs 常规样本浓度比值是最直接的污染负荷估算
+    - `HydrologicEvent = "Affected by fire"`（47条，全部为2022年）：2025野火影响尚未被标注，必须用空间叠加而非依赖此字段
+    - `ActivityMediaName = "Soil"`（1,852条）：土壤样本含PCBs、有机氯农药等遗留工业化学品，与地表水浓度对比可估算渗出时间延迟
+    - `ActivityMediaName = "Biological"`（1,855条）：物种计数数据，是水质变化的生物积分指标，敏感物种消失早于化学指标超标
+    - `ResultSampleFractionText`：Dissolved（9,151条）vs Total（4,888条）——溶解态是生物可利用的真实毒性，而现有报告几乎全用 Total，系统性高估或低估健康风险
+    - `ActivityDepthHeightMeasure`（2,599条，深度0.3—695英尺）：垂直剖面数据，表层与底层污染物浓度差异巨大，取水口深度决定了居民实际喝到的水质
+    - 质控样本（3,032条）：Field Replicate 的误差率直接量化每个站点的测量可靠性，但从未被用于数据质量评估
 
 ### CA SAFER 风险评估（饮用水违规）
 - **颗粒度**：供水系统级（每系统一行快照）
 - **时间范围**：最新快照（含 `FAILING_START_DATE` 历史记录）
 - **规模**：204个 LA County 供水系统
 - **关键字段**：`WATER_SYSTEM_NUMBER` `SYSTEM_NAME` `POPULATION` `SERVICE_CONNECTIONS` `FINAL_SAFER_STATUS`（Failing / At-Risk / Not At-Risk 等5类） `CURRENT_FAILING` `PRIMARY_MCL_VIOLATION` `PRIMARY_ANALYTES` `WATER_QUALITY_SCORE` `CALENVIRO_SCREEN_SCORE` `MHI`（中位家庭收入）
+- **潜在洞见**：
+  - `FAILING_START_DATE` 揭示失败持续时长比状态本身更重要——长期 Failing 的系统不是在等待修复，而是被系统性放弃了；与 `MHI` 叠加后会发现持续时间与社区收入强相关
+  - `WATER_QUALITY_SCORE` 高但 `FINAL_SAFER_STATUS` 为 "Not At-Risk" 的系统：水质实际差但综合评级掩盖了问题，评级体系的加权方式值得质疑
+  - `PRIMARY_ANALYTES` 的地理聚集性——同类污染物在空间上聚集往往指向共同的区域性污染源（地质/农业/工业），而非各系统的独立问题
+  - 按 `SERVICE_CONNECTIONS` 分组看水质分布：规模小的系统普遍更差，但规模不是原因，而是决定了系统有没有能力去修复——这是两件不同的事
+  - `CALENVIRO_SCREEN_SCORE` 和 `MHI` 同时存在可以分离两种不平等：是因为穷还是因为周围工业设施多导致水质差？前者需要补贴，后者需要执法，政策含义完全不同
+  - 交叉验证陷阱：系统从 Failing 名单消失不一定是水质改善——用 WQP 实测浓度验证，若浓度未下降则"改善"是虚假的，可能只是监测频率降低
 
 ### CalEnviroScreen 4.0（EJScreen）
 - **颗粒度**：Census Tract
 - **时间范围**：静态快照（v4.0，2021年基准）
 - **规模**：2,343个 LA County Tract
 - **关键字段**：`ces_40_score`（综合环境负担分） `pm25` `ozone` `diesel_pm` `drinking_water` `lead` `pesticides` `tox_release` `cleanup_sites` `groundwater_threats` `asthma` `low_birth_weight` `poverty` `unemployment` `housing_burden`（含各指标百分位数）
+- **潜在洞见**：
+  - `ces_40_score` 是加权合成指数，权重本身是政治决定——找出"污染暴露极高但综合分不高"的 Tract，这些是被合成方式系统性低估的社区（通常因社会经济指标相对好而稀释了污染权重）
+  - `drinking_water` 分项与 WQP/SAFER 实测数据对比：差距最大的 Tract 是 CES 作为政策工具最容易失灵的地方
+  - `asthma` 和 `low_birth_weight` 是累积暴露的滞后信号——`pm25` 已改善但哮喘率还高，说明清洁了环境不等于清洁了身体；滞后效应大小可用 v3.0 vs v4.0 历史版本估算
+  - 各指标百分位解耦后的"异常"Tract 比相关性更有信息量：`lead` 高但 `cleanup_sites` 低 → 铅来源是老管网/油漆而非工业，干预逻辑完全不同
+  - 2021年基准被2025野火打破——受灾 Tract 的实际污染负担已与 CES 分数严重脱节，用 CES 分配野火救灾资源会系统性低估高收入受灾 Tract
+  - `ces_40_score` 百分位是全州相对排名——LA 内部"最好"的 Tract 在全州仍可能处于中等偏差水平，用内部排名做公平性分析会低估整个 LA 相对于农村地区的系统性优势
 
 ### 美国人口普查 ACS 5年估算（US Census ACS）
 - **颗粒度**：Census Tract
@@ -196,6 +225,13 @@ GET /map?contaminant=lead&date_range=2024-2025
 - **规模**：33,827条记录，13个监测站
 - **污染物**：PM2.5、CO、NO₂、Ozone、SO₂
 - **关键字段**：`date_local` `arithmetic_mean` `first_max_value` `aqi` `parameter` `units_of_measure` `latitude` `longitude` `local_site_name`
+- **潜在洞见**：
+  - `arithmetic_mean` vs `first_max_value` 的分裂：日均值低不代表安全，峰值才是哮喘患者的真实风险——能区分"稳定性污染"和"爆发性污染"
+  - 13个站点覆盖整个 LA County，空间插值不是测量而是猜测；监测站集中在易达地区，工业走廊和东 LA 低收入社区在监测盲区
+  - 野火时间窗口从 2024-10 开始有基准期，2025-01-07 点火——CO 升高说明不完全燃烧，NO₂ 升高说明建筑燃烧，SO₂ 升高说明工业设施被点燃；五种污染物组合能识别野火烧到了什么
+  - `aqi` 与 `arithmetic_mean` 换算非线性——健康风险对应浓度，不对应 AQI 数字，用 `arithmetic_mean` 做健康分析更准确
+  - 野火烟雾特征：PM2.5 急升 + CO 升 + Ozone 下降（烟雾阻挡紫外线抑制光化学反应）；只有 PM2.5 升而其他不一致，来源可能是尘暴或工业事故
+  - 没有异常信号的站点有时比有异常信号的站点更值得怀疑——地形可能把烟雾完全引向别处
 
 ### NOAA 气候数据
 - **颗粒度**：日值（站点级）
@@ -213,23 +249,53 @@ GET /map?contaminant=lead&date_range=2024-2025
 - **规模**：5,115个 LA County 设施
 - **关键字段**：`tri_facility_id` `facility_name` `fac_latitude` `fac_longitude` `parent_co_name` `standardized_parent_company`
 - **注意**：排放量字段（`tri_releases`）因 EPA Envirofacts 接口下线暂缺
+- **潜在洞见**：
+  - 排放量缺失时，设施密度（每平方公里设施数）本身就是有效的 ML 特征——设施存在意味着潜在泄漏、运输事故、挥发排放，这些不会出现在官方申报里
+  - `standardized_parent_company` 聚合后揭示企业网络：少数集团控制大量设施且集中在同几个低收入社区，污染是系统性布局而非分散个体行为
+  - TRI 设施位置与 CalEnviroScreen `tox_release` 指标对比——两者来源不同，差距最大的设施是数据渠道失灵的地方
+  - 与 GeoTracker 500m 空间匹配：TRI 设施附近有清理案例的组合，是历史排放变成地下污染的直接证据链，比自我申报数据更诚实
+  - TRI 只覆盖年排放量超过阈值的大型设施——大量小型设施的累积排放更难管控，用 TRI 密度推断污染风险会系统性漏掉工业走廊边缘地带
+  - 把 TRI 设施位置与卫星 NO₂ 数据空间匹配：若周围实测值远高于历史申报，说明自我报告机制存在系统性低报
 
 ### 加州污染场地追踪系统（GeoTracker）
 - **颗粒度**：污染场地级
 - **时间范围**：1966 — 2026（`BEGIN_DATE`）
 - **规模**：14,379个 LA County 场地
 - **关键字段**：`CASE_TYPE`（LUST/UST/Cleanup Program Site等14类） `STATUS` `BEGIN_DATE` `POTENTIAL_CONTAMINANTS_OF_CONCERN` `DISCHARGE_SOURCE` `CALENVIROSCREEN4_SCORE` `DISADVANTAGED_COMMUNITY` `CALWATER_WATERSHED_NAME`
+- **潜在洞见**：
+  - `BEGIN_DATE` 跨越60年，按十年分组可以看到污染爆发年代对应什么经济事件——污染跟随资本流动，不是随机发生的
+  - `STATUS` 为"已关闭"不等于"已清洁"——关闭标准是"风险可接受"而非"污染物归零"；找出关闭10年以上但地块上方现在是学校/公园/住宅的案例
+  - `CALWATER_WATERSHED_NAME` 连接地下污染和地表水体：把同一流域的 GeoTracker 案例密度与 WQP 地表水检测对比，可以追踪苯/MTBE 从地下渗入地表水的时间延迟
+  - `DISADVANTAGED_COMMUNITY` 直接可做环境正义分析：对比弱势 vs 非弱势社区的案例密度、关闭率、从 BEGIN_DATE 到关闭的平均耗时——关闭更快可能意味着标准更低，关闭更慢意味着资源更少
+  - `DISCHARGE_SOURCE` 和 `POTENTIAL_CONTAMINANTS_OF_CONCERN` 两字段不一致指向填报错误或真正的混合污染，比单字段分析更有价值
+  - 14,379个案例绝大多数是 LUST（地下储油罐泄漏）；把 LUST 密度地图与现有商业数据叠加，找出前加油站地块现在是什么用途（餐厅、日托中心？）
+  - GeoTracker 是"被发现的污染"而非"存在的污染"——GeoTracker 密度低但 CalEnviroScreen `cleanup_sites` 分高的 Tract，是被系统性忽视的污染地带
 
 ### EPA 废水排放许可证系统（NPDES）
 - **颗粒度**：设施级（含月均流量时序）
 - **规模**：1,508个设施（其中86个有月均流量数据）
 - **关键字段**：`CWPName` `SourceID` `FacLat` `FacLon` `CWPActualAverageFlowNmbr`（月均流量MGD） `MasterExternalPermitNmbr` `PercentPeopleOfColor` `FacPopDen`
+- **潜在洞见**：
+  - 86/1,508 的数据覆盖缺口本身是信息——用设施规模、许可证类型、所在流域预测其余1,422个设施的排放量，缺失可以被推断
+  - `CWPActualAverageFlowNmbr` 是月均值，极端事件被平滑——月均流量与 NOAA 月降雨量高度相关的设施是合流制管网（雨污混流），暴雨时直接溢流进河道
+  - `PercentPeopleOfColor` 和 `FacPopDen` 自带环境正义字段：有色人种比例高的社区周边设施违规更多但处罚更少，是执法不平等的直接证据
+  - 月均流量时序 × 下游 WQP 水质时间差：排放量变化往往外生（设备维修、季节性停产），是最干净的因果识别之一
+  - `MasterExternalPermitNmbr` 频繁变更可能意味着违规后以新主体重新注册——"新设施"实际上是旧设施换了法律外壳继续运营
+  - NPDES 是合法排放的证据，不是污染证据——把许可排放量与 WQP 下游实测浓度对比，超出许可量能解释的部分指向存在于数据库之外的非法排放点
 
 ### 加州农药使用记录（CDPR PUR 2023）
 - **颗粒度**：单次施药记录（地块 × 日期 × 化学品）
 - **时间范围**：2023全年
 - **规模**：153,048条记录（9,313条含COMTRS空间坐标）
 - **关键字段**：`chemname` `lbs_chm_used` `acre_treated` `applic_dt` `site_name`（作物/场地类型） `comtrs`（Township-Range-Section空间编码） `product_name` `applic_cnt`
+- **潜在洞见**：
+  - 只有6%的记录（9,313/153,048）有精确空间坐标——哪些化学品空间记录最差？高毒性农药的申报精度往往最低，申报精度和监管压力相关
+  - `lbs_chm_used` / `acre_treated` = 单位面积施药强度，比总量更有意义；强度异常高的地块对应特定病虫害爆发或违规操作，而非仅仅是大农场
+  - `applic_dt` 的季节峰值 × NOAA 降雨数据：LA 降雨集中在冬季，秋季施药后接降雨的"高风险径流窗口"里的施药量占比是关键指标
+  - 同一地块同日施用的化学品组合做关联分析——混合物毒性远超单品，在任何单指标监测里都看不到
+  - `site_name` 里高尔夫球场和城市绿化的单位面积施药量往往高于农田，且紧邻住宅区
+  - 2023年施药强度高的 COMTRS 地块 × 附近地下水站点5年趋势：农药在地下水里半衰期多年，2023年的施药会在未来几年才体现在水质里
+  - CDPR 施药密度低但 CalEnviroScreen `pesticides` 分高的区域，是无法被任何申报系统捕捉的非法/未申报施药地带
 
 ### 美国疾控中心健康数据（CDC PLACES）
 - **颗粒度**：Census Tract
@@ -247,6 +313,13 @@ GET /map?contaminant=lead&date_range=2024-2025
 - **时间范围**：2016 — 2026（`Observation_Date`）
 - **规模**：212个 LA County 藻华事件
 - **关键字段**：`Water_Body_Name` `Observation_Date` `Advisory_Date` `Case_Status` `Bloom_Size` `Water_Body_Type` `Drinking_Water_Source` `Reported_Advisory_Types`
+- **潜在洞见**：
+  - `Observation_Date` 到 `Advisory_Date` 的时间差是响应速度的度量——饮用水源地的响应是否比娱乐水体更快？如果差异不显著，说明监管框架在保护基础设施而不是人
+  - `Bloom_Size` × `Drinking_Water_Source` 的组合是直接健康风险指标——大型藻华发生在饮用水源但只发布娱乐预警，说明监管框架在保护游泳者而不是喝水的人
+  - 10年时序可以验证藻华是否在加速、季节是否在延长——结合 NOAA 气温数据，直接验证气候变化对饮用水安全的影响
+  - `Water_Body_Name` 反复出现的水体有结构性富营养化问题——把这些水体与 CDPR 农药施用数据和 NPDES 排放点做空间溯源
+  - `Case_Status` 关闭速度 × 所在社区收入：关闭快可能意味着标准低，而非水质真正改善
+  - 把 FHAB 水体与 WQP 监测站分布叠加——两个数据库都没有覆盖的水体，藻华风险完全不可见，但可能通过地下水或径流影响下游饮用水源
 
 ### 供水系统边界（CA Water Board GIS）
 - **颗粒度**：供水系统多边形
