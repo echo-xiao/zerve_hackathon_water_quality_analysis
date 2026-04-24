@@ -174,7 +174,7 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 }
 
 /* Chart panels */
-#aqs-chart, #wqp-chart {
+#aqs-chart, #wqp-chart, #ladwp-chart {
   position:absolute; right:16px;
   width:clamp(280px, 28vw, 480px);
   background:rgba(255,255,255,0.96); border:1px solid var(--line);
@@ -183,8 +183,17 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
 }
 #aqs-chart { bottom:16px; }
 #wqp-chart { bottom:16px; }
+#ladwp-chart { bottom:16px; }
 #aqs-chart.visible { display:block; }
 #wqp-chart.visible { display:block; }
+#ladwp-chart.visible { display:block; }
+#ladwp-chart-hdr {
+  font-family:var(--sans); font-size:9px; color:var(--gray);
+  text-transform:uppercase; letter-spacing:1px; margin-bottom:4px;
+  display:flex; justify-content:space-between; align-items:center;
+}
+#ladwp-chart-date { font-family:var(--palatino); font-size:10px; color:var(--dark); font-weight:bold; }
+#ladwp-selector { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:6px; }
 #wqp-chart-hdr {
   font-family:var(--sans); font-size:9px; color:var(--gray);
   text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;
@@ -280,6 +289,12 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
         <div class="layer-item-left">
           <span class="l-line" style="background:linear-gradient(to right,#27ae60,#e67e22,#c0392b)"></span>
           <span>供水系统 EWG 污染评分</span>
+        </div><div class="sw"></div>
+      </div>
+      <div class="layer-item" onclick="togLadwp(this)">
+        <div class="layer-item-left">
+          <span class="l-dot" style="background:#1565C0"></span>
+          <span>LADWP 20年水质趋势 ⏱</span>
         </div><div class="sw"></div>
       </div>
     </div>
@@ -462,6 +477,16 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
   <span id="aqs-display">—</span>
 </div>
 
+<!-- LADWP 20-year trend chart panel -->
+<div id="ladwp-chart">
+  <div id="ladwp-chart-hdr">
+    <span>LADWP 饮用水质 2004–2024</span>
+    <span id="ladwp-chart-date">—</span>
+  </div>
+  <div id="ladwp-selector"></div>
+  <svg id="ladwp-svg" style="display:block;width:100%;height:auto"></svg>
+</div>
+
 <!-- AQS mini chart panel -->
 <div id="aqs-chart">
   <div id="aqs-chart-hdr">
@@ -508,17 +533,17 @@ function tog(el,...ids){
 }
 
 function stackCharts(){
-  const aqs=document.getElementById('aqs-chart');
-  const wqp=document.getElementById('wqp-chart');
-  const aqsOn=aqs.classList.contains('visible');
-  const wqpOn=wqp.classList.contains('visible');
-  if(aqsOn && wqpOn){
-    aqs.style.bottom='16px';
-    wqp.style.bottom=(aqs.offsetHeight+24)+'px';
-  } else {
-    aqs.style.bottom='16px';
-    wqp.style.bottom='16px';
-  }
+  const panels=[
+    document.getElementById('aqs-chart'),
+    document.getElementById('wqp-chart'),
+    document.getElementById('ladwp-chart'),
+  ];
+  let offset=16;
+  panels.forEach(p=>{
+    if(!p) return;
+    p.style.bottom=offset+'px';
+    if(p.classList.contains('visible')) offset+=p.offsetHeight+8;
+  });
 }
 
 function togMonthly(el){
@@ -876,6 +901,134 @@ function showWqpMarkers(on){
     if(map.getSource('wqp-leaders'))
       map.getSource('wqp-leaders').setData({type:'FeatureCollection',features:[]});
   }
+}
+
+// ── LADWP trend chart globals ────────────────────────────────────────
+let ladwpData = null;
+let ladwpContaminant = 'Arsenic';
+const LADWP_COLORS = {
+  'Arsenic':'#c0392b','Nitrate':'#2980b9','Fluoride':'#8e44ad',
+  'Chromium':'#d35400','Bromate':'#16a085','Uranium':'#2c3e50',
+  'Turbidity':'#27ae60','Gross Alpha':'#7f8c8d'
+};
+const LADWP_LABELS = {
+  'Arsenic':'砷','Nitrate':'硝酸盐','Fluoride':'氟化物',
+  'Chromium':'六价铬','Bromate':'溴酸盐','Uranium':'铀',
+  'Turbidity':'浊度','Gross Alpha':'总α放射性'
+};
+
+function togLadwp(el){
+  const on=!el.classList.contains('on');
+  el.classList.toggle('on',on);
+  document.getElementById('ladwp-chart').classList.toggle('visible',on);
+  stackCharts();
+}
+
+function onLadwpContaminant(key){
+  ladwpContaminant=key;
+  document.querySelectorAll('#ladwp-selector .wqp-tag').forEach(t=>{
+    const active=t.dataset.val===key;
+    t.classList.toggle('active',active);
+    if(active){t.style.background=LADWP_COLORS[key];t.style.borderColor=LADWP_COLORS[key];t.style.color='#fff';}
+    else{t.style.background='';t.style.borderColor='';t.style.color='';}
+  });
+  drawLadwpChart();
+}
+
+function drawLadwpChart(){
+  if(!ladwpData) return;
+  const years=Object.keys(ladwpData.data).sort();
+  const mcl=ladwpData.meta.mcl[ladwpContaminant];
+  const vals=years.map(y=>ladwpData.data[y][ladwpContaminant]??null);
+  const color=LADWP_COLORS[ladwpContaminant];
+  const W=400,H=120,PL=38,PR=20,PT=10,PB=20;
+  const w=W-PL-PR, h=H-PT-PB, n=years.length;
+  const allVals=vals.filter(v=>v!=null);
+  if(!allVals.length) return;
+  const maxRaw=Math.max(...allVals,mcl||0);
+  const maxY=maxRaw*1.18;
+  const xOf=i=>PL+i/(n-1)*w;
+  const yOf=v=>PT+h-(v/maxY)*h;
+  const rawStep=maxY/4;
+  const mag=Math.pow(10,Math.floor(Math.log10(rawStep)));
+  const step=Math.ceil(rawStep/mag)*mag;
+  let html='';
+  // grid + Y labels
+  for(let v=0;v<=maxY*1.05;v+=step){
+    const y=yOf(v); if(y<PT-2) break;
+    html+=`<line x1="${PL}" y1="${y.toFixed(1)}" x2="${PL+w}" y2="${y.toFixed(1)}" stroke="#dedad4" stroke-width="0.6"/>`;
+    html+=`<text x="${PL-4}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="8" fill="#aaa" font-family="Arial,sans-serif">${+v.toPrecision(2)}</text>`;
+  }
+  // MCL line
+  if(mcl!=null){
+    const ym=yOf(mcl);
+    if(ym>=PT&&ym<=PT+h){
+      html+=`<line x1="${PL}" y1="${ym.toFixed(1)}" x2="${PL+w}" y2="${ym.toFixed(1)}" stroke="#c0392b" stroke-width="1" stroke-dasharray="4,3" opacity="0.7"/>`;
+      html+=`<text x="${PL+w+3}" y="${(ym+3).toFixed(1)}" font-size="7.5" fill="#c0392b" font-family="Arial,sans-serif" opacity="0.85">MCL</text>`;
+    }
+  }
+  // X year labels every 4 yrs
+  years.forEach((y,i)=>{
+    if(+y%4===0)
+      html+=`<text x="${xOf(i).toFixed(1)}" y="${PT+h+14}" text-anchor="middle" font-size="7.5" fill="#bbb" font-family="Arial,sans-serif">${y}</text>`;
+  });
+  // data line (segments between non-null points)
+  let pathParts=[]; let inPath=false;
+  years.forEach((y,i)=>{
+    if(vals[i]==null){inPath=false;return;}
+    const x=xOf(i),yv=yOf(vals[i]);
+    pathParts.push(inPath?`L${x.toFixed(1)},${yv.toFixed(1)}`:`M${x.toFixed(1)},${yv.toFixed(1)}`);
+    inPath=true;
+  });
+  if(pathParts.length>1)
+    html+=`<path d="${pathParts.join(' ')}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/>`;
+  // dots
+  years.forEach((y,i)=>{
+    if(vals[i]==null) return;
+    html+=`<circle cx="${xOf(i).toFixed(1)}" cy="${yOf(vals[i]).toFixed(1)}" r="2.5" fill="${color}" stroke="#fff" stroke-width="1"/>`;
+  });
+  // hover hit areas (invisible rects per column)
+  years.forEach((y,i)=>{
+    if(vals[i]==null) return;
+    const cx=xOf(i), half=w/(n-1)*0.5;
+    const rx=Math.max(PL,cx-half), rw=Math.min(PL+w,cx+half)-rx;
+    html+=`<rect x="${rx.toFixed(1)}" y="${PT}" width="${rw.toFixed(1)}" height="${h}" fill="transparent" style="cursor:crosshair"
+      onmouseenter="ladwpHover(${i},${vals[i].toPrecision(4)},${xOf(i).toFixed(1)},${yOf(vals[i]).toFixed(1)},'${y}')"
+      onmouseleave="ladwpHoverOut()"/>`;
+  });
+  // hover elements
+  html+=`<line id="ladwp-cursor" x1="0" y1="${PT}" x2="0" y2="${PT+h}" stroke="#555" stroke-width="0.8" stroke-dasharray="3,2" display="none"/>`;
+  html+=`<circle id="ladwp-hover-dot" r="5" fill="${color}" stroke="#fff" stroke-width="1.5" display="none"/>`;
+  html+=`<rect id="ladwp-tip-bg" width="64" height="24" fill="rgba(255,255,255,0.93)" rx="2" stroke="#ddd" stroke-width="0.5" display="none"/>`;
+  html+=`<text id="ladwp-tip-yr" font-size="8" fill="#888" font-family="Arial,sans-serif" display="none"></text>`;
+  html+=`<text id="ladwp-tip-val" font-size="9.5" font-weight="bold" fill="${color}" font-family="Arial,sans-serif" display="none"></text>`;
+  // write SVG
+  const svg=document.getElementById('ladwp-svg');
+  svg.setAttribute('viewBox',`0 0 ${W} ${H}`);
+  svg.innerHTML=html;
+}
+
+function ladwpHover(i,val,cx,cy,yr){
+  const cursor=document.getElementById('ladwp-cursor');
+  const dot=document.getElementById('ladwp-hover-dot');
+  const tipBg=document.getElementById('ladwp-tip-bg');
+  const tipYr=document.getElementById('ladwp-tip-yr');
+  const tipVal=document.getElementById('ladwp-tip-val');
+  if(!cursor) return;
+  cursor.setAttribute('x1',cx);cursor.setAttribute('x2',cx);cursor.removeAttribute('display');
+  dot.setAttribute('cx',cx);dot.setAttribute('cy',cy);dot.removeAttribute('display');
+  const W=400,PL=38,PR=20,tipW=64;
+  const tx=cx+tipW+PR>W?cx-tipW-4:cx+4;
+  const ty=Math.max(8,cy-28);
+  tipBg.setAttribute('x',tx);tipBg.setAttribute('y',ty);tipBg.removeAttribute('display');
+  tipYr.setAttribute('x',tx+4);tipYr.setAttribute('y',ty+10);tipYr.textContent=yr;tipYr.removeAttribute('display');
+  tipVal.setAttribute('x',tx+4);tipVal.setAttribute('y',ty+21);tipVal.textContent=+parseFloat(val).toPrecision(3);tipVal.removeAttribute('display');
+  document.getElementById('ladwp-chart-date').textContent=yr;
+}
+function ladwpHoverOut(){
+  ['ladwp-cursor','ladwp-hover-dot','ladwp-tip-bg','ladwp-tip-yr','ladwp-tip-val']
+    .forEach(id=>{const el=document.getElementById(id);if(el)el.setAttribute('display','none');});
+  document.getElementById('ladwp-chart-date').textContent='—';
 }
 
 const STATION_COLORS = {
@@ -1883,6 +2036,20 @@ map.once('style.load', async()=>{
 
   // aqs-zcta source is 5MB+ — re-apply WQP feature states after map finishes rendering
   map.once('idle', ()=>updateWqpZcta(months[+sl.value]||''));
+
+  // ── LADWP 20-year trend ──────────────────────────────────────────
+  const ladwpText = await fetch('data/ladwp_trend.json').then(r=>r.text());
+  ladwpData = JSON.parse(ladwpText.replace(/\bNaN\b/g,'null'));
+  const ldSel = document.getElementById('ladwp-selector');
+  Object.keys(ladwpData.meta.contaminants).forEach(key=>{
+    const tag=document.createElement('span');
+    tag.className='wqp-tag';
+    tag.textContent=LADWP_LABELS[key]||key;
+    tag.dataset.val=key;
+    tag.addEventListener('click',()=>onLadwpContaminant(key));
+    ldSel.appendChild(tag);
+  });
+  onLadwpContaminant('Arsenic');
 
   // Apply any pending visibility toggles
   Object.entries(pendingToggles).forEach(([id,vis])=>{
