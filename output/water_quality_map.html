@@ -326,24 +326,6 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
           <span>WQP 水质监测 ⏱</span>
         </div><div class="sw"></div>
       </div>
-      <div class="layer-item" onclick="tog(this,'wqp-storm-circle')">
-        <div class="layer-item-left">
-          <span class="l-dot" style="background:#e67e22"></span>
-          <span>WQP 暴雨采样站</span>
-        </div><div class="sw"></div>
-      </div>
-      <div class="layer-item" onclick="tog(this,'wqp-soil-circle')">
-        <div class="layer-item-left">
-          <span class="l-dot" style="background:#8B4513"></span>
-          <span>WQP 土壤污染采样</span>
-        </div><div class="sw"></div>
-      </div>
-      <div class="layer-item" onclick="tog(this,'wqp-bio-circle')">
-        <div class="layer-item-left">
-          <span class="l-dot" style="background:#2e7d32"></span>
-          <span>WQP 生物指标采样</span>
-        </div><div class="sw"></div>
-      </div>
       <div class="layer-item" onclick="tog(this,'pfas-circle')">
         <div class="layer-item-left">
           <span class="l-dot" style="background:#1a6b8a"></span>
@@ -492,6 +474,7 @@ body { font-family:var(--palatino); background:var(--cream); overflow:hidden; }
   </div>
   <div id="ladwp-selector"></div>
   <svg id="ladwp-svg" style="display:block;width:100%;height:auto"></svg>
+  <div id="ladwp-note" style="font-family:Arial,sans-serif;font-size:10.5px;color:#555;line-height:1.6;margin-top:7px;padding-top:7px;border-top:1px solid #eee;"></div>
 </div>
 
 <!-- AQS mini chart panel -->
@@ -922,6 +905,16 @@ const LADWP_LABELS = {
   'Chromium':'六价铬','Bromate':'溴酸盐','Uranium':'铀',
   'Turbidity':'浊度','Gross Alpha':'总α放射性'
 };
+const LADWP_NOTES = {
+  'Arsenic':   '⚠ <b>砷超标持续恶化</b>：圣盖博谷地下水含天然砷。2019年起浓度持续维持在 50 µg/L（MCL 5倍），可能因干旱期加大地下水抽取，使高砷含水层暴露加剧。',
+  'Nitrate':   '📌 <b>硝酸盐接近上限</b>：2015年达到 MCL（10 mg/L）。与农业径流及干旱期浓缩效应有关。整体趋势近年已有改善。',
+  'Fluoride':  '⚠ <b>注意数据质量</b>：2013年（213 µg/L）和2016年（100 µg/L）峰值为 MCL 的 50–100倍，若属实早已触发紧急停水，疑为 PDF 解析误差（表格错行）。正常值应低于 MCL（2 mg/L）。',
+  'Chromium':  '📌 <b>监管干预效果显著</b>：2014年前长期维持在 30–80 µg/L（MCL 3–8倍）。2014年加州颁布全国首个六价铬 MCL（10 µg/L），LADWP 被迫切换水源或上马离子交换处理设施，浓度骤降至合规。2017年后反弹说明合规仍有挑战。',
+  'Bromate':   '📌 <b>臭氧消毒副产品</b>：溴酸盐由臭氧与源水中溴化物反应生成。2011–2012年峰值（50–90 µg/L，MCL 5–9倍），与 LADWP 扩大臭氧消毒规模或科罗拉多水源溴含量升高有关。2023年已降至近低点。',
+  'Uranium':   '📌 <b>干旱加重地下水铀暴露</b>：铀源自自然地质。2015年达到 MCL 上限（20 pCi/L），与同期干旱导致地下水依赖增加一致，地下水铀浓度通常高于地表水。',
+  'Turbidity': '⚠ <b>注意数据质量</b>：2012年峰值 90 NTU 为 MCL（1 NTU）的 90倍，几乎可以确定是 PDF 解析误差。正常情况下 LADWP 出厂水浊度长期低于 0.5 NTU；2015年 10 NTU 可能与旱后暴雨冲刷水库有关。',
+  'Gross Alpha':'⚠ <b>注意数据质量</b>：2014年峰值 226 pCi/L 为 MCL（15 pCi/L）的 15倍，若属实早已触发停水，强烈疑为 PDF 解析误差（跨行或单位错误）。总α放射性来自铀、镭等天然放射性核素。',
+};
 
 function togLadwp(el){
   const on=!el.classList.contains('on');
@@ -939,6 +932,8 @@ function onLadwpContaminant(key){
     else{t.style.background='';t.style.borderColor='';t.style.color='';}
   });
   drawLadwpChart();
+  const noteEl=document.getElementById('ladwp-note');
+  if(noteEl) noteEl.innerHTML=LADWP_NOTES[key]||'';
 }
 
 function drawLadwpChart(){
