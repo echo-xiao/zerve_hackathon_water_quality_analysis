@@ -108,12 +108,24 @@ body{font-family:var(--pal);background:var(--cream);overflow:hidden;}
 .pl-b{height:100%;border-radius:2px;}
 .pl-v{font-family:var(--sans);font-size:8.5px;font-weight:700;color:#555;
   min-width:30px;text-align:right;flex-shrink:0;}
+/* ── Crop toggle button (in left panel) ── */
+#crop-toggle-wrap{border-top:1px solid #f0f0f0;padding:5px 10px 7px;}
+#crop-toggle-btn{
+  display:flex;align-items:center;gap:6px;width:100%;
+  font-family:var(--sans);font-size:9px;padding:5px 8px;
+  border:1px solid #e0e0e0;border-radius:3px;background:#f8f8f8;
+  color:#666;cursor:pointer;text-align:left;transition:all .15s;
+}
+#crop-toggle-btn:hover{background:#f3fbf6;border-color:#aaa;color:var(--dark);}
+#crop-toggle-btn.active{background:var(--dark);color:#fff;border-color:var(--dark);}
+#crop-toggle-btn .ct-dot{width:7px;height:7px;border-radius:50%;background:#aaa;flex-shrink:0;transition:background .15s;}
+#crop-toggle-btn.active .ct-dot{background:#7dbd99;}
 /* ── Right crop panel ── */
 #right{
   position:absolute;top:12px;right:12px;z-index:21;width:170px;
   background:#fff;border:1px solid var(--line);border-radius:4px;
   box-shadow:0 4px 18px rgba(0,0,0,.12);overflow:hidden;
-  display:flex;flex-direction:column;max-height:calc(100vh - 90px);
+  display:none;flex-direction:column;max-height:calc(100vh - 90px);
 }
 #right .rhdr{background:var(--dark);color:#fff;padding:7px 12px;
   font-family:var(--sans);font-size:9px;letter-spacing:2px;text-transform:uppercase;flex-shrink:0;}
@@ -210,9 +222,14 @@ body{font-family:var(--pal);background:var(--cream);overflow:hidden;}
     </div>
     <div id="price-note">绿色=在此水价下仍盈利 红色=亏损（盈亏平衡水价 &lt; 滑块值则盈利）</div>
   </div>
+  <div id="crop-toggle-wrap">
+    <button id="crop-toggle-btn" onclick="toggleCropPanel()">
+      <div class="ct-dot"></div>作物筛选
+    </button>
+  </div>
 </div>
 
-<!-- Right crop filter panel -->
+<!-- Right crop filter panel (hidden by default) -->
 <div id="right">
   <div class="rhdr">作物筛选</div>
   <div class="rhdr-sub">af/ac 强度　|　¢/加仑产值</div>
@@ -706,10 +723,22 @@ map.on('load',()=>{
   document.getElementById('lgd-grad').style.background=PALETTES.overview.grad;
 });
 
+// ── Crop panel toggle ────────────────────────────────────────────────────────
+function toggleCropPanel(){
+  const panel=document.getElementById('right');
+  const btn=document.getElementById('crop-toggle-btn');
+  const open=panel.style.display==='flex';
+  panel.style.display=open?'none':'flex';
+  btn.classList.toggle('active',!open);
+  if(open&&activeCropFilter) applyCropFilter('');
+}
+
 // ── Crop filter — dims states without selected crop ──────────────────────────
 function applyCropFilter(cropName){
   activeCropFilter=cropName||null;
-  // Update button states
+  // Sync toggle button active state
+  document.getElementById('crop-toggle-btn')?.classList.toggle('active',!!cropName||document.getElementById('right').style.display==='flex');
+  // Update crop button states
   document.querySelectorAll('.crop-btn').forEach(b=>
     b.classList.toggle('active',b.dataset.crop===cropName));
   const geo=window._agriGeo;
