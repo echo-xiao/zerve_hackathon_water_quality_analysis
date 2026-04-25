@@ -81,10 +81,6 @@ body{font-family:var(--pal);background:var(--cream);overflow:hidden;}
 .sp-ai-btn:disabled{opacity:.5;cursor:default;}
 .sp-ai-load{font-family:var(--sans);font-size:9px;color:#aaa;margin-top:5px;display:none;}
 .sp-ai-text{font-size:10.5px;line-height:1.7;color:#444;margin-top:7px;display:none;}
-/* ── Crop filter ── */
-#crop-filter{border-top:1px solid #f0f0f0;padding:5px 12px 6px;}
-.cf-hdr{font-family:var(--sans);font-size:7px;color:#aaa;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
-#crop-select{width:100%;font-family:var(--sans);font-size:9px;padding:3px 5px;border:1px solid #e0e0e0;border-radius:3px;background:#f8f8f8;color:#555;cursor:pointer;}
 /* ── Enhanced trend sparkline ── */
 #trend-wrap{margin:6px 0 8px;}
 #trend-label{font-family:var(--sans);font-size:7.5px;color:#aaa;margin-bottom:3px;}
@@ -123,6 +119,36 @@ body{font-family:var(--pal);background:var(--cream);overflow:hidden;}
 .cmode-btn:first-child{border-radius:3px 0 0 3px;}
 .cmode-btn:last-child{border-radius:0 3px 3px 0;}
 .cmode-btn.active{background:var(--dark);color:#fff;border-color:var(--dark);}
+/* ── Right crop panel ── */
+#right{
+  position:absolute;top:12px;right:12px;z-index:21;width:170px;
+  background:#fff;border:1px solid var(--line);border-radius:4px;
+  box-shadow:0 4px 18px rgba(0,0,0,.12);overflow:hidden;
+  display:flex;flex-direction:column;max-height:calc(100vh - 90px);
+}
+#right .rhdr{background:var(--dark);color:#fff;padding:7px 12px;
+  font-family:var(--sans);font-size:9px;letter-spacing:2px;text-transform:uppercase;flex-shrink:0;}
+#right .rhdr-sub{font-family:var(--sans);font-size:7.5px;color:#aaa;
+  padding:3px 12px 5px;border-bottom:1px solid #f0f0f0;flex-shrink:0;}
+#right .clear-btn{
+  font-family:var(--sans);font-size:8px;padding:3px 12px 4px;color:#888;
+  border:none;background:none;cursor:pointer;text-align:left;
+  border-bottom:1px solid #f0f0f0;width:100%;flex-shrink:0;
+}
+#right .clear-btn:hover{color:#d73027;}
+#crop-list{overflow-y:auto;flex:1;padding:3px 0;}
+.crop-btn{
+  display:flex;align-items:center;gap:6px;width:100%;
+  padding:5px 10px;border:none;background:none;cursor:pointer;
+  text-align:left;border-left:3px solid transparent;
+  font-family:var(--sans);font-size:9.5px;color:#444;transition:all .12s;
+}
+.crop-btn:hover{background:#faf8f4;}
+.crop-btn.active{border-left-color:var(--green);background:#f3fbf6;color:var(--dark);font-weight:700;}
+.crop-btn .cb-swatch{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.crop-btn .cb-vals{margin-left:auto;text-align:right;flex-shrink:0;}
+.crop-btn .cb-wi{font-size:7.5px;color:#aaa;display:block;}
+.crop-btn .cb-dpg{font-size:7.5px;color:var(--gold);display:block;}
 /* ── Active mode colors ── */
 .mrow.active[data-mode=county]{border-left-color:#e6550d;background:#fff5ee;}
 /* ── Story card ── */
@@ -207,13 +233,6 @@ body{font-family:var(--pal);background:var(--cream);overflow:hidden;}
       <div class="mrow-dot" style="background:#e6550d"></div>县级灌溉分布
     </div>
   </div>
-  <!-- Crop filter — applies to any mode -->
-  <div id="crop-filter">
-    <div class="cf-hdr">作物筛选（叠加任意视图）</div>
-    <select id="crop-select" onchange="applyCropFilter(this.value)">
-      <option value="">全部作物</option>
-    </select>
-  </div>
   <div id="grad-wrap">
     <div id="lgd-grad"></div>
     <div class="lgd-row"><span id="lgd-lo">低</span><span id="lgd-hi">高（af/ac）</span></div>
@@ -248,6 +267,13 @@ body{font-family:var(--pal);background:var(--cream);overflow:hidden;}
   </div>
 </div>
 
+<!-- Right crop filter panel -->
+<div id="right">
+  <div class="rhdr">作物筛选</div>
+  <div class="rhdr-sub">af/ac 强度　|　¢/加仑产值</div>
+  <button class="clear-btn" onclick="applyCropFilter('')">✕ 清除筛选（显示全部）</button>
+  <div id="crop-list"></div>
+</div>
 
 <!-- Story card -->
 <div id="story">
@@ -904,18 +930,31 @@ map.on('load',()=>{
     showStatePopup(p, agriCrops[p.abbr]||{}, e.lngLat);
   });
 
-  // Build crop filter dropdown
+  // Build right panel crop list
   (function(){
-    const sel=document.getElementById('crop-select');
+    const cl=document.getElementById('crop-list');
     const seen=new Set();
+    // Collect unique crops with color from agriCrops top_crops
+    const cropMeta={};
+    for(const [,info] of Object.entries(agriCrops)){
+      for(const c of (info.top_crops||[])){
+        if(!cropMeta[c.crop]) cropMeta[c.crop]=c.color||'#999';
+      }
+    }
     agriSummary.filter(c=>!SKIP.has(c.crop)&&c.avg_water_int>0)
       .sort((a,b)=>b.avg_water_int-a.avg_water_int)
       .forEach(c=>{
         if(seen.has(c.crop)) return; seen.add(c.crop);
-        const opt=document.createElement('option');
-        opt.value=c.crop;
-        opt.textContent=c.crop+' ('+c.avg_water_int.toFixed(1)+'af/ac)';
-        sel.appendChild(opt);
+        const wi=c.avg_water_int.toFixed(2);
+        const dpg=c.avg_dpg_cents!=null?c.avg_dpg_cents.toFixed(2)+'¢':'—';
+        const col=cropMeta[c.crop]||'#999';
+        const btn=document.createElement('button');
+        btn.className='crop-btn'; btn.dataset.crop=c.crop;
+        btn.innerHTML=`<div class='cb-swatch' style='background:${col}'></div>
+          <span style='flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'>${c.crop}</span>
+          <div class='cb-vals'><span class='cb-wi'>${wi}</span><span class='cb-dpg'>${dpg}</span></div>`;
+        btn.onclick=()=>applyCropFilter(activeCropFilter===c.crop?'':c.crop);
+        cl.appendChild(btn);
       });
   })();
 
@@ -961,26 +1000,25 @@ function applyCountyColors(){
 // ── Crop filter — dims states without selected crop ──────────────────────────
 function applyCropFilter(cropName){
   activeCropFilter=cropName||null;
-  document.getElementById('crop-select').value=cropName||'';
+  // Update button states
+  document.querySelectorAll('.crop-btn').forEach(b=>
+    b.classList.toggle('active',b.dataset.crop===cropName));
   const geo=window._agriGeo;
   if(!geo) return;
   if(!cropName){
-    // Reset opacity, reapply current mode palette
     map.setPaintProperty('agri-fill','fill-opacity',0.82);
     const pal=PALETTES[mode]||PALETTES.overview;
-    applyPalette(pal);
+    if(mode!=='county'&&mode!=='wps') applyPalette(pal);
     return;
   }
   const byState=window._cropByState;
-  // Mark states that have this crop
   const feats=geo.features.map(f=>{
     const hasCrop=byState[f.properties.abbr]?.[cropName]!=null?1:0;
     return {...f,properties:{...f.properties,_has_crop:hasCrop}};
   });
   map.getSource('agri').setData({...geo,features:feats});
-  // Dim states without crop
   map.setPaintProperty('agri-fill','fill-opacity',
-    ['case',['==',['get','_has_crop'],1],0.85,0.12]);
+    ['case',['==',['get','_has_crop'],1],0.85,0.10]);
 }
 
 // ── State popup ───────────────────────────────────────────────────────────────
