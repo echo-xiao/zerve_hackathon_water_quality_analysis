@@ -134,6 +134,13 @@ body{{font-family:var(--pal);background:var(--cream);overflow:hidden;}}
 .sp-ai-btn:disabled{{opacity:.5;cursor:default;}}
 .sp-ai-load{{font-family:var(--sans);font-size:9px;color:#aaa;margin-top:5px;display:none;}}
 .sp-ai-text{{font-size:10.5px;line-height:1.7;color:#444;margin-top:7px;display:none;}}
+.sp-ai-text h2,.sp-ai-text h3,.sp-ai-text h4{{font-family:var(--sans);font-weight:600;color:#222;margin:8px 0 3px;}}
+.sp-ai-text h2{{font-size:12px;}}.sp-ai-text h3{{font-size:11.5px;}}.sp-ai-text h4{{font-size:11px;}}
+.sp-ai-text p{{margin:4px 0;}}
+.sp-ai-text ul{{margin:4px 0 4px 14px;padding:0;list-style:disc;}}
+.sp-ai-text li{{margin:2px 0;}}
+.sp-ai-text strong{{color:#1a1a1a;font-weight:600;}}
+.sp-ai-text em{{color:#555;font-style:italic;}}
 /* ── Enhanced trend sparkline ── */
 #trend-wrap{{margin:6px 0 8px;}}
 #trend-label{{font-family:var(--sans);font-size:7.5px;color:#aaa;margin-bottom:3px;}}
@@ -545,6 +552,22 @@ function onPriceChange(val){{
   buildOvrList('wps');
 }}
 
+// ── Markdown → HTML (lightweight, for Gemini output) ─────────────────────────
+function mdToHtml(md){{
+  const escaped=md.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  return escaped
+    .replace(/^### (.+)$/gm,'<h4>$1</h4>')
+    .replace(/^## (.+)$/gm,'<h3>$1</h3>')
+    .replace(/^# (.+)$/gm,'<h2>$1</h2>')
+    .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g,'<em>$1</em>')
+    .replace(/^[\*\-] (.+)$/gm,'<li>$1</li>')
+    .replace(/(<li>.*<\/li>\\n?)+/g,s=>'<ul>'+s+'</ul>')
+    .replace(/\\n{{2,}}/g,'</p><p>')
+    .replace(/^(?!<[hul])/,'<p>')
+    .replace(/(?<![>])$/,'</p>');
+}}
+
 // ── Gemini AI state summary ───────────────────────────────────────────────────
 const GEMINI_KEY='{gemini_key}';
 async function generateAISummary(){{
@@ -635,7 +658,7 @@ ${{cropDetail||'无作物数据'}}
     );
     const data=await resp.json();
     const text=data?.candidates?.[0]?.content?.parts?.[0]?.text||'分析失败，请重试';
-    if(textEl){{textEl.textContent=text; textEl.style.display='block';}}
+    if(textEl){{textEl.innerHTML=mdToHtml(text); textEl.style.display='block';}}
   }} catch(e){{
     if(textEl){{textEl.textContent='网络错误：'+e.message; textEl.style.display='block';}}
   }}
