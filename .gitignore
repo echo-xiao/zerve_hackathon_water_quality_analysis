@@ -1,6 +1,6 @@
-# Only the final HTML is tracked — everything else is ignored
+# Generated output (contains injected API keys — never commit)
+output/
 data/
-output/data/
 
 # API keys / secrets
 .env

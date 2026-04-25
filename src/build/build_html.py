@@ -2,6 +2,8 @@
 """build_html.py — 生成完整农业用水效率分析地图"""
 
 import json, os
+from dotenv import load_dotenv
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../.env"))
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "../../output/data")
@@ -16,6 +18,10 @@ def jsdump(obj):
 
 def main():
     print("=== build_html.py ===")
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    if not gemini_key:
+        print("  ⚠ GEMINI_API_KEY 未设置，AI 分析按钮将不可用")
+
     geo     = load("agri_state.geojson")
     crops   = load("agri_crops.json")
     summary = load("agri_summary.json")
@@ -540,7 +546,7 @@ function onPriceChange(val){{
 }}
 
 // ── Gemini AI state summary ───────────────────────────────────────────────────
-const GEMINI_KEY='AIzaSyDFt4b7m8csp9EKkzgfJ_BFDpGyTP1XKfQ';
+const GEMINI_KEY='{gemini_key}';
 async function generateAISummary(){{
   if(!_currentStateProps) return;
   const p=_currentStateProps;
