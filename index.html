@@ -113,11 +113,7 @@ body{font-family:var(--pal);background:var(--cream);overflow:hidden;}
 .pl-b{height:100%;border-radius:2px;}
 .pl-v{font-family:var(--sans);font-size:8.5px;font-weight:700;color:#555;
   min-width:30px;text-align:right;flex-shrink:0;}
-/* county controls */
-#county-ctrl{border-top:1px solid #f0f0f0;padding:5px 12px 6px;}
-#county-toggle{display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:3px;}
-#county-toggle input{cursor:pointer;accent-color:var(--dark);}
-#county-toggle label{font-family:var(--sans);font-size:9.5px;color:#666;cursor:pointer;}
+/* county sub-mode buttons */
 #county-mode-row{display:flex;gap:0;}
 .cmode-btn{
   flex:1;font-family:var(--sans);font-size:8px;padding:3px 2px;
@@ -234,16 +230,11 @@ body{font-family:var(--pal);background:var(--cream);overflow:hidden;}
   </div>
   <div id="list-hdr">全国最耗水作物</div>
   <div id="ovr-list"></div>
-  <div id="county-ctrl">
-    <div id="county-toggle">
-      <input type="checkbox" id="show-county" onchange="toggleCounty(this.checked)">
-      <label for="show-county">显示县级灌溉分布</label>
-    </div>
-    <div id="county-mode-row" style="display:none">
-      <button class="cmode-btn active" onclick="setCountyMode('crop')">作物类型</button>
-      <button class="cmode-btn" onclick="setCountyMode('water')">用水总量</button>
-      <button class="cmode-btn" onclick="setCountyMode('opp')">机会成本</button>
-    </div>
+  <!-- county sub-mode buttons — shown when county mode is active -->
+  <div id="county-mode-row" style="display:none;padding:0 12px 6px;">
+    <button class="cmode-btn active" onclick="setCountyMode('crop')">作物类型</button>
+    <button class="cmode-btn" onclick="setCountyMode('water')">用水总量</button>
+    <button class="cmode-btn" onclick="setCountyMode('opp')">机会成本</button>
   </div>
   <!-- Water price slider — shown only in wps mode -->
   <div id="price-ctrl" style="display:none">
@@ -486,7 +477,6 @@ function setMode(m){
     map.setLayoutProperty('agri-line','visibility','none');
     countyVisible=true;
     applyCountyColors();
-    document.getElementById('show-county').checked=true;
     document.getElementById('county-mode-row').style.display='flex';
     buildOvrList('county');
     return;
@@ -938,7 +928,8 @@ function toggleCounty(on){
   const vis=on?'visible':'none';
   ['county-fill','county-line','county-hover'].forEach(id=>map.setLayoutProperty(id,'visibility',vis));
   document.getElementById('county-mode-row').style.display=on?'flex':'none';
-  if(on) applyCountyColors();
+  if(on){applyCountyColors();}
+  else{document.getElementById('county-mode-row').style.display='none';}
 }
 
 function setCountyMode(m){
