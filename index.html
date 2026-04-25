@@ -406,31 +406,76 @@ async function generateAISummary(){
   if(!_currentStateProps) return;
   const p=_currentStateProps;
   const info=agriCrops[p.abbr]||{};
-  const topCrops=(info.top_crops||[]).slice(0,5)
-    .map(c=>`${c.crop}(灌溉强度${(+c.water_int).toFixed(2)}af/ac, ${c.dpg_cents!=null?(+c.dpg_cents).toFixed(2)+'¢':'—'}/加仑)`)
-    .join('；');
 
-  const wi=p.avg_intensity!=null?(+p.avg_intensity).toFixed(2):'—';
-  const dpg=p.avg_dpg_cents!=null?(+p.avg_dpg_cents).toFixed(2):'—';
-  const t=p.trend_pct; const tStr=t!=null?((+t>0?'+':'')+(+t).toFixed(1)+'%（恶化）'):'—';
-  const pt=p.precip_trend_yr; const ptStr=pt!=null?(+pt).toFixed(3)+'"·年（负=变旱）':'无数据';
+  // ── 全国对比基准 ──
+  const allStates=Object.values(agriCrops).filter(v=>v.avg_intensity);
+  const natAvgWI=(allStates.reduce((s,v)=>s+(+v.avg_intensity||0),0)/allStates.length).toFixed(2);
+  const natAvgDPG=(allStates.filter(v=>v.avg_dpg_cents).reduce((s,v)=>s+(+v.avg_dpg_cents||0),0)/allStates.filter(v=>v.avg_dpg_cents).length).toFixed(2);
+  const sortedByWI=Object.entries(agriCrops).filter(([,v])=>v.avg_intensity).sort((a,b)=>(+b[1].avg_intensity||0)-(+a[1].avg_intensity||0));
+  const wiRank=sortedByWI.findIndex(([st])=>st===p.abbr)+1;
+  const sortedByDPG=Object.entries(agriCrops).filter(([,v])=>v.avg_dpg_cents).sort((a,b)=>(+b[1].avg_dpg_cents||0)-(+a[1].avg_dpg_cents||0));
+  const dpgRank=sortedByDPG.findIndex(([st])=>st===p.abbr)+1;
+  const sortedByVuln=Object.entries(agriCrops).filter(([,v])=>{const g=agriGeo.features.find(f=>f.properties.abbr===v);return true;}).map(([st,v])=>{const gp=agriGeo.features.find(f=>f.properties.abbr===st)?.properties||{};return [st,gp.vuln_score||0];}).sort((a,b)=>b[1]-a[1]);
+  const vulnRank=sortedByVuln.findIndex(([st])=>st===p.abbr)+1;
+  const nTotal=allStates.length;
 
-  const prompt=`你是一位专注于美国农业水资源政策的专家分析师。
-请根据以下美国${p.name||p.abbr}州的农业用水数据，生成一段简明的政策建议分析（中文，3-4句话，控制在150字以内）：
+  // ── 三年趋势 ──
+  const i13=(+p.intensity_2013||0).toFixed(2);
+  const i18=(+p.intensity_2018||0).toFixed(2);
+  const i23=(+p.intensity_2023||0).toFixed(2);
+  const pr13=(+p.precip_2013||0).toFixed(1);
+  const pr23=(+p.precip_2023||0).toFixed(1);
+  const trendPct=p.trend_pct!=null?((+p.trend_pct>0?'+':'')+(+p.trend_pct).toFixed(1)+'%'):'—';
 
-核心指标：
-- 平均灌溉强度：${wi} af/ac（全美越高越耗水）
-- 每加仑产值：${dpg}¢（越高越高效）
-- 10年效率趋势：${tStr}
-- 降水趋势：${ptStr}
-- 干旱脆弱性评分：${p.vuln_score!=null?(+p.vuln_score).toFixed(2):'—'}（强度×旱情÷产值）
-- 作物集中度HHI：${p.hhi!=null?(+p.hhi).toFixed(3):'—'}（越高越依赖单一作物）
-- 土壤适宜性：${p.soil_good_ratio!=null?Math.round(+p.soil_good_ratio*100)+'% Class1-3优质土':'无数据'}
-- 水资源重配潜力：${p.opp_value_M!=null?'\$'+(+p.opp_value_M>=1000?((+p.opp_value_M)/1000).toFixed(1)+'B':(+p.opp_value_M).toFixed(0)+'M'):'—'}
+  // ── 完整作物结构 ──
+  const crops=(info.top_crops||[]).filter(c=>!SKIP.has(c.crop));
+  const cropDetail=crops.slice(0,10).map(c=>
+    `  • ${c.crop}：面积${c.area?.toLocaleString()||'—'}英亩，灌溉强度${(+c.water_int).toFixed(2)}af/ac，产值${c.dpg_cents!=null?(+c.dpg_cents).toFixed(2)+'¢/加仑':'无产值'},盈亏平衡${c.breakeven!=null?'\$'+c.breakeven.toFixed(0)+'/af':'—'}`
+  ).join('
+');
+  const highWater=crops.filter(c=>(+c.water_int||0)>1.5).map(c=>c.crop).join('、')||'无';
+  const lowValue=crops.filter(c=>c.dpg_cents!=null&&(+c.dpg_cents)<0.2).map(c=>c.crop).join('、')||'无';
+  const highValue=crops.filter(c=>c.dpg_cents!=null&&(+c.dpg_cents)>1.0).map(c=>c.crop).join('、')||'无';
+
+  const wi=(+p.avg_intensity||0).toFixed(2);
+  const dpg=(+p.avg_dpg_cents||0).toFixed(2);
+
+  const prompt=`你是美国农业水资源政策分析师，兼具数据科学和农业金融背景。
+
+请对以下【${p.name||p.abbr}州】数据进行深度分析，输出结构化中文报告，分4个维度，总计300-400字：
+
+**① 现状诊断**（该州用水效率在全国的位置，与均值的偏差，10年演变轨迹）
+**② 核心风险**（结合旱情趋势、作物结构、地下水、脆弱性，指出1-2个最紧迫问题）
+**③ 结构性机会**（具体指出哪些高耗水低产值作物可替换为哪些高产值作物，预估可节水%或增收$）
+**④ 政策优先级**（按"影响力/可行性"排序，给出2-3条可操作建议）
+
+━━━ 数据 ━━━
+
+【州级核心指标】
+- 灌溉强度：${wi} af/ac（全国均值${natAvgWI}，全国排名第${wiRank}/${nTotal}，越高越耗水）
+- 每加仑产值：${dpg}¢（全国均值${natAvgDPG}¢，产值排名第${dpgRank}/${nTotal}）
+- 干旱脆弱性：${p.vuln_score!=null?(+p.vuln_score).toFixed(2):'—'}（全国排名第${vulnRank}/${nTotal}）
+- 作物集中HHI：${p.hhi!=null?(+p.hhi).toFixed(3):'—'}（0=多样 1=单一依赖）
+- 土壤适宜度：${p.soil_good_ratio!=null?Math.round(+p.soil_good_ratio*100)+'% Class1-3优质土':'无数据'}
+- 重配潜力：${p.opp_value_M!=null?'\$'+(+p.opp_value_M>=1000?((+p.opp_value_M/1000).toFixed(1)+'B'):(+p.opp_value_M).toFixed(0)+'M'):'—'}（低效水→高值作物）
 - 农业用水效益：${p.ag_per_af!=null?'\$'+Math.round(+p.ag_per_af)+'/af':'—'}
-- 主要作物：${topCrops||'无数据'}
+- 虚拟水出口：${p.virtual_water_B!=null?(+p.virtual_water_B).toFixed(2)+'B加仑/年':'—'}
+- 灌溉总面积：${info.total_irr_area?(+info.total_irr_area).toLocaleString()+'英亩':'—'}
+- 农业销售额：${p.ag_sales_M!=null?'\$'+(+p.ag_sales_M).toFixed(0)+'M':'—'}
+- 地下水趋势：${p.gw_trend_ft!=null?((+p.gw_trend_ft>0?'+':'')+p.gw_trend_ft.toFixed(2)+'ft/yr'):'无数据'}（负=下降）
 
-分析应包含：①该州水资源使用是否高效；②最大风险；③最值得的政策行动。`;
+【三年趋势（USDA普查）】
+灌溉强度：${i13} → ${i18} → ${i23} af/ac（总变化${trendPct}）
+降水：${pr13}" (2013) → ${pr23}" (2023)，趋势${p.precip_trend_yr!=null?((+p.precip_trend_yr).toFixed(3)+'"·年'):'无数据'}
+
+【作物结构（按面积前10）】
+${cropDetail||'无作物数据'}
+
+【自动识别】
+- 高耗水作物（>1.5af/ac）：${highWater}
+- 低产值作物（<0.2¢/加仑）：${lowValue}
+- 高价值作物（>1.0¢/加仑）：${highValue}
+━━━━━━━━━━━━━━`;
 
   const btn=document.getElementById('popup-ai-btn');
   const loading=document.getElementById('popup-ai-load');
@@ -859,10 +904,18 @@ function showStatePanel(p, info){
   const iDotsSvg=iVals.map((v,i)=>`<circle cx="${xp(i)}" cy="${iy(v)}" r="3" fill="${tColor}"/>`).join('');
   const pDotsSvg=prVals.map((v,i)=>`<circle cx="${xp(i)}" cy="${py(v)}" r="2.5" fill="#74c476" opacity="0.85"/>`).join('');
   const iValLbls=iVals.map((v,i)=>`<text x="${xp(i)}" y="${iy(v)-5}" text-anchor="middle" font-size="7.5" fill="${tColor}" font-family="Arial">${v.toFixed(1)}</text>`).join('');
+  // % change arrows between years
+  const chgLbls=[[0,1],[1,2]].map(([a,b])=>{
+    if(!iVals[a]) return '';
+    const pct=((iVals[b]-iVals[a])/iVals[a]*100);
+    const mx=(xp(a)+xp(b))/2; const my=(iy(iVals[a])+iy(iVals[b]))/2-4;
+    const col=pct<0?'#3a8c5a':'#c0392b';
+    return `<text x="${mx}" y="${my}" text-anchor="middle" font-size="7" fill="${col}" font-family="Arial">${pct>0?'+':''}${pct.toFixed(0)}%</text>`;
+  }).join('');
   const trendSvg=`<svg width="${svgW}" height="${svgH}" xmlns="http://www.w3.org/2000/svg">
     <polyline points="${pLinePts}" fill="none" stroke="#74c476" stroke-width="1.5" stroke-dasharray="3,2" opacity="0.7"/>
     <polyline points="${iLinePts}" fill="none" stroke="${tColor}" stroke-width="2.5"/>
-    ${iDotsSvg}${pDotsSvg}${iValLbls}${yrLbls}
+    ${iDotsSvg}${pDotsSvg}${iValLbls}${chgLbls}${yrLbls}
   </svg>`;
 
   // ── SVG crop bar chart (水平条形，按灌溉强度排序) ─────────────────────────
@@ -894,6 +947,15 @@ function showStatePanel(p, info){
     </div>`;
   }
 
+  // Year comparison table (2013 / 2018 / 2023)
+  const yrRows=[['灌溉强度(af/ac)',i13,i18,i23,trendPct],
+    ['降水(英寸)',prVals[0].toFixed(1),prVals[1].toFixed(1),prVals[2].toFixed(1),
+      prVals[0]>0?((prVals[2]-prVals[0])/prVals[0]*100>0?'+':'')+((prVals[2]-prVals[0])/prVals[0]*100).toFixed(0)+'%':'—']];
+  const yrTable=`<table style='width:100%;border-collapse:collapse;font-family:Arial,sans-serif;font-size:8px;margin-bottom:6px'>
+    <tr style='color:#aaa'><td style='padding:2px 0'></td><td style='text-align:center'>2013</td><td style='text-align:center'>2018</td><td style='text-align:center;color:${tColor}'>2023</td><td style='text-align:right;font-size:7px'>变化</td></tr>
+    ${yrRows.map(([lbl,v1,v2,v3,chg])=>`<tr style='border-top:1px solid #f5f5f5'><td style='color:#888;padding:2px 0'>${lbl}</td><td style='text-align:center;color:#bbb'>${v1}</td><td style='text-align:center;color:#999'>${v2}</td><td style='text-align:center;font-weight:700;color:${tColor}'>${v3}</td><td style='text-align:right;color:${+chg>0?'#c0392b':'#3a8c5a'}'>${chg}</td></tr>`).join('')}
+  </table>`;
+
   const html=`<div style='font-family:Palatino Linotype,Palatino,serif'>
 <div class='sp-nm'>${p.name||p.abbr}</div>
 <div class='sp-sub'>${sub||'—'}</div>
@@ -912,6 +974,7 @@ ${cropRow}
   <span style='color:${tColor}'>▬</span> 灌溉强度（af/ac）　<span style='color:#74c476'>┅</span> 降水变化
 </div>
 ${trendSvg}
+${yrTable}
 <div style='font-family:Arial,sans-serif;font-size:7.5px;font-weight:700;color:#888;margin:6px 0 2px'>
   主要作物　<span style='font-weight:400;color:#aaa'>af/ac 灌溉强度 · ¢ 产值</span>
 </div>
