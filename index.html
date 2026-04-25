@@ -123,7 +123,7 @@ body{font-family:var(--pal);background:var(--cream);overflow:hidden;}
   min-width:30px;text-align:right;flex-shrink:0;}
 /* ── Right crop panel ── */
 #right{
-  position:absolute;top:12px;right:302px;z-index:21;width:170px;
+  position:absolute;top:12px;right:12px;z-index:21;width:170px;
   background:#fff;border:1px solid var(--line);border-radius:4px;
   box-shadow:0 4px 18px rgba(0,0,0,.12);overflow:hidden;
   display:none;flex-direction:column;max-height:calc(100vh - 90px);
@@ -339,6 +339,7 @@ function setMode(m){
   const showCrop=CROP_MODES.has(m);
   document.getElementById('right').style.display=showCrop?'flex':'none';
   if(!showCrop&&activeCropFilter) applyCropFilter('');
+  syncPanelLayout();
 
   if(m==='wps'){
     document.getElementById('list-hdr').textContent='水价敏感度';
@@ -729,7 +730,60 @@ map.on('load',()=>{
 
   buildOvrList('overview');
   document.getElementById('lgd-grad').style.background=PALETTES.overview.grad;
+
+  // Show national overview in state panel on load
+  showNationalPanel();
 });
+
+function showNationalPanel(){
+  const svgW=244;
+  // Top crops by water intensity (national)
+  const topCrops=agriSummary.filter(c=>!SKIP.has(c.crop)&&c.avg_water_int>0)
+    .sort((a,b)=>b.avg_water_int-a.avg_water_int).slice(0,10);
+  const maxWI=Math.max(...topCrops.map(c=>c.avg_water_int),0.001);
+  const cLblW=90,cValW=30,cPad=4,cBarAreaW=svgW-cLblW-cValW-cPad*2-2;
+  const cRowH=17;
+  const cropRows=topCrops.map((c,i)=>{
+    const bw=Math.max(2,Math.round(c.avg_water_int/maxWI*cBarAreaW));
+    const y=i*cRowH+4;
+    const nm=c.crop.length>15?c.crop.slice(0,14)+'…':c.crop;
+    const dpgTxt=c.avg_dpg_cents!=null?c.avg_dpg_cents.toFixed(2)+'¢':'—';
+    const col=GC[c.group]||'#aaa';
+    return `<text x="${cPad}" y="${y+11}" font-size="8.5" fill="#555" font-family="Arial">${nm}</text>
+      <rect x="${cPad+cLblW}" y="${y+2}" width="${bw}" height="11" fill="${col}" rx="2" opacity="0.82"/>
+      <text x="${cPad+cLblW+cBarAreaW+3}" y="${y+8}" font-size="7.5" fill="#888" font-family="Arial">${c.avg_water_int.toFixed(2)}</text>
+      <text x="${cPad+cLblW+cBarAreaW+3}" y="${y+16}" font-size="7" fill="#c4870a" font-family="Arial">${dpgTxt}</text>`;
+  }).join('');
+  const cropSvgH=topCrops.length*cRowH+6;
+  const cropSvg=`<svg width="${svgW}" height="${cropSvgH}" xmlns="http://www.w3.org/2000/svg">${cropRows}</svg>`;
+
+  // National stats
+  const totalArea=Object.values(agriCrops).reduce((s,v)=>s+(+v.total_irr_area||0),0);
+  const totalOpp=Object.values(agriCrops).reduce((s,v)=>s+(+v.opp_value_M||0),0);
+  const avgIntens=agriSummary.find(c=>c.crop==='HAY & HAYLAGE')?.avg_water_int||0;
+
+  const html=`<div style='font-family:Palatino Linotype,Palatino,serif'>
+<div class='sp-nm' style='font-size:13px'>全美农业用水概览</div>
+<div class='sp-sub'>USDA NASS · 2013–2023 灌溉普查</div>
+<div class='sp-grid'>
+  <div class='sp-cell'><div class='sp-lbl'>覆盖州数</div><div class='sp-val'>${Object.keys(agriCrops).length}</div><div class='sp-unit'>个州</div></div>
+  <div class='sp-cell'><div class='sp-lbl'>总灌溉面积</div><div class='sp-val'>${(totalArea/1e6).toFixed(1)}M</div><div class='sp-unit'>英亩</div></div>
+  <div class='sp-cell'><div class='sp-lbl'>作物种类</div><div class='sp-val'>${agriSummary.length}</div><div class='sp-unit'>主要作物</div></div>
+  <div class='sp-cell'><div class='sp-lbl'>重配潜力</div><div class='sp-val' style='color:#6a3d9a'>\$${(totalOpp/1e3).toFixed(0)}B</div><div class='sp-unit'>全国合计</div></div>
+</div>
+<div style='font-family:Arial,sans-serif;font-size:7.5px;font-weight:700;color:#888;margin:6px 0 2px'>
+  全国最耗水作物　<span style='font-weight:400;color:#aaa'>af/ac 强度 · ¢ 产值</span>
+</div>
+${cropSvg}
+<div style='font-family:Arial,sans-serif;font-size:8px;color:#aaa;margin-top:8px;line-height:1.5;border-top:1px solid #f0f0f0;padding-top:6px'>
+  点击地图上任意州查看该州详细数据与 AI 分析
+</div>
+</div>`;
+  document.getElementById('sp-hdr-title').textContent='全国概览';
+  document.getElementById('sp-body').innerHTML=html;
+  document.getElementById('state-panel').style.display='flex';
+  syncPanelLayout();
+}
 
 // ── Crop filter — dims states without selected crop ──────────────────────────
 function applyCropFilter(cropName){
@@ -755,10 +809,18 @@ function applyCropFilter(cropName){
     ['case',['==',['get','_has_crop'],1],0.85,0.10]);
 }
 
+// ── Panel layout sync ─────────────────────────────────────────────────────────
+function syncPanelLayout(){
+  const stateOpen=document.getElementById('state-panel').style.display==='flex';
+  // Crop filter sits to the left of state panel when both visible
+  document.getElementById('right').style.right=stateOpen?'302px':'12px';
+}
+
 // ── State info panel ──────────────────────────────────────────────────────────
 function closeStatePanel(){
   document.getElementById('state-panel').style.display='none';
   _currentStateProps=null;
+  syncPanelLayout();
 }
 
 function showStatePanel(p, info){
@@ -863,6 +925,7 @@ ${cropSvg}
   document.getElementById('sp-hdr-title').textContent=p.name||p.abbr||'州级详情';
   document.getElementById('sp-body').innerHTML=html;
   document.getElementById('state-panel').style.display='flex';
+  syncPanelLayout();
 }
 
 </script>
