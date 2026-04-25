@@ -1,31 +1,16 @@
 """
-LA Water Quality - 全量数据收集
-所有数据源整合在一个脚本中
+US National Water Quality & Resource Data Collector
+直接写入 Google Cloud Storage，无需本地存储
 
 用法：
-  python src/fetch_all.py              # 运行所有数据源（不含慢速 ewg_all）
-  python src/fetch_all.py wqp census  # 只运行指定数据源
-  python src/fetch_all.py ewg_all     # 单独运行全量 EWG（约 10 分钟）
-  python src/fetch_all.py --list      # 列出所有可用数据源
+  python src/build/fetch_all.py                 # 运行所有数据源
+  python src/build/fetch_all.py wqp census      # 只运行指定数据源
+  python src/build/fetch_all.py --list          # 列出所有可用数据源
+  python src/build/fetch_all.py --status        # 查看当前抓取进度
+  python src/build/fetch_all.py --workers 8     # 指定并行线程数（默认4）
 
-数据源：
-  wqp        Water Quality Portal（监测站 + 133K 检测记录）
-  usgs       USGS 水文数据
-  usgs_meas  USGS 实测水质时间序列（温度/DO/pH/流量等）
-  ca         California Open Data（地下水 + 违规记录）
-  la         LA Open Data
-  epa_echo   EPA ECHO（设施 + 执法记录）
-  epa_sdwis  EPA SDWIS（供水系统信息）
-  ewg        EWG 主要 6 个系统（快速）
-  ewg_all    EWG 全部 300+ 系统（慢，约 10 分钟）
-  ladwp      LADWP 年度 PDF 报告（2004-2024）
-  census     US Census 人口/收入数据（无需 Key）
-  noaa       NOAA 气候数据（需要 .env 中的 NOAA_API_KEY）
-  fire       2025 LA 野火边界 GeoJSON（Palisades + Eaton Fire）
-  beach      Heal the Bay 海滩水质评级（LA County 海滩）
-  hab        CA Water Board 有害藻华事件（HAB）
-  cdpr       CDPR 农药使用报告（LA County）
-  npdes      EPA ECHO NPDES 废水排放监测值
+需要在 .env 中设置：
+  GCS_BUCKET=zerve_hackathon
 """
 
 import requests
@@ -33,1618 +18,959 @@ import json
 import os
 import sys
 import time
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from bs4 import BeautifulSoup
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from datetime import date, timedelta
 from dotenv import load_dotenv
+from google.cloud import storage as gcs_storage
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "../.env"))
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../.env"))
 
-BASE_DIR = os.path.join(os.path.dirname(__file__), "../data/raw_data")
+GCS_BUCKET_NAME = os.getenv("GCS_BUCKET", "zerve_hackathon")
+GCS_PROJECT     = os.getenv("GCS_PROJECT", "gen-lang-client-0371685655")
+GCS_PREFIX      = "raw_data"
 
-
-# ══════════════════════════════════════════════════════════════
-# 1. Water Quality Portal (WQP)
-# ══════════════════════════════════════════════════════════════
-def fetch_wqp():
-    out_dir = os.path.join(BASE_DIR, "wqp")
-    os.makedirs(out_dir, exist_ok=True)
-
-    print("  获取 LA County 监测站...")
-    r = requests.get(
-        "https://www.waterqualitydata.us/data/Station/search",
-        params={
-            "statecode": "US:06", "countycode": "US:06:037",
-            # 不限 siteType，抓所有类型（含河流、湖泊、水井、海滩、设施等）
-            "mimeType": "csv", "zip": "no"
-        },
-        headers={"Accept": "text/csv"}
-    )
-    with open(os.path.join(out_dir, "stations.csv"), "wb") as f:
-        f.write(r.content)
-    print("  ✓ stations.csv")
-    time.sleep(1)
-
-    print("  获取检测结果（2020至今）...")
-    r = requests.get(
-        "https://www.waterqualitydata.us/data/Result/search",
-        params={
-            "statecode": "US:06", "countycode": "US:06:037",
-            "startDateLo": "01-01-2020", "mimeType": "csv", "zip": "no"
-        },
-        headers={"Accept": "text/csv"}, timeout=120
-    )
-    with open(os.path.join(out_dir, "results.csv"), "wb") as f:
-        f.write(r.content)
-    print("  ✓ results.csv")
-
-
-# ══════════════════════════════════════════════════════════════
-# 2. USGS Water Data
-# ══════════════════════════════════════════════════════════════
-def fetch_usgs():
-    out_dir = os.path.join(BASE_DIR, "usgs")
-    os.makedirs(out_dir, exist_ok=True)
-
-    def safe_fetch(url, params, filename):
-        r = requests.get(url, params=params)
-        if r.status_code != 200 or not r.text.strip():
-            print(f"  ⚠ {filename} 返回 {r.status_code}，跳过")
-            return
-        try:
-            data = r.json()
-            with open(os.path.join(out_dir, filename), "w") as f:
-                json.dump(data, f, indent=2)
-            print(f"  ✓ {filename}")
-        except Exception:
-            with open(os.path.join(out_dir, filename.replace(".json", ".txt")), "w") as f:
-                f.write(r.text)
-            print(f"  ✓ {filename} (原始格式)")
-
-    print("  获取 LA 监测站列表...")
-    safe_fetch("https://waterservices.usgs.gov/nwis/site/", {
-        "format": "rdb", "stateCd": "ca", "countyCd": "037",
-        "siteType": "ST,LK,GW", "siteStatus": "all", "hasDataTypeCd": "qw"
-    }, "sites.txt")
-    time.sleep(1)
-
-    print("  获取历史水质数据...")
-    safe_fetch("https://waterservices.usgs.gov/nwis/dv/", {
-        "format": "json", "stateCd": "ca", "countyCd": "037",
-        "parameterCd": "00095", "startDT": "2020-01-01", "endDT": "2024-12-31",
-        "siteStatus": "all"
-    }, "historical.json")
-
-
-# ══════════════════════════════════════════════════════════════
-# 3. California Open Data
-# ══════════════════════════════════════════════════════════════
-def fetch_ca_open_data():
-    out_dir = os.path.join(BASE_DIR, "ca_open_data")
-    os.makedirs(out_dir, exist_ok=True)
-
-    print("  获取加州地下水质数据...")
-    r = requests.get("https://data.ca.gov/api/3/action/datastore_search", params={
-        "resource_id": "805e6762-1b82-48d9-b68f-5d79cca06ace",
-        "filters": json.dumps({"gm_gis_county": "Los Angeles"}),
-        "limit": 10000
-    })
-    with open(os.path.join(out_dir, "groundwater_stations.json"), "w") as f:
-        json.dump(r.json(), f, indent=2)
-    print("  ✓ groundwater_stations.json")
-    time.sleep(1)
-
-    print("  获取饮用水违规数据...")
-    r = requests.get("https://data.ca.gov/api/3/action/datastore_search", params={
-        "resource_id": "9ce012e2-5fd3-4372-a4dd-63294b0ce0f6", "limit": 10000
-    })
-    with open(os.path.join(out_dir, "drinking_water_violations.json"), "w") as f:
-        json.dump(r.json(), f, indent=2)
-    print("  ✓ drinking_water_violations.json")
-
-
-# ══════════════════════════════════════════════════════════════
-# 4. LA Open Data
-# ══════════════════════════════════════════════════════════════
-def fetch_la_open_data():
-    out_dir = os.path.join(BASE_DIR, "la_open_data")
-    os.makedirs(out_dir, exist_ok=True)
-
-    print("  获取 LA 本地水质数据...")
-    r = requests.get("https://data.lacity.org/resource/rcpd-miwk.json", params={"$limit": 10000})
-    with open(os.path.join(out_dir, "water_quality.json"), "w") as f:
-        json.dump(r.json(), f, indent=2)
-    print("  ✓ water_quality.json")
-
-
-# ══════════════════════════════════════════════════════════════
-# 5. EPA ECHO
-# ══════════════════════════════════════════════════════════════
-def fetch_epa_echo():
-    out_dir = os.path.join(BASE_DIR, "epa_echo")
-    os.makedirs(out_dir, exist_ok=True)
-
-    print("  获取 LA 供水设施列表...")
-    r = requests.get("https://echodata.epa.gov/echo/sdw_rest_services.get_facilities", params={
-        "output": "JSON", "p_st": "CA", "p_county": "LOS ANGELES", "p_act": "Y"
-    })
-    with open(os.path.join(out_dir, "facilities.json"), "w") as f:
-        json.dump(r.json(), f, indent=2)
-    print("  ✓ facilities.json")
-    time.sleep(1)
-
-    print("  获取违规详情...")
-    r = requests.get("https://echodata.epa.gov/echo/sdw_rest_services.get_qid", params={
-        "output": "JSON", "p_st": "CA", "p_county": "LOS ANGELES"
-    })
-    with open(os.path.join(out_dir, "violations.json"), "w") as f:
-        json.dump(r.json(), f, indent=2)
-    print("  ✓ violations.json")
-
-
-# ══════════════════════════════════════════════════════════════
-# 6. EPA SDWIS
-# ══════════════════════════════════════════════════════════════
-def fetch_epa_sdwis():
-    out_dir = os.path.join(BASE_DIR, "epa_sdwis")
-    os.makedirs(out_dir, exist_ok=True)
-
-    print("  获取 LA 供水系统列表...")
-    r = requests.get(
-        "https://data.epa.gov/efservice/WATER_SYSTEM/PRIMACY_AGENCY_CODE/CA/CITY_NAME/LOS%20ANGELES/JSON"
-    )
-    if r.status_code == 200:
-        with open(os.path.join(out_dir, "water_systems.json"), "w") as f:
-            json.dump(r.json(), f, indent=2)
-        print("  ✓ water_systems.json")
-    else:
-        print(f"  ⚠ SDWIS 返回 {r.status_code}，跳过")
-
-
-# ══════════════════════════════════════════════════════════════
-# 7. EWG 主要 6 个系统
-# ══════════════════════════════════════════════════════════════
-EWG_HEADERS = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
-EWG_MAIN_SYSTEMS = {
-    "ladwp":       "CA1910067",
-    "burbank":     "CA1910046",
-    "glendale":    "CA1910068",
-    "pasadena":    "CA1910116",
-    "long_beach":  "CA1910087",
-    "santa_monica":"CA1910134",
+STATE_FIPS = {
+    "01": "AL", "02": "AK", "04": "AZ", "05": "AR", "06": "CA",
+    "08": "CO", "09": "CT", "10": "DE", "11": "DC", "12": "FL",
+    "13": "GA", "15": "HI", "16": "ID", "17": "IL", "18": "IN",
+    "19": "IA", "20": "KS", "21": "KY", "22": "LA", "23": "ME",
+    "24": "MD", "25": "MA", "26": "MI", "27": "MN", "28": "MS",
+    "29": "MO", "30": "MT", "31": "NE", "32": "NV", "33": "NH",
+    "34": "NJ", "35": "NM", "36": "NY", "37": "NC", "38": "ND",
+    "39": "OH", "40": "OK", "41": "OR", "42": "PA", "44": "RI",
+    "45": "SC", "46": "SD", "47": "TN", "48": "TX", "49": "UT",
+    "50": "VT", "51": "VA", "53": "WA", "54": "WV", "55": "WI",
+    "56": "WY",
 }
+ABBR_TO_FIPS = {v: k for k, v in STATE_FIPS.items()}
+N_STATES     = len(STATE_FIPS)
+WORKERS      = 4
 
 
-def _parse_ewg_page(html):
-    soup = BeautifulSoup(html, "html.parser")
-    contaminants = []
-    for item in soup.select(".contaminant-grid-item"):
-        c = {}
-        h3 = item.find("h3")
-        if h3:
-            c["name"] = h3.get_text(strip=True)
-        for cls, key in [
-            ("this-utility-text", "utility_level"),
-            ("legal-limit-text", "legal_limit"),
-            ("health-guideline-text", "health_guideline"),
-            ("detect-times-greater-than", "times_above_guideline"),
-            ("potentital-effect", "potential_effect"),
-        ]:
-            el = item.find(class_=cls)
-            if el:
-                text = el.get_text(strip=True)
-                for prefix in ["This Utility:", "Legal Limit:", "EWG's Health Guideline:", "Potential Effect:"]:
-                    text = text.replace(prefix, "").strip()
-                c[key] = text
-        if c.get("name"):
-            contaminants.append(c)
-    info = {}
-    h1 = soup.find("h1")
-    if h1:
-        info["title"] = h1.get_text(strip=True)
-    return contaminants, info
+# ── GCS 操作 ─────────────────────────────────────────────────────────
+
+_gcs_client = None
+_gcs_bucket = None
+_gcs_lock   = threading.Lock()
+
+def _get_bucket():
+    global _gcs_client, _gcs_bucket
+    with _gcs_lock:
+        if _gcs_bucket is None:
+            _gcs_client = gcs_storage.Client(project=GCS_PROJECT)
+            _gcs_bucket = _gcs_client.bucket(GCS_BUCKET_NAME)
+    return _gcs_bucket
+
+def _key(rel_path: str) -> str:
+    return f"{GCS_PREFIX}/{rel_path}"
+
+def _exists(rel_path: str) -> bool:
+    return _get_bucket().blob(_key(rel_path)).exists()
+
+def _list_existing(prefix: str) -> set:
+    """批量列出 GCS 中某前缀下所有文件，返回 rel_path 集合（一次请求）。"""
+    full_prefix = f"{GCS_PREFIX}/{prefix}"
+    return {
+        b.name[len(f"{GCS_PREFIX}/"):]
+        for b in _get_bucket().list_blobs(prefix=full_prefix)
+    }
+
+def _put_bytes(rel_path: str, content: bytes, content_type: str = "application/octet-stream"):
+    blob = _get_bucket().blob(_key(rel_path))
+    blob.upload_from_string(content, content_type=content_type)
+
+def _put_json(rel_path: str, data):
+    _put_bytes(rel_path, json.dumps(data).encode(), "application/json")
+
+def _put_text(rel_path: str, text: str):
+    _put_bytes(rel_path, text.encode(), "text/plain; charset=utf-8")
+
+def _put_csv(rel_path: str, content: bytes):
+    _put_bytes(rel_path, content, "text/csv")
 
 
-def fetch_ewg():
-    out_dir = os.path.join(BASE_DIR, "ewg")
-    os.makedirs(out_dir, exist_ok=True)
+# ── 进度条（线程安全）─────────────────────────────────────────────────
 
-    for name, pws_id in EWG_MAIN_SYSTEMS.items():
-        print(f"  获取 {name} ({pws_id})...")
-        r = requests.get(f"https://www.ewg.org/tapwater/system.php?pws={pws_id}",
-                         headers=EWG_HEADERS, timeout=30)
-        if r.status_code != 200:
-            print(f"  ✗ {name} 请求失败 ({r.status_code})")
-            continue
-        contaminants, info = _parse_ewg_page(r.text)
-        result = {"pws_id": pws_id, "name": name, **info, "contaminants": contaminants}
-        with open(os.path.join(out_dir, f"{name}.json"), "w") as f:
-            json.dump(result, f, indent=2, ensure_ascii=False)
-        with open(os.path.join(out_dir, f"{name}_raw.html"), "w", encoding="utf-8") as f:
-            f.write(r.text)
-        print(f"  ✓ {name} ({len(contaminants)} 条污染物记录)")
-        time.sleep(2)
+def _fmt_secs(secs: float) -> str:
+    if secs == float("inf") or secs < 0:
+        return "?"
+    secs = int(secs)
+    if secs >= 3600:
+        return f"{secs // 3600}h{(secs % 3600) // 60}m"
+    elif secs >= 60:
+        return f"{secs // 60}m{secs % 60:02d}s"
+    return f"{secs}s"
 
 
-# ══════════════════════════════════════════════════════════════
-# 8. EWG 全部 300+ 系统
-# ══════════════════════════════════════════════════════════════
-def fetch_ewg_all():
-    out_dir = os.path.join(BASE_DIR, "ewg")
-    os.makedirs(out_dir, exist_ok=True)
+class Progress:
+    def __init__(self, total: int, label: str = ""):
+        self._lock   = threading.Lock()
+        self.total   = max(1, total)
+        self.done    = 0
+        self.skipped = 0
+        self.fetched = 0
+        self.t0      = time.time()
+        self._last_t = 0.0
+        print(f"  → 共 {total} 个文件目标" + (f"（{label}）" if label else ""))
 
-    # 从 EPA 获取 LA County 所有供水系统
-    print("  获取 LA County 供水系统列表...")
-    all_systems = []
-    for offset in range(0, 5000, 1000):
-        r = requests.get(
-            f"https://data.epa.gov/efservice/WATER_SYSTEM/PRIMACY_AGENCY_CODE/CA"
-            f"/PWS_TYPE_CODE/CWS/PWS_ACTIVITY_CODE/A/ROWS/{offset}:{offset+1000}/JSON",
-            timeout=60
+    def tick(self, skipped: bool = False):
+        with self._lock:
+            self.done += 1
+            if skipped:
+                self.skipped += 1
+            else:
+                self.fetched += 1
+            now = time.time()
+            if now - self._last_t >= 1.5 or self.done == self.total:
+                self._last_t = now
+                self._render()
+
+    def _render(self):
+        elapsed = time.time() - self.t0
+        pct     = self.done / self.total * 100
+        rate    = self.fetched / elapsed if elapsed > 0 and self.fetched > 0 else 0
+        remain  = self.total - self.done
+        eta_sec = remain / rate if rate > 0 else float("inf")
+        W       = 28
+        filled  = int(W * self.done / self.total)
+        bar     = "█" * filled + "░" * (W - filled)
+        line = (
+            f"\r  [{bar}] {self.done}/{self.total} ({pct:.0f}%)"
+            f"  ↓{self.fetched}获取 ⏭{self.skipped}跳过"
+            f"  已用{_fmt_secs(elapsed)} ETA {_fmt_secs(eta_sec)}"
         )
-        if r.status_code != 200:
-            break
-        batch = r.json()
-        if not batch:
-            break
-        all_systems.extend(batch)
-        if len(batch) < 1000:
-            break
+        print(line.ljust(96), end="", flush=True)
+        if self.done == self.total:
+            print()
 
-    la_systems = [s for s in all_systems if s.get("pwsid", "").startswith("CA19")]
-    print(f"  找到 {len(la_systems)} 个 LA County 供水系统")
-    with open(os.path.join(out_dir, "_la_water_systems.json"), "w") as f:
-        json.dump(la_systems, f, indent=2)
+    def summary(self):
+        elapsed = time.time() - self.t0
+        print(f"  ✔ 完成：{self.fetched} 新获取 / {self.skipped} 跳过，耗时 {_fmt_secs(elapsed)}")
 
-    ok, skipped, errors = 0, 0, 0
-    for i, s in enumerate(la_systems):
-        pwsid = s["pwsid"]
-        name = s["pws_name"]
-        out_json = os.path.join(out_dir, f"{pwsid}.json")
-        if os.path.exists(out_json):
-            skipped += 1
+
+# ── 日期工具 ──────────────────────────────────────────────────────────
+
+def iter_weeks(start: str, end: str):
+    cur    = date.fromisoformat(start)
+    end_dt = date.fromisoformat(end)
+    while cur <= end_dt:
+        week_end = min(cur + timedelta(days=6), end_dt)
+        yield cur.isoformat(), week_end.isoformat()
+        cur = week_end + timedelta(days=1)
+
+def _weeks_list(start, end):
+    return list(iter_weeks(start, end))
+
+def iter_weeks_by_year(start_year, end_year):
+    for year in range(start_year, end_year + 1):
+        yield from iter_weeks(f"{year}-01-01", f"{year}-12-31")
+
+def _weeks_by_year_list(start_year, end_year):
+    return list(iter_weeks_by_year(start_year, end_year))
+
+
+# ── 进度状态 ──────────────────────────────────────────────────────────
+
+def show_status(targets: list):
+    print("\n  正在读取 GCS bucket 文件列表...")
+    existing = set(
+        b.name for b in _get_bucket().list_blobs(prefix=GCS_PREFIX + "/")
+    )
+
+    WEEKS_MEAS = _weeks_list(MEAS_START, MEAS_END)
+    WQP_YEARS  = list(range(WQP_START_YEAR, WQP_END_YEAR + 1))
+    USGS_YEARS = list(range(2020, 2026))
+
+    specs = {
+        "wqp": {"label": "Water Quality Portal", "targets":
+            [f"wqp/{a}_stations.csv" for a in STATE_FIPS.values()] +
+            [f"wqp/{a}_results_{y}.csv" for a in STATE_FIPS.values() for y in WQP_YEARS]},
+        "usgs": {"label": "USGS 水文数据", "targets":
+            [f"usgs/{a}_sites.txt" for a in STATE_FIPS.values()] +
+            [f"usgs/{a}_historical_{y}.json" for a in STATE_FIPS.values() for y in USGS_YEARS]},
+        "usgs_meas": {"label": "USGS 实测时间序列", "targets":
+            [f"usgs_meas/{a}/{ws}.json" for a in STATE_FIPS.values() for ws, _ in WEEKS_MEAS]},
+        "epa_sdwis": {"label": "EPA SDWIS", "targets":
+            [f"epa_sdwis/{a}_water_systems.json" for a in STATE_FIPS.values()]},
+        "census": {"label": "US Census", "targets":
+            ["census/national_counties.json"] +
+            [f"census/{a}_tracts.json" for a in STATE_FIPS.values()]},
+        "cdc": {"label": "CDC PLACES", "targets":
+            [f"cdc_places/{a}_health_outcomes.json" for a in STATE_FIPS.values()]},
+        "tri": {"label": "EPA TRI", "targets":
+            [f"epa_tri/{a}_facilities.json" for a in STATE_FIPS.values()]},
+        "npdes": {"label": "EPA ECHO NPDES", "targets":
+            [f"npdes/{a}_facilities.json" for a in STATE_FIPS.values()] +
+            [f"npdes/{a}_dmr.json" for a in STATE_FIPS.values()]},
+    }
+
+    print("\n" + "=" * 65)
+    print(f"  数据抓取进度总览  [bucket: {GCS_BUCKET_NAME}]")
+    print("=" * 65)
+    print(f"  {'数据源':<14} {'完成':>6} {'总计':>6}  进度")
+    print("  " + "-" * 55)
+    grand_done = grand_total = 0
+    for key in targets:
+        spec = specs.get(key)
+        if not spec:
             continue
-        try:
-            r = requests.get(f"https://www.ewg.org/tapwater/system.php?pws={pwsid}",
-                             headers=EWG_HEADERS, timeout=20)
-            if r.status_code != 200:
-                errors += 1
-                continue
-            contaminants, info = _parse_ewg_page(r.text)
-            with open(out_json, "w") as f:
-                json.dump({"pwsid": pwsid, "name": name, **info, "contaminants": contaminants},
-                          f, indent=2, ensure_ascii=False)
-            print(f"  [{i+1}/{len(la_systems)}] ✓ {name[:40]} ({len(contaminants)} 污染物)")
-            ok += 1
-        except Exception as e:
-            print(f"  [{i+1}/{len(la_systems)}] ✗ {name[:40]} ({e})")
-            errors += 1
-        time.sleep(1)
-
-    print(f"  EWG ALL 完成：成功 {ok}，跳过 {skipped}，失败 {errors}")
+        tgt_list = spec["targets"]
+        total = len(tgt_list)
+        done  = sum(1 for p in tgt_list if _key(p) in existing)
+        pct   = done / total * 100 if total else 0
+        W     = 15
+        bar   = "█" * int(W * done / total) + "░" * (W - int(W * done / total))
+        print(f"  {key:<14} {done:>6,} {total:>6,}  [{bar}] {pct:5.1f}%")
+        grand_done  += done
+        grand_total += total
+    print("  " + "-" * 55)
+    pct_all = grand_done / grand_total * 100 if grand_total else 0
+    print(f"  {'合计':<14} {grand_done:>6,} {grand_total:>6,}  {pct_all:.1f}%")
+    print("=" * 65 + "\n")
 
 
 # ══════════════════════════════════════════════════════════════
-# 9. LADWP PDF 报告
+# 1. WQP
 # ══════════════════════════════════════════════════════════════
-LADWP_PDF_URLS = {
-    "2024": "/sites/default/files/2025-07/2025_BOOKLETS_2024_DWQR_E_digital_0.pdf",
-    "2023": "/sites/default/files/2024-07/2024_DIGITAL_PUBLICATION_2023_Drinking_Water_Quality_Report_03_Print.pdf",
-    "2022": "/sites/default/files/2023-08/2022_Drinking_Water_Quality_Report.pdf",
-    "2021": "/sites/default/files/documents/2021_Drinking_Water_Quality_Report.pdf",
-    "2020": "/sites/default/files/documents/2020_Drinking_Water_Quality_Report.pdf",
-    "2019": "/sites/default/files/documents/2019_drinking_water_quality_report_final.pdf",
-    "2018": "/sites/default/files/documents/DWQR_2018.pdf",
-    "2017": "/sites/default/files/documents/DWQR_2017v9.pdf",
-    "2016": "/sites/default/files/documents/2016_Drinking_Water_Quality_Report_FINAL.pdf",
-    "2015": "/sites/default/files/documents/2015_Drinking_Water_Quality_Report_rev080916.pdf",
-    "2014": "/sites/default/files/documents/2014_Drinking_Water_Quality_Report_FINAL.pdf",
-    "2013": "/sites/default/files/documents/2013_Drinking_Water_Quality_Report.pdf",
-    "2012": "/sites/default/files/documents/DWQR_2012_LoRez.pdf",
-    "2011": "/sites/default/files/documents/DWQR_2011_FINAL_LoRes_3_.pdf",
-    "2010": "/sites/default/files/documents/2010_WQR.pdf",
-    "2009": "/sites/default/files/documents/AWQR_2009.pdf",
-    "2008": "/sites/default/files/documents/2008AWQREnglishWeb.pdf",
-    "2007": "/sites/default/files/documents/2007AWQREnglishWeb.pdf",
-    "2006": "/sites/default/files/documents/2006_WQAR_hi.pdf",
-    "2005": "/sites/default/files/documents/2005_WQAR.pdf",
-    "2004": "/sites/default/files/documents/2004WQAR_web.pdf",
-}
+WQP_START_YEAR = 2020
+WQP_END_YEAR   = 2025
 
+def fetch_wqp(workers: int = WORKERS):
+    years    = list(range(WQP_START_YEAR, WQP_END_YEAR + 1))
+    existing = _list_existing("wqp/")
+    prog     = Progress(N_STATES * (1 + len(years)), f"按州+年，{workers}线程→GCS")
 
-def fetch_ladwp():
-    out_dir = os.path.join(BASE_DIR, "ladwp_pdf")
-    os.makedirs(out_dir, exist_ok=True)
-    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}
-
-    for year in sorted(LADWP_PDF_URLS.keys(), reverse=True):
-        out_path = os.path.join(out_dir, f"LADWP_DWQR_{year}.pdf")
-        if os.path.exists(out_path):
-            print(f"  ⏭ {year} 已存在，跳过")
-            continue
-        r = requests.get("https://www.ladwp.com" + LADWP_PDF_URLS[year],
-                         headers=headers, timeout=30)
-        if r.status_code == 200 and len(r.content) > 1000:
-            with open(out_path, "wb") as f:
-                f.write(r.content)
-            print(f"  ✓ {year} ({len(r.content) // 1024} KB)")
+    def _fetch_state(item):
+        fips, abbr = item
+        rel = f"wqp/{abbr}_stations.csv"
+        if rel in existing:
+            prog.tick(skipped=True)
         else:
-            print(f"  ✗ {year} 下载失败 ({r.status_code})")
-        time.sleep(1)
+            try:
+                r = requests.get("https://www.waterqualitydata.us/data/Station/search",
+                    params={"statecode": f"US:{fips}", "mimeType": "csv", "zip": "no"},
+                    headers={"Accept": "text/csv"}, timeout=180)
+                _put_csv(rel, r.content)
+            except Exception as e:
+                print(f"\n  ✗ {abbr} stations: {e}")
+            prog.tick()
+            time.sleep(1)
+        for year in years:
+            rel = f"wqp/{abbr}_results_{year}.csv"
+            if rel in existing:
+                prog.tick(skipped=True)
+                continue
+            try:
+                r = requests.get("https://www.waterqualitydata.us/data/Result/search",
+                    params={"statecode": f"US:{fips}", "startDateLo": f"01-01-{year}",
+                            "startDateHi": f"12-31-{year}", "mimeType": "csv", "zip": "no"},
+                    headers={"Accept": "text/csv"}, timeout=300)
+                _put_csv(rel, r.content)
+            except Exception as e:
+                print(f"\n  ✗ {abbr} results {year}: {e}")
+            prog.tick()
+            time.sleep(2)
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_fetch_state, STATE_FIPS.items()))
+    prog.summary()
 
 
 # ══════════════════════════════════════════════════════════════
-# 10. US Census ACS 5-Year
+# 2. USGS
+# ══════════════════════════════════════════════════════════════
+def fetch_usgs(workers: int = WORKERS):
+    years    = list(range(2020, 2026))
+    existing = _list_existing("usgs/")
+    prog     = Progress(N_STATES * (1 + len(years)), f"按州+年，{workers}线程→GCS")
+
+    def _fetch_state(item):
+        fips, abbr = item
+        rel = f"usgs/{abbr}_sites.txt"
+        if rel in existing:
+            prog.tick(skipped=True)
+        else:
+            try:
+                r = requests.get("https://waterservices.usgs.gov/nwis/site/",
+                    params={"format": "rdb", "stateCd": abbr.lower(),
+                            "siteType": "ST,LK,GW", "siteStatus": "all", "hasDataTypeCd": "qw"},
+                    timeout=120)
+                if r.status_code == 200:
+                    _put_text(rel, r.text)
+            except Exception as e:
+                print(f"\n  ✗ {abbr} sites: {e}")
+            prog.tick()
+            time.sleep(0.5)
+        for year in years:
+            rel = f"usgs/{abbr}_historical_{year}.json"
+            if rel in existing:
+                prog.tick(skipped=True)
+                continue
+            try:
+                r = requests.get("https://waterservices.usgs.gov/nwis/dv/",
+                    params={"format": "json", "stateCd": abbr.lower(), "parameterCd": "00095",
+                            "startDT": f"{year}-01-01", "endDT": f"{year}-12-31", "siteStatus": "all"},
+                    timeout=180)
+                if r.status_code == 200 and r.text.strip():
+                    _put_text(rel, r.text)
+            except Exception as e:
+                print(f"\n  ✗ {abbr} historical {year}: {e}")
+            prog.tick()
+            time.sleep(0.5)
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_fetch_state, STATE_FIPS.items()))
+    prog.summary()
+
+
+# ══════════════════════════════════════════════════════════════
+# 3. USGS measurements
+# ══════════════════════════════════════════════════════════════
+MEAS_PARAMS = "00060,00010,00300,00400,00095,63680"
+MEAS_START  = "2020-01-01"
+MEAS_END    = "2025-03-31"
+
+def fetch_usgs_measurements(workers: int = WORKERS):
+    weeks    = _weeks_list(MEAS_START, MEAS_END)
+    existing = _list_existing("usgs_meas/")
+    prog     = Progress(N_STATES * len(weeks), f"按州×周，{workers}线程→GCS")
+
+    def _fetch_state(item):
+        fips, abbr = item
+        for w_start, w_end in weeks:
+            rel = f"usgs_meas/{abbr}/{w_start}.json"
+            if rel in existing:
+                prog.tick(skipped=True)
+                continue
+            try:
+                r = requests.get("https://waterservices.usgs.gov/nwis/dv/",
+                    params={"format": "json", "stateCd": abbr.lower(), "parameterCd": MEAS_PARAMS,
+                            "startDT": w_start, "endDT": w_end, "siteStatus": "all"},
+                    timeout=180)
+                if r.status_code == 200 and r.text.strip():
+                    _put_json(rel, r.json())
+            except Exception as e:
+                print(f"\n  ✗ {abbr} {w_start}: {e}")
+            prog.tick()
+            time.sleep(0.3)
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_fetch_state, STATE_FIPS.items()))
+    prog.summary()
+
+
+# ══════════════════════════════════════════════════════════════
+# 4. EPA SDWIS
+# ══════════════════════════════════════════════════════════════
+def fetch_epa_sdwis(workers: int = WORKERS):
+    existing = _list_existing("epa_sdwis/")
+    prog     = Progress(N_STATES, f"按州，{workers}线程→GCS")
+
+    def _fetch_state(item):
+        fips, abbr = item
+        rel = f"epa_sdwis/{abbr}_water_systems.json"
+        if rel in existing:
+            prog.tick(skipped=True)
+            return
+        records = []
+        for offset in range(0, 100_000, 1000):
+            try:
+                r = requests.get(
+                    f"https://data.epa.gov/efservice/WATER_SYSTEM/PRIMACY_AGENCY_CODE/{abbr}/ROWS/{offset}:{offset+1000}/JSON",
+                    timeout=60)
+                if r.status_code != 200:
+                    break
+                batch = r.json()
+                if not batch or isinstance(batch, dict):
+                    break
+                records.extend(batch)
+                if len(batch) < 1000:
+                    break
+                time.sleep(0.2)
+            except Exception as e:
+                print(f"\n  ✗ {abbr} offset={offset}: {e}")
+                break
+        _put_json(rel, records)
+        prog.tick()
+        time.sleep(0.3)
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_fetch_state, STATE_FIPS.items()))
+    prog.summary()
+
+
+# ══════════════════════════════════════════════════════════════
+# 6. Census
 # ══════════════════════════════════════════════════════════════
 ACS_YEAR = "2023"
 ACS_BASE = f"https://api.census.gov/data/{ACS_YEAR}/acs/acs5"
 CENSUS_VARS = {
-    "B01003_001E": "total_population",
-    "B19013_001E": "median_household_income",
-    "B19301_001E": "per_capita_income",
-    "B17001_002E": "population_below_poverty",
-    "B02001_002E": "race_white_alone",
-    "B02001_003E": "race_black_alone",
-    "B02001_004E": "race_native_alone",
-    "B02001_005E": "race_asian_alone",
-    "B02001_006E": "race_pacific_islander_alone",
-    "B02001_007E": "race_other_alone",
-    "B02001_008E": "race_two_or_more",
-    "B03003_003E": "hispanic_or_latino",
-    "B15003_001E": "edu_total_25plus",
-    "B15003_017E": "edu_high_school_diploma",
-    "B15003_022E": "edu_bachelors",
-    "B25003_001E": "housing_total_units",
-    "B25003_002E": "housing_owner_occupied",
-    "B25077_001E": "median_home_value",
-    # 住房建造年代（铅管污染代理变量：1970年前建造的房屋铅管风险高）
-    "B25034_001E": "housing_age_total",
-    "B25034_002E": "housing_built_2020_or_later",
-    "B25034_003E": "housing_built_2010_2019",
-    "B25034_004E": "housing_built_2000_2009",
-    "B25034_005E": "housing_built_1990_1999",
-    "B25034_006E": "housing_built_1980_1989",
+    "B01003_001E": "total_population", "B19013_001E": "median_household_income",
+    "B19301_001E": "per_capita_income", "B17001_002E": "population_below_poverty",
+    "B02001_002E": "race_white_alone",  "B02001_003E": "race_black_alone",
+    "B02001_005E": "race_asian_alone",  "B03003_003E": "hispanic_or_latino",
+    "B15003_022E": "edu_bachelors",     "B25003_001E": "housing_total_units",
+    "B25077_001E": "median_home_value", "B25034_001E": "housing_age_total",
+    "B25034_011E": "housing_built_1939_or_earlier", "B25034_010E": "housing_built_1940_1949",
+    "B25034_009E": "housing_built_1950_1959",       "B25034_008E": "housing_built_1960_1969",
     "B25034_007E": "housing_built_1970_1979",
-    "B25034_008E": "housing_built_1960_1969",
-    "B25034_009E": "housing_built_1950_1959",
-    "B25034_010E": "housing_built_1940_1949",
-    "B25034_011E": "housing_built_1939_or_earlier",
 }
 
-
 def _parse_census_val(v):
-    if v is None:
-        return None
     try:
         vi = int(v)
         return None if vi < 0 else vi
     except (ValueError, TypeError):
         return None
 
-
-def fetch_census():
-    out_dir = os.path.join(BASE_DIR, "census")
-    os.makedirs(out_dir, exist_ok=True)
+def fetch_census(workers: int = WORKERS):
     var_list = ",".join(["NAME"] + list(CENSUS_VARS.keys()))
+    prog     = Progress(1 + N_STATES, f"全国County+按州Tract，{workers}线程→GCS")
 
-    # Census Tract 级别
-    print("  获取 Census Tract 数据（LA County 2498 个）...")
-    r = requests.get(ACS_BASE, params={
-        "get": var_list,
-        "for": "tract:*",
-        "in": "state:06 county:037",
-    }, timeout=60)
-    if r.status_code == 200:
-        raw = r.json()
-        headers, rows = raw[0], raw[1:]
-        records = []
-        for row in rows:
-            rec = dict(zip(headers, row))
-            out = {
-                "geoid": f"{rec.get('state')}{rec.get('county')}{rec.get('tract')}",
-                "name": rec.get("NAME"),
-                "state_fips": rec.get("state"),
-                "county_fips": rec.get("county"),
-                "tract_id": rec.get("tract"),
-            }
-            for api_var, readable in CENSUS_VARS.items():
-                out[readable] = _parse_census_val(rec.get(api_var))
-            records.append(out)
-        with open(os.path.join(out_dir, "la_census_tracts.json"), "w") as f:
-            json.dump(records, f, indent=2)
-        print(f"  ✓ la_census_tracts.json — {len(records)} 个 tract")
+    existing = _list_existing("census/")
+    rel = "census/national_counties.json"
+    if rel in existing:
+        prog.tick(skipped=True)
     else:
-        print(f"  ✗ Census Tract 请求失败：{r.status_code}")
-    time.sleep(1)
-
-    # ZIP Code (ZCTA) 级别
-    print("  获取 ZIP Code 数据（全国查询后过滤 LA）...")
-    LA_ZCTA_PREFIX = ["900","901","902","903","904","905","906","907",
-                      "908","910","911","912","913","914","915","916"]
-    r = requests.get(ACS_BASE, params={
-        "get": "NAME,B19013_001E,B01003_001E,B02001_002E,B03003_003E,B17001_002E",
-        "for": "zip code tabulation area:*",
-    }, timeout=120)
-    if r.status_code == 200:
-        raw = r.json()
-        headers, rows = raw[0], raw[1:]
-        la_records = []
-        for row in rows:
-            rec = dict(zip(headers, row))
-            zcta = rec.get("zip code tabulation area", "")
-            if any(zcta.startswith(p) for p in LA_ZCTA_PREFIX):
-                la_records.append({
-                    "zcta": zcta,
-                    "name": rec.get("NAME"),
-                    "total_population": _parse_census_val(rec.get("B01003_001E")),
-                    "median_household_income": _parse_census_val(rec.get("B19013_001E")),
-                    "race_white_alone": _parse_census_val(rec.get("B02001_002E")),
-                    "hispanic_or_latino": _parse_census_val(rec.get("B03003_003E")),
-                    "population_below_poverty": _parse_census_val(rec.get("B17001_002E")),
-                })
-        with open(os.path.join(out_dir, "la_zcta_income.json"), "w") as f:
-            json.dump(la_records, f, indent=2)
-        print(f"  ✓ la_zcta_income.json — {len(la_records)} 个 ZIP code")
-    else:
-        print(f"  ✗ ZCTA 请求失败：{r.status_code}")
-    time.sleep(1)
-
-    # 城市级别
-    print("  获取城市级人口数据...")
-    LA_CITIES = {
-        "Los Angeles","Burbank","Glendale","Pasadena","Long Beach","Santa Monica",
-        "Compton","Inglewood","Torrance","Carson","Hawthorne","El Monte","Alhambra",
-        "Pomona","Norwalk","West Covina","Downey","Whittier","Culver City",
-        "Beverly Hills","West Hollywood","Malibu","Calabasas","Altadena",
-    }
-    r = requests.get(ACS_BASE, params={
-        "get": "NAME,B19013_001E,B01003_001E,B03003_003E,B17001_002E,B25077_001E",
-        "for": "place:*",
-        "in": "state:06",
-    }, timeout=60)
-    if r.status_code == 200:
-        raw = r.json()
-        headers, rows = raw[0], raw[1:]
-        records = []
-        for row in rows:
-            rec = dict(zip(headers, row))
-            city = rec.get("NAME","").split(" city,")[0].split(" CDP,")[0].strip()
-            if city in LA_CITIES:
-                records.append({
-                    "place_id": rec.get("place"),
-                    "city_name": city,
-                    "name": rec.get("NAME"),
-                    "total_population": _parse_census_val(rec.get("B01003_001E")),
-                    "median_household_income": _parse_census_val(rec.get("B19013_001E")),
-                    "hispanic_or_latino": _parse_census_val(rec.get("B03003_003E")),
-                    "population_below_poverty": _parse_census_val(rec.get("B17001_002E")),
-                    "median_home_value": _parse_census_val(rec.get("B25077_001E")),
-                })
-        with open(os.path.join(out_dir, "la_cities_demographics.json"), "w") as f:
-            json.dump(records, f, indent=2)
-        print(f"  ✓ la_cities_demographics.json — {len(records)} 个城市")
-    else:
-        print(f"  ✗ Cities 请求失败：{r.status_code}")
-
-
-# ══════════════════════════════════════════════════════════════
-# 11. NOAA 气候数据
-# ══════════════════════════════════════════════════════════════
-NOAA_TOKEN = os.getenv("NOAA_API_KEY", "")
-NOAA_BASE = "https://www.ncei.noaa.gov/cdo-web/api/v2"
-NOAA_STATIONS = {
-    "GHCND:USW00023174": "LAX International Airport",
-    "GHCND:USW00093134": "Burbank Bob Hope Airport",
-    "GHCND:USW00023129": "Long Beach Airport",
-    "GHCND:USC00045114": "Pasadena",
-    "GHCND:USC00042319": "Downtown LA",
-}
-
-
-def _noaa_fetch_daily(station_id, start_date, end_date):
-    all_results = []
-    current = datetime.strptime(start_date, "%Y-%m-%d")
-    end = datetime.strptime(end_date, "%Y-%m-%d")
-    while current <= end:
-        year_end = min(datetime(current.year, 12, 31), end)
-        chunk_start = current.strftime("%Y-%m-%d")
-        chunk_end = year_end.strftime("%Y-%m-%d")
-        offset = 1
-        while True:
-            try:
-                r = requests.get(f"{NOAA_BASE}/data",
-                    headers={"token": NOAA_TOKEN},
-                    params={
-                        "datasetid": "GHCND", "stationid": station_id,
-                        "datatypeid": "PRCP,TMAX,TMIN,TAVG,AWND,SNOW",
-                        "startdate": chunk_start, "enddate": chunk_end,
-                        "limit": 1000, "offset": offset, "units": "metric",
-                    }, timeout=90)
-            except requests.exceptions.ReadTimeout:
-                print(f"    ⚠ {chunk_start}~{chunk_end} offset={offset}: 超时，跳过")
-                break
-            if r.status_code != 200:
-                print(f"    ⚠ {chunk_start}~{chunk_end}: {r.status_code}")
-                break
-            results = r.json().get("results", [])
-            all_results.extend(results)
-            if len(results) < 1000:
-                print(f"    {chunk_start} ~ {chunk_end}: {len(all_results)} 条")
-                break
-            offset += 1000
-            time.sleep(0.3)
-        current = datetime(current.year + 1, 1, 1)
-        time.sleep(0.5)
-    return all_results
-
-
-def fetch_noaa():
-    if not NOAA_TOKEN:
-        print("  ⚠ 未找到 NOAA_API_KEY，跳过")
-        print("  申请地址：https://www.ncdc.noaa.gov/cdo-web/token")
-        return
-
-    out_dir = os.path.join(BASE_DIR, "noaa")
-    os.makedirs(out_dir, exist_ok=True)
-
-    # 气象站列表
-    r = requests.get(f"{NOAA_BASE}/stations",
-        headers={"token": NOAA_TOKEN},
-        params={"locationid": "FIPS:06037", "datasetid": "GHCND", "limit": 1000},
-        timeout=30)
-    if r.status_code == 200:
-        with open(os.path.join(out_dir, "stations.json"), "w") as f:
-            json.dump(r.json(), f, indent=2)
-        count = r.json().get("metadata", {}).get("resultset", {}).get("count", "?")
-        print(f"  ✓ stations.json — {count} 个气象站")
-    time.sleep(1)
-
-    # 日气候数据（2023-2025）
-    all_station_data = {}
-    for station_id, station_name in NOAA_STATIONS.items():
-        print(f"  [{station_name}]")
-        records = _noaa_fetch_daily(station_id, "2023-01-01", "2025-12-31")
-        all_station_data[station_id] = {"station_name": station_name, "data": records}
-        time.sleep(1)
-    with open(os.path.join(out_dir, "daily_climate.json"), "w") as f:
-        json.dump(all_station_data, f, indent=2)
-    total = sum(len(v["data"]) for v in all_station_data.values())
-    print(f"  ✓ daily_climate.json — 共 {total} 条")
-
-    # 野火前后专项（2024-10 至 2025-03）
-    wildfire_data = {}
-    for station_id, station_name in NOAA_STATIONS.items():
-        print(f"  [野火期间] {station_name}")
-        records = _noaa_fetch_daily(station_id, "2024-10-01", "2025-03-31")
-        wildfire_data[station_id] = {
-            "station_name": station_name,
-            "period": "2024-10-01 to 2025-03-31",
-            "note": "Covers pre/post Palisades Fire (Jan 2025)",
-            "data": records
-        }
-        time.sleep(1)
-    with open(os.path.join(out_dir, "wildfire_period_climate.json"), "w") as f:
-        json.dump(wildfire_data, f, indent=2)
-    total = sum(len(v["data"]) for v in wildfire_data.values())
-    print(f"  ✓ wildfire_period_climate.json — 共 {total} 条")
-
-
-# ══════════════════════════════════════════════════════════════
-# 12. 2025 LA 野火边界 GeoJSON
-# ══════════════════════════════════════════════════════════════
-# Palisades Fire: 起火 2025-01-07，位于 Santa Monica Mountains
-# Eaton Fire:     起火 2025-01-07，位于 Eaton Canyon / San Gabriel Mountains
-# 两场火均于 2025-01-31 完全控制
-
-FIRE_SOURCES = [
-    {
-        "name": "calfire_all_perimeters",
-        "desc": "CAL FIRE 历史全量火灾边界（含 2025）",
-        "url": "https://gis.data.cnra.ca.gov/api/download/v1/items/c3c10388e3b24cec8a954ba10458039d/geojson?layers=0",
-        "filename": "calfire_all_perimeters.geojson",
-        "timeout": 120,
-    },
-    {
-        "name": "wfigs_2025",
-        "desc": "WFIGS 2025 全年野火边界（NIFC 实时数据）",
-        "url": "https://services3.arcgis.com/T4QMspbfLg3qTGWY/arcgis/rest/services/WFIGS_Interagency_Perimeters_YTD/FeatureServer/0/query",
-        "params": {
-            "where": "FireDiscoveryDateTime >= '2025-01-01'",
-            "outFields": "*",
-            "f": "geojson",
-            "resultRecordCount": 2000,
-        },
-        "filename": "wfigs_2025_perimeters.geojson",
-        "timeout": 60,
-    },
-    {
-        "name": "la_county_2025",
-        "desc": "LA County eGIS - Palisades & Eaton 火灾边界",
-        "url": "https://egis-lacounty.hub.arcgis.com/maps/ad51845ea5fb4eb483bc2a7c38b2370c/about",
-        "filename": None,  # 需手动下载，此处仅记录来源
-        "timeout": 30,
-    },
-]
-
-
-def fetch_fire():
-    out_dir = os.path.join(BASE_DIR, "fire_perimeters")
-    os.makedirs(out_dir, exist_ok=True)
-
-    # Source 1: WFIGS 2025（NIFC ArcGIS FeatureServer）
-    print("  获取 WFIGS 2025 野火边界（NIFC）...")
-    src = FIRE_SOURCES[1]
-    try:
-        r = requests.get(src["url"], params=src["params"], timeout=src["timeout"])
-        if r.status_code == 200:
-            data = r.json()
-            features = data.get("features", [])
-            with open(os.path.join(out_dir, src["filename"]), "w") as f:
-                json.dump(data, f, indent=2)
-            print(f"  ✓ {src['filename']} — {len(features)} 个火灾边界")
-
-            # 单独提取 Palisades 和 Eaton Fire
-            la_fires = [
-                feat for feat in features
-                if any(name in (feat.get("properties", {}).get("IncidentName", "") or "").lower()
-                       for name in ["palisades", "eaton"])
-            ]
-            if la_fires:
-                la_geojson = {"type": "FeatureCollection", "features": la_fires}
-                with open(os.path.join(out_dir, "la_2025_fires.geojson"), "w") as f:
-                    json.dump(la_geojson, f, indent=2)
-                print(f"  ✓ la_2025_fires.geojson — {len(la_fires)} 个 LA 火灾（Palisades + Eaton）")
-            else:
-                print("  ⚠ 未在 WFIGS 结果中找到 Palisades/Eaton，尝试 CAL FIRE 数据源")
-        else:
-            print(f"  ⚠ WFIGS 返回 {r.status_code}")
-    except Exception as e:
-        print(f"  ⚠ WFIGS 请求失败：{e}")
-
-    time.sleep(2)
-
-    # Source 2: CAL FIRE 全量（文件较大，约 50-100MB）
-    print("  获取 CAL FIRE 全量历史边界（含 2025）...")
-    src = FIRE_SOURCES[0]
-    try:
-        r = requests.get(src["url"], timeout=src["timeout"], stream=True)
-        if r.status_code == 200:
-            out_path = os.path.join(out_dir, src["filename"])
-            with open(out_path, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    f.write(chunk)
-            size_mb = os.path.getsize(out_path) / 1024 / 1024
-            print(f"  ✓ {src['filename']} ({size_mb:.1f} MB)")
-
-            # 过滤出 2025 年 LA 火灾
-            with open(out_path) as f:
-                all_data = json.load(f)
-            features = all_data.get("features", [])
-            la_2025 = [
-                feat for feat in features
-                if (feat.get("properties", {}).get("YEAR_", "") == "2025" or
-                    "2025" in str(feat.get("properties", {}).get("ALARM_DATE", ""))) and
-                any(name in (feat.get("properties", {}).get("FIRE_NAME", "") or "").upper()
-                    for name in ["PALISADES", "EATON"])
-            ]
-            if la_2025:
-                with open(os.path.join(out_dir, "la_2025_fires_calfire.geojson"), "w") as f:
-                    json.dump({"type": "FeatureCollection", "features": la_2025}, f, indent=2)
-                print(f"  ✓ la_2025_fires_calfire.geojson — {len(la_2025)} 个边界")
-        else:
-            print(f"  ⚠ CAL FIRE 返回 {r.status_code}")
-    except Exception as e:
-        print(f"  ⚠ CAL FIRE 请求失败：{e}")
-
-    # 说明手动来源
-    print("  ℹ LA County 精细边界可手动下载：")
-    print("    https://egis-lacounty.hub.arcgis.com/maps/ad51845ea5fb4eb483bc2a7c38b2370c")
-
-
-# ══════════════════════════════════════════════════════════════
-# 13. CDC PLACES - Census Tract 级别健康结果数据
-# ══════════════════════════════════════════════════════════════
-# 用途：验证水质根因是否真正导致健康损害（癌症率、肾病率等）
-# 无需 API Key，Socrata 公开数据
-
-def fetch_cdc_places():
-    out_dir = os.path.join(BASE_DIR, "cdc_places")
-    os.makedirs(out_dir, exist_ok=True)
-
-    print("  获取 CDC PLACES LA County Census Tract 健康数据...")
-    all_records = []
-    offset = 0
-    limit = 50000
-
-    while True:
-        r = requests.get(
-            "https://data.cdc.gov/resource/cwsq-ngmh.json",
-            params={
-                "stateabbr": "CA",
-                "countyname": "Los Angeles",
-                "$limit": limit,
-                "$offset": offset,
-            },
-            timeout=60
-        )
-        if r.status_code != 200:
-            print(f"  ✗ 请求失败：{r.status_code}")
-            break
-        batch = r.json()
-        if not batch:
-            break
-        all_records.extend(batch)
-        if len(batch) < limit:
-            break
-        offset += limit
-        time.sleep(0.5)
-
-    if all_records:
-        with open(os.path.join(out_dir, "la_health_outcomes.json"), "w") as f:
-            json.dump(all_records, f, indent=2)
-
-        # 统计覆盖的健康指标
-        measures = list({r.get("measureid") for r in all_records if r.get("measureid")})
-        print(f"  ✓ la_health_outcomes.json — {len(all_records)} 条，{len(measures)} 个健康指标")
-        print(f"    指标包括：{', '.join(sorted(measures)[:8])} ...")
-
-        # 透视为宽表（每个 tract 一行，每个指标一列）
-        tract_map = {}
-        for rec in all_records:
-            fips = rec.get("locationname", "")
-            measure = rec.get("measureid", "")
-            val = rec.get("data_value")
-            if fips and measure:
-                if fips not in tract_map:
-                    tract_map[fips] = {"tractfips": fips,
-                                       "stateabbr": rec.get("stateabbr"),
-                                       "countyname": rec.get("countyname")}
-                try:
-                    tract_map[fips][measure.lower()] = float(val) if val else None
-                except (ValueError, TypeError):
-                    tract_map[fips][measure.lower()] = None
-
-        wide = list(tract_map.values())
-        with open(os.path.join(out_dir, "la_health_wide.json"), "w") as f:
-            json.dump(wide, f, indent=2)
-        print(f"  ✓ la_health_wide.json — {len(wide)} 个 Census Tract（宽表格式）")
-
-
-# ══════════════════════════════════════════════════════════════
-# 14. EPA TRI - 工业有毒物质排放清单
-# ══════════════════════════════════════════════════════════════
-# 用途：识别供水系统附近的工业污染源（ML 根因特征）
-# 无需 API Key
-
-def fetch_epa_tri():
-    out_dir = os.path.join(BASE_DIR, "epa_tri")
-    os.makedirs(out_dir, exist_ok=True)
-
-    print("  获取 EPA TRI LA County 工业排放设施...")
-    all_facilities = []
-    for offset in range(0, 10000, 1000):
-        r = requests.get(
-            f"https://data.epa.gov/efservice/TRI_FACILITY"
-            f"/STATE_ABBR/CA/COUNTY/LOS%20ANGELES"
-            f"/ROWS/{offset}:{offset + 1000}/JSON",
-            timeout=60
-        )
-        if r.status_code != 200:
-            break
-        batch = r.json()
-        if not batch:
-            break
-        all_facilities.extend(batch)
-        if len(batch) < 1000:
-            break
-        time.sleep(0.3)
-
-    with open(os.path.join(out_dir, "tri_facilities.json"), "w") as f:
-        json.dump(all_facilities, f, indent=2)
-    print(f"  ✓ tri_facilities.json — {len(all_facilities)} 个工业设施")
-    time.sleep(1)
-
-    # 获取排放量数据
-    # 正确表名：TRI_REPORTING_FORM（含 doc_ctrl_num）+ TRI_RELEASE_QTY（含排放量）
-    # 原用的 TRI_BASIC_DATA 表已不存在
-    print("  获取 TRI 排放量数据（2020-2024）...")
-    la_facility_ids = {fac["tri_facility_id"] for fac in all_facilities}
-
-    # Step 1: 分页拉取 TRI_REPORTING_FORM，过滤出 LA 设施的 doc_ctrl_num
-    doc_ctrl_map = {}  # doc_ctrl_num -> 元数据
-    for year in range(2020, 2025):
-        year_count = 0
-        for offset in range(0, 500_000, 1000):
-            r = requests.get(
-                f"https://data.epa.gov/efservice/TRI_REPORTING_FORM"
-                f"/REPORTING_YEAR/{year}/ROWS/{offset}:{offset+1000}/JSON",
-                timeout=60
-            )
-            if r.status_code != 200:
-                break
-            batch = r.json()
-            if not batch or isinstance(batch, dict):
-                break
-            for row in batch:
-                fid = row.get("tri_facility_id", "")
-                if fid in la_facility_ids:
-                    dcn = row.get("doc_ctrl_num")
-                    if dcn:
-                        doc_ctrl_map[dcn] = {
-                            "tri_facility_id": fid,
-                            "tri_chem_id":     row.get("tri_chem_id"),
-                            "cas_chem_name":   row.get("cas_chem_name"),
-                            "reporting_year":  year,
-                        }
-                        year_count += 1
-            if len(batch) < 1000:
-                break
-            time.sleep(0.1)
-        print(f"    {year}: {year_count} 条 LA 设施报告表单")
-    print(f"  → 共 {len(doc_ctrl_map)} 个报告单据，开始并发获取排放量...")
-
-    # Step 2: 并发获取每个 doc_ctrl_num 对应的排放量
-    def _fetch_release_qty(dcn):
         try:
-            r = requests.get(
-                f"https://data.epa.gov/efservice/TRI_RELEASE_QTY/DOC_CTRL_NUM/{dcn}/JSON",
-                timeout=30
-            )
+            r = requests.get(ACS_BASE, params={"get": var_list, "for": "county:*", "in": "state:*"}, timeout=180)
             if r.status_code == 200:
-                return dcn, r.json()
-        except Exception:
-            pass
-        return dcn, []
-
-    release_map = {}
-    done = 0
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        futures = {executor.submit(_fetch_release_qty, dcn): dcn for dcn in doc_ctrl_map}
-        for fut in as_completed(futures):
-            dcn, rows = fut.result()
-            release_map[dcn] = rows if isinstance(rows, list) else []
-            done += 1
-            if done % 500 == 0:
-                print(f"    {done}/{len(doc_ctrl_map)} 完成...")
-
-    # 合并：报告元数据 + 各介质排放量
-    all_releases = []
-    for dcn, meta in doc_ctrl_map.items():
-        total_air = total_water = total_land = total_all = 0.0
-        media_breakdown = []
-        for row in release_map.get(dcn, []):
-            qty = row.get("total_release")
-            if qty is None:
-                continue
-            try:
-                qty = float(qty)
-            except (ValueError, TypeError):
-                continue
-            medium = (row.get("environmental_medium") or "").upper()
-            total_all += qty
-            if "AIR" in medium:
-                total_air += qty
-            elif "WATER" in medium or "STREAM" in medium:
-                total_water += qty
-            elif "LAND" in medium or "SOIL" in medium or "GROUND" in medium:
-                total_land += qty
-            media_breakdown.append({"medium": medium, "qty_lbs": qty})
-        all_releases.append({
-            **meta,
-            "doc_ctrl_num": dcn,
-            "total_lbs":    total_all,
-            "air_lbs":      total_air,
-            "water_lbs":    total_water,
-            "land_lbs":     total_land,
-            "media_breakdown": media_breakdown,
-        })
-
-    with open(os.path.join(out_dir, "tri_releases.json"), "w") as f:
-        json.dump(all_releases, f, indent=2)
-    print(f"  ✓ tri_releases.json — 共 {len(all_releases)} 条排放记录")
-
-
-# ══════════════════════════════════════════════════════════════
-# 15. EPA AQS - 空气质量数据
-# ══════════════════════════════════════════════════════════════
-# 用途：野火→空气污染→水质污染因果链的中间环节
-# 需要免费 API Key：https://aqs.epa.gov/data/api/signup?email=YOUR_EMAIL
-# 在 .env 中添加：AQS_EMAIL=xxx  AQS_KEY=xxx
-
-AQS_EMAIL = os.getenv("AQS_EMAIL", "")
-AQS_KEY = os.getenv("AQS_KEY", "")
-AQS_BASE = "https://aqs.epa.gov/data/api"
-
-# 关键污染物参数代码
-AQS_PARAMS = {
-    "88101": "PM2.5",
-    "42101": "CO",
-    "42602": "NO2",
-    "44201": "Ozone",
-    "42401": "SO2",
-    "88502": "PM2.5_nonFRM",  # 用于野火烟雾监测
-}
-
-
-def fetch_aqs():
-    if not AQS_EMAIL or not AQS_KEY:
-        print("  ⚠ 未找到 AQS_EMAIL / AQS_KEY，跳过")
-        print("  申请地址：https://aqs.epa.gov/data/api/signup?email=YOUR_EMAIL")
-        print("  申请后在 .env 添加：AQS_EMAIL=xxx  AQS_KEY=xxx")
-        return
-
-    out_dir = os.path.join(BASE_DIR, "aqs")
-    os.makedirs(out_dir, exist_ok=True)
-
-    # 获取 LA County 监测站列表
-    print("  获取 LA County AQS 监测站...")
-    r = requests.get(f"{AQS_BASE}/monitors/byCounty", params={
-        "email": AQS_EMAIL, "key": AQS_KEY,
-        "param": "88101", "bdate": "20230101", "edate": "20251231",
-        "state": "06", "county": "037",
-    }, timeout=60)
-    if r.status_code == 200 and r.json().get("Header", [{}])[0].get("status") == "Success":
-        stations = r.json().get("Data", [])
-        with open(os.path.join(out_dir, "stations.json"), "w") as f:
-            json.dump(stations, f, indent=2)
-        print(f"  ✓ stations.json — {len(stations)} 个空气质量监测站")
-    else:
-        print(f"  ⚠ 监测站请求失败：{r.status_code} {r.text[:100]}")
-    time.sleep(1)
-
-    # AQS 每次只允许查询 1 个日历年，跨年需拆分
-    def _aqs_daily(param_code, bdate, edate):
-        """分年查询并合并结果"""
-        from datetime import date
-        start_year = int(bdate[:4])
-        end_year = int(edate[:4])
-        combined = []
-        for year in range(start_year, end_year + 1):
-            y_start = f"{year}0101" if year > start_year else bdate
-            y_end   = f"{year}1231" if year < end_year   else edate
-            r = requests.get(f"{AQS_BASE}/dailyData/byCounty", params={
-                "email": AQS_EMAIL, "key": AQS_KEY,
-                "param": param_code,
-                "bdate": y_start, "edate": y_end,
-                "state": "06", "county": "037",
-            }, timeout=60)
-            if r.status_code == 200 and r.json().get("Header", [{}])[0].get("status") == "Success":
-                combined.extend(r.json().get("Data", []))
-            time.sleep(0.5)
-        return combined
-
-    # 获取野火前后日均数据（2024-10-01 至 2025-03-31，拆分为两年查询）
-    all_data = {}
-    for param_code, param_name in AQS_PARAMS.items():
-        print(f"  获取 {param_name} 日均数据（野火前后）...")
-        try:
-            data = _aqs_daily(param_code, "20241001", "20250331")
-            all_data[param_name] = data
-            print(f"    ✓ {param_name}: {len(data)} 条")
+                raw = r.json()
+                hdrs = raw[0]
+                records = []
+                for row in raw[1:]:
+                    rec = dict(zip(hdrs, row))
+                    out = {"geoid": f"{rec.get('state')}{rec.get('county')}", "name": rec.get("NAME"),
+                           "state_fips": rec.get("state"), "county_fips": rec.get("county")}
+                    for k, v in CENSUS_VARS.items():
+                        out[v] = _parse_census_val(rec.get(k))
+                    records.append(out)
+                _put_json(rel, records)
         except Exception as e:
-            print(f"    ⚠ {param_name} 跳过：{e}")
-            all_data[param_name] = []
+            print(f"\n  ✗ national counties: {e}")
+        prog.tick()
 
-    with open(os.path.join(out_dir, "wildfire_period_aqi.json"), "w") as f:
-        json.dump(all_data, f, indent=2)
-    total = sum(len(v) for v in all_data.values())
-    print(f"  ✓ wildfire_period_aqi.json — 共 {total} 条空气质量记录")
-
-    # 获取长期年度数据（2020-2025，每年单独查询）
-    annual_data = {}
-    for param_code, param_name in list(AQS_PARAMS.items())[:3]:  # PM2.5, CO, NO2
-        print(f"  获取 {param_name} 年度数据（2020-2025）...")
-        combined = []
-        for year in range(2020, 2026):
-            r = requests.get(f"{AQS_BASE}/annualData/byCounty", params={
-                "email": AQS_EMAIL, "key": AQS_KEY,
-                "param": param_code,
-                "bdate": f"{year}0101", "edate": f"{year}1231",
-                "state": "06", "county": "037",
-            }, timeout=60)
-            if r.status_code == 200 and r.json().get("Header", [{}])[0].get("status") == "Success":
-                combined.extend(r.json().get("Data", []))
-            time.sleep(0.5)
-        annual_data[param_name] = combined
-        print(f"    ✓ {param_name}: {len(combined)} 条年度统计")
-
-    with open(os.path.join(out_dir, "annual_aqi.json"), "w") as f:
-        json.dump(annual_data, f, indent=2)
-    print(f"  ✓ annual_aqi.json — PM2.5/CO/NO2 年度统计")
-
-
-# ══════════════════════════════════════════════════════════════
-# 16. CA GeoTracker - 地下储油罐 & 污染清理地点
-# ══════════════════════════════════════════════════════════════
-# 用途：苯/MTBE 等石油衍生物污染的根因来源
-# 无需 API Key
-
-def fetch_geotracker():
-    out_dir = os.path.join(BASE_DIR, "geotracker")
-    os.makedirs(out_dir, exist_ok=True)
-
-    # LA County 的边界框（用于空间查询）
-    LA_BBOX = {
-        "xmin": -118.9448, "ymin": 33.7037,
-        "xmax": -117.6462, "ymax": 34.8233,
-    }
-
-    # GeoTracker ArcGIS Feature Service（CA Water Board 公开数据）
-    endpoints = [
-        {
-            "name": "ust_sites",
-            "desc": "地下储油罐（UST）污染地点",
-            "url": "https://geotracker.waterboards.ca.gov/arcgis/rest/services/GEOTRACKER/GeoTrackerPublic/MapServer/0/query",
-        },
-        {
-            "name": "cleanup_sites",
-            "desc": "污染清理中地点",
-            "url": "https://geotracker.waterboards.ca.gov/arcgis/rest/services/GEOTRACKER/GeoTrackerPublic/MapServer/1/query",
-        },
-    ]
-
-    # CA GeoTracker via CALEPA EnviroStor (替代 GeoTracker 直接 API)
-    # EnviroStor 是 CA DTSC 管理的污染地块数据库，公开 REST API
-    print("  获取 EnviroStor 污染清理地点（CA DTSC）...")
-    try:
-        r = requests.get(
-            "https://geotracker.waterboards.ca.gov/esi/search",
-            params={
-                "cmd": "search",
-                "county": "19",   # LA County code
-                "status": "Active",
-                "output": "json",
-                "rows": 5000,
-            },
-            timeout=60
-        )
-        if r.status_code == 200:
-            data = r.json()
-            sites = data if isinstance(data, list) else data.get("sites", data.get("results", []))
-            with open(os.path.join(out_dir, "geotracker_sites.json"), "w") as f:
-                json.dump(sites, f, indent=2)
-            print(f"  ✓ geotracker_sites.json — {len(sites)} 个地点")
-        else:
-            print(f"  ⚠ GeoTracker ESI: {r.status_code}")
-    except Exception as e:
-        print(f"  ⚠ GeoTracker ESI 请求失败：{e}")
-    time.sleep(1)
-
-    # CA EnviroStor (DTSC) - ArcGIS Feature Service
-    print("  获取 CA EnviroStor 污染地块（ArcGIS）...")
-    try:
-        r = requests.get(
-            "https://services1.arcgis.com/BbKbPoacMHPqM6dN/arcgis/rest/services"
-            "/EnviroStor_Public/FeatureServer/0/query",
-            params={
-                "where": "COUNTY_NAME='LOS ANGELES'",
-                "outFields": "SITE_ID,SITE_NAME,SITE_TYPE,SITE_STATUS,ADDRESS,"
-                             "CITY,LATITUDE,LONGITUDE,REGULATORY_STATUS",
-                "f": "geojson",
-                "resultRecordCount": 5000,
-            },
-            timeout=60
-        )
-        if r.status_code == 200:
-            data = r.json()
-            features = data.get("features", [])
-            with open(os.path.join(out_dir, "envirostor_sites.geojson"), "w") as f:
-                json.dump(data, f, indent=2)
-            print(f"  ✓ envirostor_sites.geojson — {len(features)} 个污染地块")
-        else:
-            print(f"  ⚠ EnviroStor ArcGIS: {r.status_code}")
-    except Exception as e:
-        print(f"  ⚠ EnviroStor 请求失败：{e}")
-    time.sleep(1)
-
-    # EPA RCRA 危险废物设施（补充工业污染来源）
-    print("  获取 EPA RCRA 危险废物设施...")
-    try:
-        r = requests.get(
-            "https://data.epa.gov/efservice/RCRA_FACILITIES"
-            "/STATE_CODE/CA/COUNTY_NAME/LOS ANGELES/ROWS/0:3000/JSON",
-            timeout=60
-        )
-        if r.status_code == 200:
-            data = r.json()
-            with open(os.path.join(out_dir, "rcra_hazardous_facilities.json"), "w") as f:
-                json.dump(data, f, indent=2)
-            print(f"  ✓ rcra_hazardous_facilities.json — {len(data)} 个危险废物设施")
-        else:
-            print(f"  ⚠ RCRA: {r.status_code}")
-    except Exception as e:
-        print(f"  ⚠ RCRA 请求失败：{e}")
-
-
-# ══════════════════════════════════════════════════════════════
-# 17. EPA EJScreen - 环境正义综合指标（Census Tract 级别）
-# ══════════════════════════════════════════════════════════════
-# 用途：预聚合的环境负担指标，含 TRI 临近度、Superfund 临近度、
-#       交通流量、废水排放等，直接作为 ML 特征使用
-# 无需 API Key
-
-def fetch_ejscreen():
-    out_dir = os.path.join(BASE_DIR, "ejscreen")
-    os.makedirs(out_dir, exist_ok=True)
-
-    # EJScreen ArcGIS Feature Service - Census Tract 级别
-    # EJScreen 数据托管在 EPA ArcGIS Online
-    print("  获取 EPA EJScreen LA County Census Tract 数据...")
-    all_features = []
-    offset = 0
-    batch_size = 1000
-
-    while True:
-        r = requests.get(
-            "https://services.arcgis.com/cJ9YHowT8TU7DUyn/arcgis/rest/services"
-            "/EJScreen_2024_with_AS_CNMI_GU_VI/FeatureServer/2/query",
-            params={
-                "where": "ID LIKE '06037%'",
-                "outFields": (
-                    "ID,ACSTOTPOP,CANCER,RESP,PTRAF,PWDIS,PNPL,PRMP,PTSDF,"
-                    "OZONE,PM25,DSLPM,PEOPCOLORPCT,LOWINCPCT,UNEMPPCT,"
-                    "LINGISOPCT,LESSHSPCT,UNDER5PCT,OVER64PCT,DEMOGINX,"
-                    "PRE1960PCT,ACSIPOVBAS"
-                ),
-                "f": "json",
-                "resultOffset": offset,
-                "resultRecordCount": batch_size,
-            },
-            timeout=60
-        )
-
-        if r.status_code != 200:
-            print(f"  ⚠ 请求失败：{r.status_code}")
-            break
-
-        data = r.json()
-        features = data.get("features", [])
-        all_features.extend(features)
-
-        if len(features) < batch_size:
-            break
-        offset += batch_size
-        time.sleep(0.3)
-
-    if all_features:
-        records = [f.get("attributes", {}) for f in all_features]
-        with open(os.path.join(out_dir, "la_ejscreen_tracts.json"), "w") as f:
-            json.dump(records, f, indent=2)
-        print(f"  ✓ la_ejscreen_tracts.json — {len(records)} 个 Census Tract")
-        print(f"    字段含：癌症风险、PM2.5、TRI临近度、Superfund临近度、人口统计等")
-    else:
-        print("  ⚠ ArcGIS Online 未获取到数据，尝试备用下载...")
-
-
-# ══════════════════════════════════════════════════════════════
-# 18. USGS 实测水质时间序列
-# ══════════════════════════════════════════════════════════════
-def fetch_usgs_measurements():
-    out_dir = os.path.join(BASE_DIR, "usgs")
-    os.makedirs(out_dir, exist_ok=True)
-
-    out_path = os.path.join(out_dir, "measurements.json")
-    if os.path.exists(out_path):
-        print("  ⏭ measurements.json 已存在，跳过")
-        return
-
-    print("  获取 LA County USGS 实测水质时间序列（温度/DO/pH/流量/电导/浊度）...")
-    try:
-        r = requests.get(
-            "https://waterservices.usgs.gov/nwis/dv/",
-            params={
-                "format": "json",
-                "stateCd": "ca",
-                "countyCd": "037",
-                "parameterCd": "00060,00010,00300,00400,00095,63680",
-                "startDT": "2020-01-01",
-                "endDT": "2025-03-31",
-                "siteStatus": "all",
-            },
-            timeout=180,
-        )
-        if r.status_code != 200 or not r.text.strip():
-            print(f"  ⚠ measurements 返回 {r.status_code}，跳过")
+    def _fetch_state(item):
+        fips, abbr = item
+        rel = f"census/{abbr}_tracts.json"
+        if rel in existing:
+            prog.tick(skipped=True)
             return
         try:
-            data = r.json()
-            with open(out_path, "w") as f:
-                json.dump(data, f, indent=2)
-            ts_count = len(data.get("value", {}).get("timeSeries", []))
-            print(f"  ✓ measurements.json（{ts_count} 时间序列）")
-        except Exception as e:
-            print(f"  ⚠ JSON 解析失败，保存原始文本：{e}")
-            with open(os.path.join(out_dir, "measurements.txt"), "w") as f:
-                f.write(r.text)
-            print("  ✓ measurements.txt（原始格式）")
-    except Exception as e:
-        print(f"  ⚠ fetch_usgs_measurements 请求失败：{e}")
-
-
-# ══════════════════════════════════════════════════════════════
-# 19. Heal the Bay 海滩水质评级
-# ══════════════════════════════════════════════════════════════
-def fetch_heal_the_bay():
-    out_dir = os.path.join(BASE_DIR, "beach")
-    os.makedirs(out_dir, exist_ok=True)
-
-    out_path = os.path.join(out_dir, "beach_quality.json")
-    if os.path.exists(out_path):
-        print("  ⏭ beach_quality.json 已存在，跳过")
-        return
-
-    results = []
-
-    # 方法 1：尝试 Heal the Bay 官方 API
-    print("  尝试 Heal the Bay API...")
-    try:
-        r = requests.get(
-            "https://api.healthebay.org/v1/beaches",
-            params={"county": "Los Angeles", "state": "CA"},
-            timeout=30,
-        )
-        if r.status_code == 200:
-            data = r.json()
-            beaches = data if isinstance(data, list) else data.get("beaches", data.get("results", []))
-            for b in beaches:
-                results.append({
-                    "name": b.get("name", b.get("beach_name", "")),
-                    "lat": b.get("lat", b.get("latitude", None)),
-                    "lon": b.get("lon", b.get("longitude", None)),
-                    "grade": b.get("grade", b.get("overall_grade", "")),
-                    "last_sample_date": b.get("last_sample_date", b.get("sample_date", "")),
-                    "bacteria_level": b.get("bacteria_level", b.get("enterococcus", "")),
-                })
-            print(f"  ✓ Heal the Bay API 返回 {len(results)} 个海滩")
-        else:
-            print(f"  ⚠ Heal the Bay API 返回 {r.status_code}，尝试备用来源")
-    except Exception as e:
-        print(f"  ⚠ Heal the Bay API 失败：{e}，尝试备用来源")
-
-    time.sleep(1)
-
-    # 方法 2：CEDEN CA Water Board 海滩数据
-    if not results:
-        print("  尝试 CA Water Board CEDEN 海滩数据...")
-        try:
-            r = requests.get(
-                "https://data.ca.gov/api/3/action/datastore_search",
-                params={
-                    "resource_id": "c4ae47fc-f0fa-4b0d-a2c0-ed2b8a0dea0e",
-                    "filters": json.dumps({"county": "Los Angeles"}),
-                    "limit": 5000,
-                },
-                timeout=60,
-            )
+            r = requests.get(ACS_BASE,
+                params={"get": var_list, "for": "tract:*", "in": f"state:{fips} county:*"}, timeout=120)
             if r.status_code == 200:
-                data = r.json()
-                records = data.get("result", {}).get("records", [])
-                for rec in records:
-                    results.append({
-                        "name": rec.get("StationName", rec.get("station_name", "")),
-                        "lat": rec.get("TargetLatitude", rec.get("latitude", None)),
-                        "lon": rec.get("TargetLongitude", rec.get("longitude", None)),
-                        "grade": rec.get("Result", ""),
-                        "last_sample_date": rec.get("SampleDate", rec.get("sample_date", "")),
-                        "bacteria_level": rec.get("ResultQualCode", ""),
-                    })
-                print(f"  ✓ CEDEN 返回 {len(records)} 条记录")
-            else:
-                print(f"  ⚠ CEDEN 返回 {r.status_code}")
+                raw = r.json()
+                hdrs = raw[0]
+                records = []
+                for row in raw[1:]:
+                    rec = dict(zip(hdrs, row))
+                    out = {"geoid": f"{rec.get('state')}{rec.get('county')}{rec.get('tract')}",
+                           "name": rec.get("NAME"), "state_fips": rec.get("state"),
+                           "county_fips": rec.get("county"), "tract_id": rec.get("tract")}
+                    for k, v in CENSUS_VARS.items():
+                        out[v] = _parse_census_val(rec.get(k))
+                    records.append(out)
+                _put_json(rel, records)
         except Exception as e:
-            print(f"  ⚠ CEDEN 请求失败：{e}")
-        time.sleep(1)
+            print(f"\n  ✗ {abbr} tracts: {e}")
+        prog.tick()
+        time.sleep(0.5)
 
-    # 方法 3：从 WQP 站点过滤海滩/海洋类型站点
-    if not results:
-        print("  从 WQP 站点过滤海滩/海洋类型...")
-        wqp_path = os.path.join(BASE_DIR, "wqp", "stations.csv")
-        if os.path.exists(wqp_path):
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_fetch_state, STATE_FIPS.items()))
+    prog.summary()
+
+
+# ══════════════════════════════════════════════════════════════
+# 7. CDC PLACES
+# ══════════════════════════════════════════════════════════════
+def fetch_cdc_places(workers: int = WORKERS):
+    existing = _list_existing("cdc_places/")
+    prog     = Progress(N_STATES, f"按州，{workers}线程→GCS")
+
+    def _fetch_state(item):
+        fips, abbr = item
+        rel = f"cdc_places/{abbr}_health_outcomes.json"
+        if rel in existing:
+            prog.tick(skipped=True)
+            return
+        records, offset = [], 0
+        while True:
             try:
-                import csv
-                with open(wqp_path, newline="", encoding="utf-8", errors="replace") as csvf:
-                    reader = csv.DictReader(csvf)
-                    for row in reader:
-                        stype = row.get("MonitoringLocationTypeName", "")
-                        if "Beach" in stype or "Ocean" in stype or "Coastal" in stype:
-                            try:
-                                lat = float(row.get("LatitudeMeasure", 0) or 0)
-                                lon = float(row.get("LongitudeMeasure", 0) or 0)
-                            except (ValueError, TypeError):
-                                lat, lon = None, None
-                            results.append({
-                                "name": row.get("MonitoringLocationName", ""),
-                                "lat": lat if lat else None,
-                                "lon": lon if lon else None,
-                                "grade": "",
-                                "last_sample_date": "",
-                                "bacteria_level": "",
-                            })
-                print(f"  ✓ 从 WQP 过滤出 {len(results)} 个海滩/海洋站点")
+                r = requests.get("https://data.cdc.gov/resource/cwsq-ngmh.json",
+                    params={"stateabbr": abbr, "$limit": 50000, "$offset": offset}, timeout=60)
+                if r.status_code != 200:
+                    break
+                batch = r.json()
+                if not batch:
+                    break
+                records.extend(batch)
+                if len(batch) < 50000:
+                    break
+                offset += 50000
+                time.sleep(0.5)
             except Exception as e:
-                print(f"  ⚠ WQP 过滤失败：{e}")
+                print(f"\n  ✗ {abbr}: {e}")
+                break
+        _put_json(rel, records)
+        prog.tick()
+        time.sleep(0.3)
 
-    with open(out_path, "w") as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
-    print(f"  ✓ beach_quality.json（{len(results)} 条记录）")
-
-
-# ══════════════════════════════════════════════════════════════
-# 20. 有害藻华（HAB）
-# ══════════════════════════════════════════════════════════════
-def fetch_hab():
-    out_dir = os.path.join(BASE_DIR, "hab")
-    os.makedirs(out_dir, exist_ok=True)
-
-    out_path = os.path.join(out_dir, "la_hab_events.json")
-    if os.path.exists(out_path):
-        print("  ⏭ la_hab_events.json 已存在，跳过")
-        return
-
-    results = []
-
-    # CA FHAB Bloom Reports（正确 resource ID）
-    for label, rid in [
-        ("Bloom Reports", "c6a36b91-ad38-4611-8750-87ee99e497dd"),
-        ("HAB Cases",     "67648948-034f-4882-bbc0-c07c7d38daf9"),
-        ("HAB Results",   "9d4e1df4-0cd6-4165-9e63-effcafd9dccc"),
-    ]:
-        print(f"  获取 CA FHAB {label}...")
-        try:
-            r = requests.get(
-                "https://data.ca.gov/api/3/action/datastore_search",
-                params={
-                    "resource_id": rid,
-                    "filters": json.dumps({"County": "Los Angeles"}),
-                    "limit": 5000,
-                },
-                timeout=60,
-            )
-            if r.status_code == 200 and r.json().get("success"):
-                records = r.json().get("result", {}).get("records", [])
-                results.extend(records)
-                print(f"  ✓ {label}：{len(records)} 条")
-            else:
-                print(f"  ⚠ {label} 返回 {r.status_code}")
-        except Exception as e:
-            print(f"  ⚠ {label} 请求失败：{e}")
-        time.sleep(1)
-
-    with open(out_path, "w") as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
-    print(f"  ✓ la_hab_events.json（{len(results)} 条记录）")
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_fetch_state, STATE_FIPS.items()))
+    prog.summary()
 
 
 # ══════════════════════════════════════════════════════════════
-# 21. CDPR 农药使用数据
+# 9. EPA TRI
 # ══════════════════════════════════════════════════════════════
-def fetch_cdpr_pesticides():
-    out_dir = os.path.join(BASE_DIR, "cdpr")
-    os.makedirs(out_dir, exist_ok=True)
+def fetch_epa_tri(workers: int = WORKERS):
+    existing = _list_existing("epa_tri/")
+    prog     = Progress(N_STATES, f"按州，{workers}线程→GCS")
 
-    out_path = os.path.join(out_dir, "la_pesticide_use.json")
-    if os.path.exists(out_path):
-        print("  ⏭ la_pesticide_use.json 已存在，跳过")
-        return
+    def _fetch_state(item):
+        fips, abbr = item
+        rel = f"epa_tri/{abbr}_facilities.json"
+        if rel in existing:
+            prog.tick(skipped=True)
+            return
+        facilities = []
+        for offset in range(0, 50_000, 1000):
+            try:
+                r = requests.get(
+                    f"https://data.epa.gov/efservice/TRI_FACILITY/STATE_ABBR/{abbr}/ROWS/{offset}:{offset+1000}/JSON",
+                    timeout=60)
+                if r.status_code != 200:
+                    break
+                batch = r.json()
+                if not batch or isinstance(batch, dict):
+                    break
+                facilities.extend(batch)
+                if len(batch) < 1000:
+                    break
+                time.sleep(0.2)
+            except Exception as e:
+                print(f"\n  ✗ {abbr} offset={offset}: {e}")
+                break
+        _put_json(rel, facilities)
+        prog.tick()
+        time.sleep(0.3)
 
-    # CDPR 通过年度 ZIP 包提供数据（2023年为最新），下载后过滤 LA County（county code=19）
-    print("  下载 CDPR 农药使用报告 2023 ZIP...")
-    import zipfile, io
-    zip_url = "https://files.cdpr.ca.gov/pub/outgoing/pur_archives/pur2023.zip"
-    try:
-        r = requests.get(zip_url, timeout=180, stream=True)
-        if r.status_code == 200:
-            z = zipfile.ZipFile(io.BytesIO(r.content))
-            # 主数据在 pur2023/pur_data/udc23_XX.txt
-            data_files = [n for n in z.namelist()
-                          if "/pur_data/udc" in n and n.endswith(".txt")]
-            records = []
-            for fn in data_files:
-                with z.open(fn) as f:
-                    lines = f.read().decode("latin-1").splitlines()
-                    if not lines:
-                        continue
-                    header = [h.strip() for h in lines[0].split(",")]
-                    for line in lines[1:]:
-                        parts = line.split(",")
-                        if len(parts) >= len(header):
-                            rec = dict(zip(header, [p.strip() for p in parts]))
-                            if rec.get("county_cd", "").strip() == "19":
-                                records.append(rec)
-            with open(out_path, "w") as f:
-                json.dump(records, f, indent=2, ensure_ascii=False)
-            print(f"  ✓ la_pesticide_use.json（{len(records)} 条 LA County 农药记录）")
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_fetch_state, STATE_FIPS.items()))
+    prog.summary()
+
+
+# ══════════════════════════════════════════════════════════════
+# 9. NPDES
+# ══════════════════════════════════════════════════════════════
+def fetch_npdes(workers: int = WORKERS):
+    existing = _list_existing("npdes/")
+    prog     = Progress(N_STATES * 2, f"设施+DMR，{workers}线程→GCS")
+
+    def _fetch_state(item):
+        fips, abbr = item
+        rel = f"npdes/{abbr}_facilities.json"
+        if rel in existing:
+            prog.tick(skipped=True)
         else:
-            print(f"  ⚠ CDPR ZIP 返回 {r.status_code}")
-            with open(out_path, "w") as f:
-                json.dump([], f)
-    except Exception as e:
-        print(f"  ⚠ CDPR 请求失败：{e}")
-        with open(out_path, "w") as f:
-            json.dump([], f)
-
-
-# ══════════════════════════════════════════════════════════════
-# 22. EPA SDWIS 水源类型（per-system primary_source_code）
-# ══════════════════════════════════════════════════════════════
-def fetch_sdwis_source_type():
-    """逐个查询每个供水系统的 primary_source_code，输出 data/raw_data/sdwis/source_type.csv"""
-    import csv
-    out_dir = os.path.join(BASE_DIR, "sdwis")
-    os.makedirs(out_dir, exist_ok=True)
-
-    feat_path = os.path.join(os.path.dirname(BASE_DIR), "output", "data", "system_features.csv")
-    if not os.path.exists(feat_path):
-        print(f"  ⚠ 未找到 {feat_path}，请先运行 01_build_features.py")
-        return
-
-    import pandas as pd
-    df = pd.read_csv(feat_path)
-    pwsids = df["pwsid"].tolist()
-    print(f"  需要查询 {len(pwsids)} 个供水系统水源类型...")
-
-    records, failed = [], []
-    for i, pwsid in enumerate(pwsids):
-        url = f"https://data.epa.gov/efservice/WATER_SYSTEM/PWSID/{pwsid}/JSON"
-        try:
-            r = requests.get(url, timeout=10)
-            if r.status_code == 200:
-                data = r.json()[0]
-                records.append({
-                    "pwsid":               pwsid,
-                    "gw_sw_code":          data.get("gw_sw_code", ""),
-                    "primary_source_code": data.get("primary_source_code", ""),
-                })
-            else:
-                failed.append(pwsid)
-            if (i + 1) % 20 == 0:
-                print(f"    {i+1}/{len(pwsids)} ...")
-            time.sleep(0.15)
-        except Exception as e:
-            print(f"    ⚠ {pwsid} 失败: {e}")
-            failed.append(pwsid)
+            try:
+                r = requests.get("https://echodata.epa.gov/echo/cwa_rest_services.get_facilities",
+                    params={"output": "JSON", "p_st": abbr, "p_act": "Y"}, timeout=60)
+                facilities = []
+                if r.status_code == 200:
+                    qid  = r.json().get("Results", {}).get("QueryID")
+                    page = 1
+                    while qid:
+                        r2 = requests.get("https://echodata.epa.gov/echo/cwa_rest_services.get_qid",
+                            params={"output": "JSON", "qid": qid, "pageno": page}, timeout=60)
+                        if r2.status_code != 200:
+                            break
+                        batch = r2.json().get("Results", {}).get("Facilities", [])
+                        if not batch:
+                            break
+                        facilities.extend(batch)
+                        if len(batch) < 1000:
+                            break
+                        page += 1
+                        time.sleep(0.3)
+                _put_json(rel, facilities)
+            except Exception as e:
+                print(f"\n  ✗ {abbr} npdes: {e}")
+                _put_json(rel, [])
+            prog.tick()
             time.sleep(0.5)
 
-    label_map = {
-        "GW": "地下水", "SW": "地表水", "GU": "受影响地下水",
-        "GWP": "购买地下水", "SWP": "购买地表水（进口）", "": "未知",
-    }
-    result = pd.DataFrame(records)
-    result["source_label"] = result["primary_source_code"].map(label_map).fillna("其他")
+        rel = f"npdes/{abbr}_dmr.json"
+        if rel in existing:
+            prog.tick(skipped=True)
+        else:
+            try:
+                r = requests.get(
+                    "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_annual",
+                    params={"p_st": abbr, "p_year": "2024", "output": "JSON"}, timeout=90)
+                _put_json(rel, r.json() if r.status_code == 200 else {})
+            except Exception as e:
+                print(f"\n  ✗ {abbr} dmr: {e}")
+                _put_json(rel, {})
+            prog.tick()
+            time.sleep(0.5)
 
-    out_path = os.path.join(out_dir, "source_type.csv")
-    result.to_csv(out_path, index=False)
-    print(f"  ✓ {out_path}  ({len(result)} 条)")
-    print(result["primary_source_code"].value_counts().to_string())
-    if failed:
-        print(f"  ⚠ 失败 {len(failed)} 个：{failed}")
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_fetch_state, STATE_FIPS.items()))
+    prog.summary()
 
 
-# ══════════════════════════════════════════════════════════════
-# 23. NPDES 排放监测值（EPA ECHO）
-# ══════════════════════════════════════════════════════════════
-def fetch_npdes():
-    out_dir = os.path.join(BASE_DIR, "npdes")
-    os.makedirs(out_dir, exist_ok=True)
 
-    fac_path = os.path.join(out_dir, "la_npdes_facilities.json")
-    dmr_path = os.path.join(out_dir, "la_npdes_dmr.json")
 
-    # 获取 NPDES 设施列表
-    if os.path.exists(fac_path):
-        print("  ⏭ la_npdes_facilities.json 已存在，跳过")
-    else:
-        print("  获取 EPA ECHO NPDES 废水排放设施列表（LA County）...")
+def fetch_snotel(workers: int = 4):
+    """NRCS SNOTEL 全美西部积雪量（SWE）+ 降水 → GCS raw_data/snotel/"""
+    SNOTEL_STATES = ["AK","AZ","CA","CO","ID","MT","NM","NV","OR","UT","WA","WY"]
+    existing = _list_existing("snotel/")
+    prog = Progress(len(SNOTEL_STATES), f"西部{len(SNOTEL_STATES)}州 SNOTEL")
+
+    def _fetch_state(abbr):
+        rel = f"snotel/{abbr}_snotel_daily.csv"
+        if rel in existing:
+            prog.tick(skipped=True)
+            return
+        url = (
+            "https://wcc.sc.egov.usda.gov/reportGenerator/view_csv/"
+            "customMultipleStationReport/daily/start_of_period/"
+            f"state=%22{abbr}%22%20AND%20network=%22SNTL%22/"
+            "2000-01-01,2026-04-25/"
+            "WTEQ::value,PREC::value,SNWD::value,TOBS::value"
+        )
         try:
-            # Step 1: get_facilities 返回 QueryID
-            r = requests.get(
-                "https://echodata.epa.gov/echo/cwa_rest_services.get_facilities",
-                params={"output": "JSON", "p_st": "CA", "p_co": "Los Angeles", "p_act": "Y"},
-                timeout=60,
-            )
+            r = requests.get(url, timeout=180)
             if r.status_code == 200:
-                meta = r.json()
-                res_meta = meta.get("Results", {})
-                qid = res_meta.get("QueryID")
-                total = res_meta.get("QueryRows", 0)
-                print(f"  QueryID={qid}, 共 {total} 个设施，逐页抓取...")
-                # Step 2: get_qid 分页获取设施详情
-                facilities = []
-                page = 1
-                while True:
-                    r2 = requests.get(
-                        "https://echodata.epa.gov/echo/cwa_rest_services.get_qid",
-                        params={"output": "JSON", "qid": qid, "pageno": page},
-                        timeout=60,
-                    )
-                    if r2.status_code != 200:
-                        break
-                    batch = r2.json().get("Results", {}).get("Facilities", [])
-                    if not batch:
-                        break
-                    facilities.extend(batch)
-                    if len(batch) < 1000:
-                        break
-                    page += 1
-                    time.sleep(0.3)
-                with open(fac_path, "w") as f:
-                    json.dump(facilities, f, indent=2)
-                print(f"  ✓ la_npdes_facilities.json（{len(facilities)} 个设施）")
-            else:
-                print(f"  ⚠ NPDES 设施列表返回 {r.status_code}")
-                with open(fac_path, "w") as f:
-                    json.dump([], f)
+                _put_csv(rel, r.content)
+                n = r.content.count(b"\n")
+                print(f"\n  ✓ snotel/{abbr}  ({n} rows)")
         except Exception as e:
-            print(f"  ⚠ NPDES 设施列表请求失败：{e}")
-            with open(fac_path, "w") as f:
-                json.dump([], f)
+            print(f"\n  ✗ SNOTEL {abbr}: {e}")
+        prog.tick()
 
-    time.sleep(1)
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        list(ex.map(_fetch_state, SNOTEL_STATES))
+    prog.summary()
 
-    # 获取排放监测报告
-    if os.path.exists(dmr_path):
-        print("  ⏭ la_npdes_dmr.json 已存在，跳过")
-    else:
-        print("  获取 EPA ECHO NPDES 排放监测报告（2024 年）...")
+
+
+
+def fetch_usda_water(workers: int = 1):
+    """USGS 全美农业/城市用水量（Water Use Data）→ GCS raw_data/water_use/"""
+    rel = "water_use/us_water_use.rdb"
+    if _exists(rel):
+        print("  ✓ water_use/us_water_use.rdb 已存在，跳过")
+        return
+    print("  正在下载 USGS 全美用水量数据...")
+    url = (
+        "https://waterdata.usgs.gov/nwis/water_use"
+        "?format=rdb&rdb_compression=value"
+        "&wu_area=State&wu_year=ALL&wu_county=000"
+        "&wu_category=TO,IR,PS,IN,AQ,MI,TE,CO"
+        "&wu_county_nms=--All+Counties--"
+        "&wu_basin_nms=--All+Basins--"
+    )
+    r = requests.get(url, timeout=180)
+    r.raise_for_status()
+    _put_bytes(rel, r.content, "text/plain")
+    n_rows = r.content.count(b"\n")
+    print(f"  ✓ water_use/us_water_use.rdb  ({n_rows} rows)")
+
+
+def fetch_drought(workers: int = 1):
+    """US Drought Monitor 全美干旱指数 + NOAA 各州气温 → GCS raw_data/drought/"""
+    # 1. US Drought Monitor 全美周度数据（2000—今）
+    rel_dm = "drought/us_drought_monitor.csv"
+    if not _exists(rel_dm):
+        print("  正在下载 US Drought Monitor 全美数据...")
+        url = (
+            "https://droughtmonitor.unl.edu/DmData/DataDownload/ComprehensiveStatistics.aspx"
+            "?aoi=national&startdate=2000-01-01&enddate=2026-04-25"
+            "&timeseries=Weekly&statistic=0&type=1&statstype=1"
+        )
         try:
-            r = requests.get(
-                "https://echodata.epa.gov/echo/dmr_rest_services.get_custom_data_annual",
-                params={
-                    "p_st": "CA",
-                    "p_county": "LOS ANGELES",
-                    "p_year": "2024",
-                    "output": "JSON",
-                },
+            r = requests.get(url, timeout=120)
+            if r.status_code == 200:
+                _put_csv(rel_dm, r.content)
+                n = r.content.count(b"\n")
+                print(f"  ✓ drought/us_drought_monitor.csv  ({n} rows)")
+            else:
+                print(f"  ✗ Drought Monitor: HTTP {r.status_code}")
+        except Exception as e:
+            print(f"  ✗ Drought Monitor: {e}")
+    else:
+        print("  ✓ drought/us_drought_monitor.csv 已存在，跳过")
+
+    # 2. NOAA CDO 加州月均气温（Sacramento + LA）
+    noaa_key = os.getenv("NOAA_API_KEY", "")
+    for station, name in [("GHCND:USW00023271", "sacramento"), ("GHCND:USW00023174", "la")]:
+        rel_t = f"drought/noaa_temp_{name}.json"
+        if _exists(rel_t):
+            print(f"  ✓ drought/noaa_temp_{name}.json 已存在，跳过")
+            continue
+        if not noaa_key:
+            print("  ✗ 未找到 NOAA_API_KEY，跳过气温下载")
+            break
+        url = "https://www.ncdc.noaa.gov/cdo-web/api/v2/data"
+        params = {
+            "datasetid": "GHCND", "stationid": station,
+            "datatypeid": "TAVG,TMAX,TMIN,PRCP",
+            "startdate": "2018-01-01", "enddate": "2026-04-25",
+            "limit": 1000, "units": "metric", "offset": 1,
+        }
+        headers = {"token": noaa_key}
+        all_results = []
+        while True:
+            try:
+                r = requests.get(url, params=params, headers=headers, timeout=30)
+                if r.status_code != 200:
+                    break
+                data = r.json()
+                results = data.get("results", [])
+                all_results.extend(results)
+                meta = data.get("metadata", {}).get("resultset", {})
+                if params["offset"] + params["limit"] > meta.get("count", 0):
+                    break
+                params["offset"] += params["limit"]
+                time.sleep(0.25)
+            except Exception as e:
+                print(f"  ✗ NOAA {name}: {e}")
+                break
+        if all_results:
+            _put_json(rel_t, all_results)
+            print(f"  ✓ drought/noaa_temp_{name}.json  ({len(all_results)} records)")
+
+
+def fetch_usda_nass(workers: int = 1):
+    """USDA NASS 全美作物灌溉用水量+产值+面积 → GCS raw_data/usda_nass/"""
+    nass_key = os.getenv("USDA_NASS_API", "")
+    if not nass_key:
+        print("  ✗ 未找到 USDA_NASS_API key")
+        return
+
+    queries = [
+        # 灌溉用水量（每英亩acre-feet） — CENSUS, STATE
+        ("water_applied", {
+            "source_desc": "CENSUS", "agg_level_desc": "STATE",
+            "statisticcat_desc": "WATER APPLIED", "unit_desc": "ACRE FEET / ACRE",
+        }),
+        # 灌溉用水量 — SURVEY（Farm & Ranch Irrigation Survey，更细粒度作物）
+        ("water_applied_survey", {
+            "source_desc": "SURVEY", "agg_level_desc": "STATE",
+            "statisticcat_desc": "WATER APPLIED", "unit_desc": "ACRE FEET / ACRE",
+        }),
+        # 灌溉面积（露天灌溉） — CENSUS, STATE
+        ("irrigated_area", {
+            "source_desc": "CENSUS", "agg_level_desc": "STATE",
+            "statisticcat_desc": "AREA HARVESTED",
+            "prodn_practice_desc": "IN THE OPEN, IRRIGATED",
+        }),
+        # 灌溉面积 — SURVEY（更细粒度作物，如 ALMONDS/PISTACHIOS/GRAPES 等）
+        ("irrigated_area_survey", {
+            "source_desc": "SURVEY", "agg_level_desc": "STATE",
+            "statisticcat_desc": "AREA HARVESTED",
+            "prodn_practice_desc": "IRRIGATED",
+        }),
+        # 作物产量（实物单位BU/TONS等） — CENSUS, STATE，按普查年分开（避免>50K限制）
+        ("crop_production_2017", {
+            "source_desc": "CENSUS", "agg_level_desc": "STATE",
+            "statisticcat_desc": "PRODUCTION", "year": "2017",
+        }),
+        ("crop_production_2022", {
+            "source_desc": "CENSUS", "agg_level_desc": "STATE",
+            "statisticcat_desc": "PRODUCTION", "year": "2022",
+        }),
+        # 作物价格（$/单位） — SURVEY, NATIONAL，用于计算产值
+        ("price_received", {
+            "source_desc": "SURVEY", "agg_level_desc": "NATIONAL",
+            "statisticcat_desc": "PRICE RECEIVED",
+        }),
+    ]
+
+    for name, extra_params in queries:
+        rel = f"usda_nass/{name}.json"
+        if _exists(rel):
+            print(f"  ✓ usda_nass/{name}.json 已存在，跳过")
+            continue
+        print(f"  正在下载 USDA NASS {name}...")
+        params = {
+            "key": nass_key,
+            "sector_desc": "CROPS",
+            "year__GE": "2000",
+            "format": "JSON",
+            **extra_params,
+        }
+        try:
+            r = requests.get("https://quickstats.nass.usda.gov/api/api_GET/",
+                             params=params, timeout=120)
+            data = r.json()
+            records = data.get("data", [])
+            _put_json(rel, records)
+            print(f"  ✓ usda_nass/{name}.json  ({len(records)} records)")
+        except Exception as e:
+            print(f"  ✗ NASS {name}: {e}")
+        time.sleep(1)
+
+
+def fetch_ssurgo(workers: int = 1):
+    """USDA NRCS SSURGO 土壤能力等级 → GCS raw_data/ssurgo/state_soil_capability.json
+
+    土壤能力等级 (LCC irrigated, lcc1w):
+      Class 1-3: 优质农业土壤（可转蔬菜/果树等高价值作物）
+      Class 4+  : 受限土壤（饲料/粮食为主，转型困难）
+
+    用途: 按州调整机会成本的转换率
+      good_ratio (class 1-3 灌溉面积占比) → 调整实际可转换耕地比例 (0.15→0.40)
+    """
+    rel = "ssurgo/state_soil_capability.json"
+    if _exists(rel):
+        print(f"  ✓ {rel} 已存在，跳过")
+        return
+
+    GOOD_CLASSES = {"1", "1e", "1s", "1w",
+                    "2", "2e", "2s", "2w",
+                    "3", "3e", "3s", "3w"}
+
+    result = {}
+    print(f"  查询 SSURGO 灌溉土壤能力等级（{len(STATE_FIPS)} 州）...")
+
+    for fips, abbr in STATE_FIPS.items():
+        # Query land capability class for IRRIGATED land (lcc1w) per state
+        # Correct join: mapunit.lkey → legend.lkey, filter by areasymbol prefix
+        # iccdcd = Irrigated Capability Class dominant condition
+        sql = (
+            f"SELECT ma.iccdcd AS lcc, SUM(m.muacres) AS acres "
+            f"FROM mapunit m "
+            f"JOIN legend l ON l.lkey = m.lkey "
+            f"JOIN muaggatt ma ON ma.mukey = m.mukey "
+            f"WHERE LEFT(l.areasymbol, 2) = '{abbr}' "
+            f"  AND ma.iccdcd IS NOT NULL "
+            f"  AND m.muacres IS NOT NULL "
+            f"GROUP BY ma.iccdcd "
+            f"ORDER BY ma.iccdcd"
+        )
+        try:
+            r = requests.post(
+                "https://SDMDataAccess.sc.egov.usda.gov/Tabular/post.rest",
+                json={"query": sql, "format": "json+columnname"},
                 timeout=90,
             )
-            if r.status_code == 200:
-                data = r.json()
-                with open(dmr_path, "w") as f:
-                    json.dump(data, f, indent=2)
-                print(f"  ✓ la_npdes_dmr.json")
+            if r.status_code != 200:
+                print(f"    {abbr}: HTTP {r.status_code}"); continue
+
+            data = r.json()
+            table = data.get("Table", [])
+            if len(table) < 2:
+                print(f"    {abbr}: empty"); continue
+
+            hdrs = [h.lower() for h in table[0]]
+            lcc_i = hdrs.index("lcc") if "lcc" in hdrs else 0
+            ac_i  = hdrs.index("acres") if "acres" in hdrs else 1
+
+            by_class = {}
+            for row in table[1:]:
+                lcc = str(row[lcc_i]).strip().lower()
+                try:
+                    ac = float(row[ac_i])
+                except (ValueError, TypeError):
+                    continue
+                if lcc:
+                    by_class[lcc] = by_class.get(lcc, 0) + round(ac, 0)
+
+            total = sum(by_class.values())
+            if total > 0:
+                good = sum(v for k, v in by_class.items() if k in GOOD_CLASSES)
+                result[abbr] = {
+                    "by_class":    by_class,
+                    "total_acres": round(total, 0),
+                    "good_ratio":  round(good / total, 3),
+                }
+                print(f"    {abbr}: {len(by_class)} classes  good_ratio={result[abbr]['good_ratio']:.1%}")
             else:
-                print(f"  ⚠ NPDES DMR 返回 {r.status_code}")
-                with open(dmr_path, "w") as f:
-                    json.dump({}, f)
+                print(f"    {abbr}: zero acres")
+
         except Exception as e:
-            print(f"  ⚠ NPDES DMR 请求失败：{e}")
-            with open(dmr_path, "w") as f:
-                json.dump({}, f)
+            print(f"    {abbr}: ERROR {e}")
+        time.sleep(0.5)
+
+    _put_json(rel, result)
+    print(f"  ✓ ssurgo/state_soil_capability.json  ({len(result)} 州有数据)")
+
+
+def fetch_usda_ers(workers: int = 1):
+    """USDA NASS 主要出口作物县级产量（虚拟水出口分析）→ GCS raw_data/usda_ers/"""
+    nass_key = os.getenv("USDA_NASS_API", "")
+    if not nass_key:
+        print("  ✗ 未找到 USDA_NASS_API key")
+        return
+
+    # 主要出口作物：玉米、大豆、小麦、棉花、苜蓿（虚拟水出口大户）
+    EXPORT_CROPS = ["CORN", "SOYBEANS", "WHEAT", "COTTON", "HAY & HAYLAGE", "ALMONDS"]
+
+    # 县级灌溉面积（2022 普查，用于地图可视化）
+    county_queries = [
+        ("county_irrigated_area_2022", {"year": "2022"}),
+    ]
+
+    for name, extra_params in county_queries:
+        rel = f"usda_ers/{name}.json"
+        if _exists(rel):
+            print(f"  ✓ usda_ers/{name}.json 已存在，跳过")
+            continue
+        print(f"  正在下载 {name}（县级）...")
+        params = {
+            "key": nass_key,
+            "source_desc": "CENSUS",
+            "sector_desc": "CROPS",
+            "statisticcat_desc": "AREA HARVESTED",
+            "prodn_practice_desc": "IN THE OPEN, IRRIGATED",
+            "agg_level_desc": "COUNTY",
+            "format": "JSON",
+            **extra_params,
+        }
+        try:
+            r = requests.get("https://quickstats.nass.usda.gov/api/api_GET/",
+                             params=params, timeout=180)
+            data = r.json()
+            records = data.get("data", [])
+            _put_json(rel, records)
+            print(f"  ✓ usda_ers/{name}.json  ({len(records)} records)")
+        except Exception as e:
+            print(f"  ✗ {name}: {e}")
+        time.sleep(2)
 
 
 # ══════════════════════════════════════════════════════════════
 # 主程序
 # ══════════════════════════════════════════════════════════════
 SOURCES = {
-    "wqp":       ("Water Quality Portal（监测站 + 检测记录）",      fetch_wqp),
-    "usgs":      ("USGS 水文数据",                                  fetch_usgs),
-    "usgs_meas": ("USGS 实测水质时间序列（温度/DO/pH/流量等）",      fetch_usgs_measurements),
-    "ca":        ("California Open Data（地下水 + 违规）",          fetch_ca_open_data),
-    "la":        ("LA Open Data（本地水质）",                       fetch_la_open_data),
-    "epa_echo":  ("EPA ECHO（设施 + 执法记录）",                    fetch_epa_echo),
-    "epa_sdwis": ("EPA SDWIS（供水系统信息）",                      fetch_epa_sdwis),
-    "ewg":       ("EWG 主要 6 系统（快）",                          fetch_ewg),
-    "ewg_all":   ("EWG 全部 300+ 系统（慢，约 10 分钟）",           fetch_ewg_all),
-    "ladwp":     ("LADWP 年度 PDF 报告 2004-2024",                  fetch_ladwp),
-    "census":    ("US Census 人口/收入数据（无需 Key）",             fetch_census),
-    "noaa":      ("NOAA 气候数据（需 NOAA_API_KEY）",               fetch_noaa),
-    "fire":      ("2025 LA 野火边界 GeoJSON（Palisades + Eaton）",  fetch_fire),
-    "cdc":       ("CDC PLACES 健康结果数据（癌症/肾病等，无需 Key）",fetch_cdc_places),
-    "tri":       ("EPA TRI 工业有毒排放设施（无需 Key）",            fetch_epa_tri),
-    "aqs":       ("EPA AQS 空气质量数据（需 AQS_EMAIL + AQS_KEY）",fetch_aqs),
-    "geotracker":("CA GeoTracker 地下储油罐 + 污染地块（无需 Key）",fetch_geotracker),
-    "ejscreen":  ("EPA EJScreen 环境正义综合指标（无需 Key）",       fetch_ejscreen),
-    "beach":     ("Heal the Bay 海滩水质评级（LA County 海滩）",     fetch_heal_the_bay),
-    "hab":       ("CA Water Board 有害藻华事件（HAB）",              fetch_hab),
-    "cdpr":      ("CDPR 农药使用报告（LA County）",                  fetch_cdpr_pesticides),
-    "npdes":     ("EPA ECHO NPDES 废水排放监测值",                   fetch_npdes),
-    "sdwis_src": ("EPA SDWIS 水源类型（per-system primary_source_code）", fetch_sdwis_source_type),
+    "wqp":        ("Water Quality Portal（全国，按州+年）",          fetch_wqp),
+    "usgs":       ("USGS 水文数据（全国，按州+年）",                 fetch_usgs),
+    "usgs_meas":  ("USGS 实测时间序列（全国，按州+周）",             fetch_usgs_measurements),
+    "epa_sdwis":  ("EPA SDWIS 供水系统（全国，按州）",               fetch_epa_sdwis),
+    "census":     ("US Census 人口/收入（全国）",                    fetch_census),
+    "cdc":        ("CDC PLACES 健康数据（全国，按州）",              fetch_cdc_places),
+    "tri":        ("EPA TRI 工业有毒排放（全国，按州）",             fetch_epa_tri),
+    "npdes":      ("EPA ECHO NPDES 废水排放（全国，按州）",          fetch_npdes),
+    "snotel":     ("NRCS SNOTEL 全美西部积雪量/SWE",                fetch_snotel),
+    "water_use":  ("USGS 全美农业/城市用水量",                      fetch_usda_water),
+    "drought":    ("US Drought Monitor 全美 + NOAA 各州气温",        fetch_drought),
+    "usda_nass":  ("USDA NASS 作物灌溉用水+产值+面积（全美）",      fetch_usda_nass),
+    "usda_ers":   ("USDA NASS 县级灌溉数据（主要出口作物/虚拟水）",   fetch_usda_ers),
+    "ssurgo":     ("USDA NRCS SSURGO 土壤能力等级（灌溉适宜性/换种约束）", fetch_ssurgo),
 }
 
-DEFAULT_ORDER = ["wqp", "usgs", "usgs_meas", "ca", "la", "epa_echo", "epa_sdwis",
-                 "ewg", "ladwp", "census", "noaa", "fire",
-                 "cdc", "tri", "aqs", "geotracker", "ejscreen",
-                 "beach", "hab", "cdpr", "npdes", "sdwis_src"]
+DEFAULT_ORDER = [
+    "wqp", "usgs", "usgs_meas", "epa_sdwis",
+    "census", "cdc", "tri", "npdes",
+    "snotel", "water_use", "drought",
+    "usda_nass", "usda_ers", "ssurgo",
+]
 
 if __name__ == "__main__":
     args = sys.argv[1:]
@@ -1654,35 +980,58 @@ if __name__ == "__main__":
         for key, (desc, _) in SOURCES.items():
             print(f"  {key:<12} {desc}")
         print("\n用法：")
-        print("  python src/fetch_all.py              # 运行全部（不含 ewg_all）")
-        print("  python src/fetch_all.py census noaa  # 只运行指定源")
-        print("  python src/fetch_all.py ewg_all      # 全量 EWG（慢）")
+        print("  python src/build/fetch_all.py              # 运行全部")
+        print("  python src/build/fetch_all.py census noaa  # 只运行指定源")
+        print("  python src/build/fetch_all.py --workers 8  # 指定并行线程数")
+        print("  python src/build/fetch_all.py --status     # 查看GCS进度")
         sys.exit(0)
 
-    targets = args if args else DEFAULT_ORDER
+    # 解析 --workers N
+    workers = WORKERS
+    if "--workers" in args:
+        idx = args.index("--workers")
+        if idx + 1 < len(args):
+            try:
+                workers = int(args[idx + 1])
+                args = [a for i, a in enumerate(args) if i not in (idx, idx + 1)]
+            except ValueError:
+                pass
+
+    if "--status" in args:
+        remaining = [a for a in args if a != "--status"]
+        show_status(remaining if remaining else DEFAULT_ORDER)
+        sys.exit(0)
+
+    targets = [a for a in args if not a.startswith("--")] if args else DEFAULT_ORDER
     invalid = [t for t in targets if t not in SOURCES]
     if invalid:
         print(f"未知数据源：{invalid}，运行 --list 查看可用选项")
         sys.exit(1)
 
-    print("=" * 55)
-    print("LA Water Quality - 数据收集")
-    print(f"目标：{', '.join(targets)}")
-    print("=" * 55)
+    print("=" * 65)
+    print(f"  US National Water Quality — 直接写入 GCS [{GCS_BUCKET_NAME}]")
+    print(f"  目标：{', '.join(targets)}")
+    print(f"  并行线程数：{workers}")
+    print(f"  提示：Ctrl+C 可中断，重新运行自动跳过已上传文件")
+    print("=" * 65)
 
-    start = time.time()
+    t0 = time.time()
     for key in targets:
         desc, fn = SOURCES[key]
-        print(f"\n{'─' * 55}")
-        print(f"【{key.upper()}】{desc}")
-        print("─" * 55)
+        print(f"\n{'─' * 65}")
+        print(f"  【{key.upper()}】{desc}")
+        print("─" * 65)
         try:
-            fn()
+            fn(workers=workers)
+        except KeyboardInterrupt:
+            print("\n\n  ⚠ 用户中断。已保存进度，重新运行可断点续跑。")
+            sys.exit(0)
         except Exception as e:
-            print(f"  ✗ 出错：{e}")
+            print(f"\n  ✗ 出错：{e}")
         time.sleep(1)
 
-    elapsed = int(time.time() - start)
-    print(f"\n{'=' * 55}")
-    print(f"完成！耗时 {elapsed // 60}分{elapsed % 60}秒，数据在 data/raw_data/")
-    print("=" * 55)
+    elapsed = int(time.time() - t0)
+    print(f"\n{'=' * 65}")
+    print(f"  全部完成！耗时 {elapsed // 60}分{elapsed % 60}秒")
+    print(f"  数据已存储在 gs://{GCS_BUCKET_NAME}/{GCS_PREFIX}/")
+    print("=" * 65)
