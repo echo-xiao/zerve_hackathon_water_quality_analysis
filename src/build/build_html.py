@@ -28,11 +28,24 @@ def main():
     pareto  = load("agri_pareto.json")
     county  = load("agri_county.geojson")
 
-    geo_js     = jsdump(geo)
-    crops_js   = jsdump(crops)
-    summary_js = jsdump(summary)
-    pareto_js  = jsdump(pareto)
-    county_js  = jsdump(county)
+    # 新增数据（可选，文件不存在时降级为空）
+    def load_optional(fname, default):
+        try:
+            return load(fname)
+        except FileNotFoundError:
+            print(f"  ⚠ {fname} 未找到，跳过")
+            return default
+
+    commodity_prices = load_optional("commodity_prices.json", {})
+    state_drought    = load_optional("state_drought.json", {})
+
+    geo_js          = jsdump(geo)
+    crops_js        = jsdump(crops)
+    summary_js      = jsdump(summary)
+    pareto_js       = jsdump(pareto)
+    county_js       = jsdump(county)
+    commodity_js    = jsdump(commodity_prices)
+    drought_js      = jsdump(state_drought)
 
     html = f"""<!DOCTYPE html>
 <html lang="zh">
@@ -607,6 +620,15 @@ async function generateAISummary(){{
   const wi=(+p.avg_intensity||0).toFixed(2);
   const dpg=(+p.avg_dpg_cents||0).toFixed(2);
 
+  // 实时数据（干旱 + 商品价格）
+  const drought=stateDrought[p.abbr]||{{}};
+  const droughtStr=drought.drought_pct!=null
+    ?`D1+: ${{drought.drought_pct}}%, D2+: ${{drought.severe_pct}}% (截至 ${{drought.date}})`
+    :'暂无实时干旱数据';
+  const priceContext=Object.entries(commodityPrices).map(([nm,v])=>
+    `${{nm}} $$${{v.latest}} (${{v.yr_chg_pct>0?'+':''}}${{v.yr_chg_pct||0}}% YoY, 5yr范围$$${{v.lo5}}-$$${{v.hi5}})`
+  ).join('\\n');
+
   const prompt=`你是美国农业水资源政策分析师，兼具数据科学和农业金融背景。
 
 请对以下【${{p.name||p.abbr}}州】数据进行深度分析，输出结构化中文报告，分4个维度，总计300-400字：
@@ -642,6 +664,10 @@ ${{cropDetail||'无作物数据'}}
 - 高耗水作物（>1.5af/ac）：${{highWater}}
 - 低产值作物（<0.2¢/加仑）：${{lowValue}}
 - 高价值作物（>1.0¢/加仑）：${{highValue}}
+
+【实时数据】
+- 当前干旱状况：${{droughtStr}}
+${{priceContext?'- 主要作物期货（Alpha Vantage）：\\n'+priceContext:''}}
 ━━━━━━━━━━━━━━`;
 
   const btn=document.getElementById('popup-ai-btn');
@@ -914,10 +940,12 @@ const map=new maplibregl.Map({{
   center:[-98.5,39.5],zoom:4,maxZoom:12,minZoom:2
 }});
 
-const agriGeo     = {geo_js};
-const agriCrops   = {crops_js};
-const agriSummary = {summary_js};
-const agriPareto  = {pareto_js};
+const agriGeo         = {geo_js};
+const agriCrops       = {crops_js};
+const agriSummary     = {summary_js};
+const agriPareto      = {pareto_js};
+const commodityPrices = {commodity_js};
+const stateDrought    = {drought_js};
 
 window._agriGeo=agriGeo;
 window._cropByState={{}};
@@ -1051,49 +1079,134 @@ function showCountyPanel(p){{
 }}
 
 function showNationalPanel(){{
-  const svgW=244;
-  // Top crops by water intensity (national)
-  const topCrops=agriSummary.filter(c=>!SKIP.has(c.crop)&&c.avg_water_int>0)
-    .sort((a,b)=>b.avg_water_int-a.avg_water_int).slice(0,10);
-  const maxWI=Math.max(...topCrops.map(c=>c.avg_water_int),0.001);
-  const cLblW=90,cValW=30,cPad=4,cBarAreaW=svgW-cLblW-cValW-cPad*2-2;
-  const cRowH=17;
-  const cropRows=topCrops.map((c,i)=>{{
-    const bw=Math.max(2,Math.round(c.avg_water_int/maxWI*cBarAreaW));
-    const y=i*cRowH+4;
-    const nm=c.crop.length>15?c.crop.slice(0,14)+'…':c.crop;
-    const dpgTxt=c.avg_dpg_cents!=null?c.avg_dpg_cents.toFixed(2)+'¢':'—';
-    const col=GC[c.group]||'#aaa';
-    return `<text x="${{cPad}}" y="${{y+11}}" font-size="8.5" fill="#555" font-family="Arial">${{nm}}</text>
-      <rect x="${{cPad+cLblW}}" y="${{y+2}}" width="${{bw}}" height="11" fill="${{col}}" rx="2" opacity="0.82"/>
-      <text x="${{cPad+cLblW+cBarAreaW+3}}" y="${{y+8}}" font-size="7.5" fill="#888" font-family="Arial">${{c.avg_water_int.toFixed(2)}}</text>
-      <text x="${{cPad+cLblW+cBarAreaW+3}}" y="${{y+16}}" font-size="7" fill="#c4870a" font-family="Arial">${{dpgTxt}}</text>`;
-  }}).join('');
-  const cropSvgH=topCrops.length*cRowH+6;
-  const cropSvg=`<svg width="${{svgW}}" height="${{cropSvgH}}" xmlns="http://www.w3.org/2000/svg">${{cropRows}}</svg>`;
+  // ── 基础汇总 ──
+  const states=Object.entries(agriCrops).map(([abbr,v])=>({{abbr,...v}}));
+  const totalArea=states.reduce((s,v)=>s+(+v.total_irr_area||0),0);
+  const totalVW=states.reduce((s,v)=>s+(+v.virtual_water_B||0),0);
+  const totalOpp=states.reduce((s,v)=>s+(+v.opp_value_M||0),0);
+  const avgIntens=(states.filter(v=>v.avg_intensity).reduce((s,v)=>s+(+v.avg_intensity),0)/states.filter(v=>v.avg_intensity).length);
 
-  // National stats
-  const totalArea=Object.values(agriCrops).reduce((s,v)=>s+(+v.total_irr_area||0),0);
-  const totalOpp=Object.values(agriCrops).reduce((s,v)=>s+(+v.opp_value_M||0),0);
-  const avgIntens=agriSummary.find(c=>c.crop==='HAY & HAYLAGE')?.avg_water_int||0;
+  // ── 水效率排名：ag_per_af ($/af) ──
+  const byEff=states.filter(v=>v.ag_per_af>0).sort((a,b)=>b.ag_per_af-a.ag_per_af);
+  const topEff=byEff.slice(0,5), botEff=byEff.slice(-5).reverse();
+  const maxEff=byEff[0]?.ag_per_af||1;
+
+  function effBar(v,color){{
+    const pct=Math.max(4,Math.round(v.ag_per_af/maxEff*100));
+    const val=v.ag_per_af>=1000?'$'+(v.ag_per_af/1000).toFixed(1)+'K':'$'+Math.round(v.ag_per_af);
+    return `<div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+      <span style="font-family:Arial,sans-serif;font-size:8px;color:#555;width:20px;flex-shrink:0">${{v.abbr}}</span>
+      <div style="flex:1;background:#f0f0f0;height:7px;border-radius:3px;overflow:hidden">
+        <div style="width:${{pct}}%;height:100%;background:${{color}};border-radius:3px"></div>
+      </div>
+      <span style="font-family:Arial,sans-serif;font-size:7.5px;color:#888;width:34px;text-align:right">${{val}}</span>
+    </div>`;
+  }}
+
+  // ── 最高风险排名：vuln_score ──
+  const byVuln=states.filter(v=>v.vuln_score>0).sort((a,b)=>b.vuln_score-a.vuln_score).slice(0,5);
+  const maxVuln=byVuln[0]?.vuln_score||1;
+  function vulnBar(v){{
+    const pct=Math.max(4,Math.round(v.vuln_score/maxVuln*100));
+    const lbl=v.top1_crop||(v.opp_crop||'—');
+    return `<div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+      <span style="font-family:Arial,sans-serif;font-size:8px;color:#555;width:20px;flex-shrink:0">${{v.abbr}}</span>
+      <div style="flex:1;background:#f0f0f0;height:7px;border-radius:3px;overflow:hidden">
+        <div style="width:${{pct}}%;height:100%;background:#d73027;border-radius:3px"></div>
+      </div>
+      <span style="font-family:Arial,sans-serif;font-size:7px;color:#c4870a;width:58px;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${{lbl}}</span>
+    </div>`;
+  }}
+
+  // ── 最高耗水作物（全国均值）──
+  const topCrops=agriSummary.filter(c=>!SKIP.has(c.crop)&&c.avg_water_int>0)
+    .sort((a,b)=>b.avg_water_int-a.avg_water_int).slice(0,6);
+  const maxWI=topCrops[0]?.avg_water_int||1;
+  function cropBar(c){{
+    const pct=Math.max(4,Math.round(c.avg_water_int/maxWI*100));
+    const dpg=c.avg_dpg_cents!=null?c.avg_dpg_cents.toFixed(1)+'¢':'—';
+    const col=GC[c.group]||'#aaa';
+    const nm=c.crop.length>13?c.crop.slice(0,12)+'…':c.crop;
+    return `<div style="display:flex;align-items:center;gap:4px;margin:2px 0">
+      <span style="font-family:Arial,sans-serif;font-size:7.5px;color:#555;width:72px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${{nm}}</span>
+      <div style="flex:1;background:#f0f0f0;height:7px;border-radius:3px;overflow:hidden">
+        <div style="width:${{pct}}%;height:100%;background:${{col}};border-radius:3px;opacity:.85"></div>
+      </div>
+      <span style="font-family:Arial,sans-serif;font-size:7px;color:#888;width:26px;text-align:right">${{c.avg_water_int.toFixed(1)}}</span>
+      <span style="font-family:Arial,sans-serif;font-size:7px;color:#c4870a;width:22px;text-align:right">${{dpg}}</span>
+    </div>`;
+  }}
+
+  // ── 降水趋势：快速恶化的州 ──
+  const dryingStates=states.filter(v=>v.precip_trend_yr<0&&v.avg_intensity>0)
+    .sort((a,b)=>a.precip_trend_yr-b.precip_trend_yr).slice(0,3)
+    .map(v=>`<b>${{v.abbr}}</b> ${{(v.precip_trend_yr*10).toFixed(1)}}in/dec`).join(' · ');
+
+  // ── 实时干旱数据 ──
+  const droughtEntries=Object.entries(stateDrought).filter(([,v])=>v.drought_pct>0);
+  const natDroughtPct=droughtEntries.length
+    ? Math.round(droughtEntries.reduce((s,[,v])=>s+v.drought_pct,0)/droughtEntries.length)
+    : null;
+  const worstDrought=droughtEntries.sort((a,b)=>b[1].drought_pct-a[1].drought_pct).slice(0,3)
+    .map(([a,v])=>`<b>${{a}}</b> ${{v.drought_pct}}%`).join(' · ');
+  const droughtDate=droughtEntries[0]?.[1]?.date||'';
+
+  // ── 商品价格摘要 ──
+  const priceRows=Object.entries(commodityPrices).map(([nm,v])=>{{
+    const chg=v.yr_chg_pct;
+    const col=chg>0?'#c0392b':chg<0?'#2ca25f':'#888';
+    const sign=chg>0?'+':'';
+    return `<span style="font-family:Arial,sans-serif;font-size:7.5px;margin-right:8px;white-space:nowrap">
+      <b style="text-transform:capitalize">${{nm}}</b> \$${{v.latest}}
+      <span style="color:${{col}}">${{sign}}${{chg}}%</span>
+    </span>`;
+  }}).join('');
+
+  const section=(title,sub,body)=>`
+    <div style="font-family:Arial,sans-serif;font-size:7.5px;font-weight:700;color:#888;margin:8px 0 3px;text-transform:uppercase;letter-spacing:.5px">
+      ${{title}}<span style="font-weight:400;color:#bbb;margin-left:6px">${{sub}}</span>
+    </div>${{body}}`;
 
   const html=`<div style='font-family:Palatino Linotype,Palatino,serif'>
 <div class='sp-nm' style='font-size:13px'>全美农业用水概览</div>
-<div class='sp-sub'>USDA NASS · 2013–2023 灌溉普查</div>
+<div class='sp-sub'>USDA NASS · 2013–2023 灌溉普查 · ${{states.length}} 州</div>
+
 <div class='sp-grid'>
-  <div class='sp-cell'><div class='sp-lbl'>覆盖州数</div><div class='sp-val'>${{Object.keys(agriCrops).length}}</div><div class='sp-unit'>个州</div></div>
   <div class='sp-cell'><div class='sp-lbl'>总灌溉面积</div><div class='sp-val'>${{(totalArea/1e6).toFixed(1)}}M</div><div class='sp-unit'>英亩</div></div>
-  <div class='sp-cell'><div class='sp-lbl'>作物种类</div><div class='sp-val'>${{agriSummary.length}}</div><div class='sp-unit'>主要作物</div></div>
+  <div class='sp-cell'><div class='sp-lbl'>全国均值强度</div><div class='sp-val'>${{avgIntens.toFixed(2)}}</div><div class='sp-unit'>af/ac</div></div>
+  <div class='sp-cell'><div class='sp-lbl'>虚拟水出口</div><div class='sp-val' style='color:#2171b5'>${{totalVW.toFixed(0)}}</div><div class='sp-unit'>十亿 af</div></div>
   <div class='sp-cell'><div class='sp-lbl'>重配潜力</div><div class='sp-val' style='color:#6a3d9a'>\$${{(totalOpp/1e3).toFixed(0)}}B</div><div class='sp-unit'>全国合计</div></div>
 </div>
-<div style='font-family:Arial,sans-serif;font-size:7.5px;font-weight:700;color:#888;margin:6px 0 2px'>
-  全国最耗水作物　<span style='font-weight:400;color:#aaa'>af/ac 强度 · ¢ 产值</span>
+
+${{section('水效率 Top 5','$/af 农业产值/英亩·英尺',topEff.map(v=>effBar(v,'#2ca25f')).join(''))}}
+${{section('水效率 末 5','$/af 农业产值/英亩·英尺',botEff.map(v=>effBar(v,'#fc8d59')).join(''))}}
+${{section('高风险州','耗水×干旱×地下水',byVuln.map(v=>vulnBar(v)).join(''))}}
+${{section('最耗水作物','af/ac 强度　¢ 产值/加仑',topCrops.map(c=>cropBar(c)).join(''))}}
+
+${{natDroughtPct!==null?`
+<div style='font-family:Arial,sans-serif;font-size:7.5px;font-weight:700;color:#888;margin:8px 0 3px;text-transform:uppercase;letter-spacing:.5px'>
+  实时干旱<span style='font-weight:400;color:#bbb;margin-left:6px'>Drought Monitor ${{droughtDate}}</span>
 </div>
-${{cropSvg}}
-<div style='font-family:Arial,sans-serif;font-size:8px;color:#aaa;margin-top:8px;line-height:1.5;border-top:1px solid #f0f0f0;padding-top:6px'>
-  点击地图上任意州查看该州详细数据与 AI 分析
+<div style='font-family:Arial,sans-serif;font-size:8px;color:#555;margin-bottom:3px'>
+  全国均值中度以上干旱：<b style='color:#d73027'>${{natDroughtPct}}%</b> 面积
+</div>
+<div style='font-family:Arial,sans-serif;font-size:7.5px;color:#aaa'>最严峻：${{worstDrought}}</div>`:''}}
+
+${{priceRows?`
+<div style='font-family:Arial,sans-serif;font-size:7.5px;font-weight:700;color:#888;margin:8px 0 3px;text-transform:uppercase;letter-spacing:.5px'>
+  期货价格<span style='font-weight:400;color:#bbb;margin-left:6px'>近1年变化</span>
+</div>
+<div style='flex-wrap:wrap;display:flex;gap:2px'>${{priceRows}}</div>`:''}}
+
+${{dryingStates?`<div style='font-family:Arial,sans-serif;font-size:7.5px;color:#aaa;margin-top:6px;padding-top:6px;border-top:1px solid #f5f5f5'>
+  ☁ 降水下降最快：${{dryingStates}}
+</div>`:''}}
+
+<div style='font-family:Arial,sans-serif;font-size:7.5px;color:#bbb;margin-top:6px;border-top:1px solid #f5f5f5;padding-top:6px'>
+  点击任意州 → 州级详情 + Gemini AI 分析
 </div>
 </div>`;
+
   document.getElementById('sp-hdr-title').textContent='全国概览';
   document.getElementById('sp-body').innerHTML=html;
   document.getElementById('state-panel').style.display='flex';

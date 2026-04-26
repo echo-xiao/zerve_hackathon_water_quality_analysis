@@ -706,7 +706,29 @@ def fetch_drought(workers: int = 1):
     else:
         print("  ✓ drought/us_drought_monitor.csv 已存在，跳过")
 
-    # 2. NOAA CDO 加州月均气温（Sacramento + LA）
+    # 2. US Drought Monitor 州级周度数据（2015—今）
+    rel_state = "drought/state_drought_monitor.csv"
+    if not _exists(rel_state):
+        print("  正在下载 US Drought Monitor 州级数据...")
+        url_state = (
+            "https://droughtmonitor.unl.edu/DmData/DataDownload/ComprehensiveStatistics.aspx"
+            "?aoi=state&startdate=2015-01-01&enddate=2026-04-25"
+            "&timeseries=Weekly&statistic=0&type=1&statstype=1"
+        )
+        try:
+            r = requests.get(url_state, timeout=180)
+            if r.status_code == 200:
+                _put_csv(rel_state, r.content)
+                n = r.content.count(b"\n")
+                print(f"  ✓ drought/state_drought_monitor.csv  ({n} rows)")
+            else:
+                print(f"  ✗ State Drought Monitor: HTTP {r.status_code}")
+        except Exception as e:
+            print(f"  ✗ State Drought Monitor: {e}")
+    else:
+        print("  ✓ drought/state_drought_monitor.csv 已存在，跳过")
+
+    # 3. NOAA CDO 加州月均气温（Sacramento + LA）
     noaa_key = os.getenv("NOAA_API_KEY", "")
     for station, name in [("GHCND:USW00023271", "sacramento"), ("GHCND:USW00023174", "la")]:
         rel_t = f"drought/noaa_temp_{name}.json"
@@ -946,6 +968,157 @@ def fetch_usda_ers(workers: int = 1):
 
 
 # ══════════════════════════════════════════════════════════════
+# 新数据源：Alpha Vantage 农产品期货
+# ══════════════════════════════════════════════════════════════
+def fetch_commodity_prices(workers: int = 1):
+    """Alpha Vantage 农产品月度价格 → GCS raw_data/commodities/"""
+    av_key = os.getenv("AV_API_KEY", "")
+    if not av_key:
+        print("  ✗ 未找到 AV_API_KEY")
+        return
+
+    # 主要灌溉作物对应 ETF/期货代码
+    COMMODITIES = {
+        "corn":     "CORN",
+        "wheat":    "WEAT",
+        "soybeans": "SOYB",
+        "cotton":   "BAL",
+        "rice":     "RICE",
+    }
+
+    for name, symbol in COMMODITIES.items():
+        rel = f"commodities/{name}_monthly.json"
+        if _exists(rel):
+            print(f"  ✓ commodities/{name}_monthly.json 已存在，跳过")
+            continue
+        print(f"  正在下载 {name} ({symbol}) 月度价格...")
+        try:
+            r = requests.get("https://www.alphavantage.co/query", params={
+                "function": "TIME_SERIES_MONTHLY",
+                "symbol": symbol,
+                "apikey": av_key,
+            }, timeout=30)
+            data = r.json()
+            monthly = data.get("Monthly Time Series", {})
+            if monthly:
+                records = [{"date": d, "close": float(v["4. close"]), "volume": int(v["5. volume"])}
+                           for d, v in sorted(monthly.items(), reverse=True)[:60]]  # 最近5年
+                _put_json(rel, {"symbol": symbol, "name": name, "prices": records})
+                print(f"  ✓ commodities/{name}_monthly.json  ({len(records)} months)")
+            else:
+                print(f"  ✗ {name}: {list(data.keys())}")
+        except Exception as e:
+            print(f"  ✗ {name}: {e}")
+        time.sleep(12)  # Alpha Vantage 免费 5次/分
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：USGS 地下水位趋势（Ogallala + 中央谷）
+# ══════════════════════════════════════════════════════════════
+def fetch_groundwater(workers: int = 1):
+    """USGS NWIS 主要含水层地下水位日均值（年度聚合）→ GCS raw_data/groundwater/
+    使用 dv endpoint，parameterCd=72019（地下水深度，ft below land surface），
+    每个州取最近3年数据，由 build_agri.py 聚合出年均趋势。
+    """
+    AQUIFER_STATES = {
+        "ogallala": ["NE", "KS", "TX", "OK", "CO", "SD", "WY", "NM"],
+        "central_valley": ["CA"],
+    }
+
+    for aquifer, states in AQUIFER_STATES.items():
+        for abbr in states:
+            rel = f"groundwater/{aquifer}_{abbr}_dv.json"
+            if _exists(rel):
+                print(f"  ✓ {rel} 已存在，跳过")
+                continue
+            print(f"  正在下载 {aquifer}/{abbr} 地下水位（dv）...")
+            try:
+                r = requests.get("https://waterservices.usgs.gov/nwis/dv/", params={
+                    "format": "json",
+                    "stateCd": abbr.lower(),
+                    "parameterCd": "72019",
+                    "siteType": "GW",
+                    "startDT": "2015-01-01",
+                    "endDT": "2024-12-31",
+                    "siteStatus": "all",
+                    "statCd": "00003",   # daily mean
+                }, timeout=180)
+                if r.status_code == 200 and r.text.strip():
+                    data = r.json()
+                    n = len(data.get("value", {}).get("timeSeries", []))
+                    _put_json(rel, data)
+                    print(f"  ✓ groundwater/{aquifer}_{abbr}_dv.json  ({n} sites)")
+                else:
+                    print(f"  ✗ {abbr}: HTTP {r.status_code}")
+            except Exception as e:
+                print(f"  ✗ groundwater {abbr}: {e}")
+            time.sleep(2)
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：NOAA 州级 Palmer 干旱指数（PDSI）
+# ══════════════════════════════════════════════════════════════
+def fetch_noaa_pdsi(workers: int = 1):
+    """NOAA CDO Climate Division PDSI（州级，月度）→ GCS raw_data/noaa_pdsi/
+    使用 CLIMDIV 数据集，locationid 格式 CLIMDIV:{ABBR}00（全州平均）。
+    """
+    noaa_key = os.getenv("NOAA_API_KEY", "")
+    if not noaa_key:
+        print("  ✗ 未找到 NOAA_API_KEY")
+        return
+
+    AGR_STATES = ["CA", "TX", "NE", "KS", "ID", "MT", "CO", "OR", "WA",
+                  "AR", "ND", "SD", "MN", "IA", "IL", "IN", "OH", "GA"]
+
+    for abbr in AGR_STATES:
+        rel = f"noaa_pdsi/{abbr}_pdsi.json"
+        if _exists(rel):
+            print(f"  ✓ noaa_pdsi/{abbr}_pdsi.json 已存在，跳过")
+            continue
+        print(f"  正在下载 {abbr} PDSI (CLIMDIV)...")
+        # NOAA Climate Division 使用两位州缩写 + "00" 表示全州汇总
+        loc_id = f"CLIMDIV:{abbr}00"
+        params = {
+            "datasetid": "CLIMDIV",
+            "datatypeid": "PDSI",
+            "locationid": loc_id,
+            "startdate": "2010-01-01",
+            "enddate": "2024-12-31",
+            "limit": 1000,
+            "units": "standard",
+            "offset": 1,
+        }
+        headers = {"token": noaa_key}
+        all_results = []
+        while True:
+            try:
+                r = requests.get("https://www.ncdc.noaa.gov/cdo-web/api/v2/data",
+                    params=params, headers=headers, timeout=30)
+                if r.status_code != 200:
+                    print(f"  ✗ {abbr}: HTTP {r.status_code}")
+                    break
+                data = r.json()
+                results = data.get("results", [])
+                if not results:
+                    break
+                all_results.extend(results)
+                meta = data.get("metadata", {}).get("resultset", {})
+                if params["offset"] + 1000 > meta.get("count", 0):
+                    break
+                params["offset"] += 1000
+                time.sleep(0.3)
+            except Exception as e:
+                print(f"  ✗ PDSI {abbr}: {e}")
+                break
+        if all_results:
+            _put_json(rel, all_results)
+            print(f"  ✓ noaa_pdsi/{abbr}_pdsi.json  ({len(all_results)} records)")
+        else:
+            print(f"  ✗ {abbr}: no CLIMDIV PDSI data")
+        time.sleep(0.5)
+
+
+# ══════════════════════════════════════════════════════════════
 # 主程序
 # ══════════════════════════════════════════════════════════════
 SOURCES = {
@@ -962,7 +1135,10 @@ SOURCES = {
     "drought":    ("US Drought Monitor 全美 + NOAA 各州气温",        fetch_drought),
     "usda_nass":  ("USDA NASS 作物灌溉用水+产值+面积（全美）",      fetch_usda_nass),
     "usda_ers":   ("USDA NASS 县级灌溉数据（主要出口作物/虚拟水）",   fetch_usda_ers),
-    "ssurgo":     ("USDA NRCS SSURGO 土壤能力等级（灌溉适宜性/换种约束）", fetch_ssurgo),
+    "ssurgo":       ("USDA NRCS SSURGO 土壤能力等级（灌溉适宜性/换种约束）", fetch_ssurgo),
+    "commodities":  ("Alpha Vantage 农产品月度期货价格（玉米/小麦/大豆/棉花）", fetch_commodity_prices),
+    "groundwater":  ("USGS NWIS Ogallala+中央谷地下水位年均趋势",              fetch_groundwater),
+    "noaa_pdsi":    ("NOAA CDO 主要农业州 Palmer 干旱指数（月度）",             fetch_noaa_pdsi),
 }
 
 DEFAULT_ORDER = [
@@ -970,6 +1146,7 @@ DEFAULT_ORDER = [
     "census", "cdc", "tri", "npdes",
     "snotel", "water_use", "drought",
     "usda_nass", "usda_ers", "ssurgo",
+    "commodities", "groundwater", "noaa_pdsi",
 ]
 
 if __name__ == "__main__":

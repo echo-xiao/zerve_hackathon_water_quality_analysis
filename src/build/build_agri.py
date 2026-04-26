@@ -921,5 +921,113 @@ def _build_county_geojson(county_records, state_summary):
     print(f"  ✓ agri_county.geojson  ({matched} 县多边形, {sz} KB)")
 
 
+def build_commodity_prices():
+    """从 GCS 下载商品价格 → output/data/commodity_prices.json"""
+    import io, csv
+    print("\n=== 商品期货价格处理 ===")
+    client = gcs_client()
+    bucket = client.bucket(GCS_BUCKET)
+
+    CROPS = ["corn", "soybeans", "cotton", "rice", "wheat"]
+    result = {}
+    for name in CROPS:
+        blob = bucket.blob(f"{GCS_PREFIX}/commodities/{name}_monthly.json")
+        if not blob.exists():
+            print(f"  ✗ commodities/{name}_monthly.json 未找到，跳过")
+            continue
+        data = json.loads(blob.download_as_text())
+        prices = data.get("prices", [])
+        if not prices:
+            continue
+        latest = prices[0]["close"]
+        yr_ago = next((p["close"] for p in prices if p["date"][:4] == str(int(prices[0]["date"][:4])-1)), None)
+        hi5 = max(p["close"] for p in prices)
+        lo5 = min(p["close"] for p in prices)
+        result[name] = {
+            "symbol":    data.get("symbol"),
+            "latest":    round(latest, 2),
+            "date":      prices[0]["date"],
+            "yr_chg_pct": round((latest/yr_ago - 1)*100, 1) if yr_ago else None,
+            "hi5":       round(hi5, 2),
+            "lo5":       round(lo5, 2),
+            "pct_of_hi": round(latest/hi5*100, 1) if hi5 else None,
+        }
+        print(f"  ✓ {name}: ${latest:.2f}  ({'+' if result[name].get('yr_chg_pct',0)>=0 else ''}{result[name].get('yr_chg_pct','?')}% YoY)")
+
+    out_path = os.path.join(OUT_DATA, "commodity_prices.json")
+    with open(out_path, "w") as f:
+        json.dump(result, f)
+    print(f"  ✓ commodity_prices.json  ({len(result)} 种)")
+
+
+def build_state_drought():
+    """从 GCS 下载 Drought Monitor 州级 CSV → output/data/state_drought.json"""
+    import io, csv as csvmod
+    print("\n=== 州级干旱指数处理 ===")
+    csvmod.field_size_limit(10_000_000)
+    client = gcs_client()
+    bucket = client.bucket(GCS_BUCKET)
+
+    blob = bucket.blob(f"{GCS_PREFIX}/drought/state_drought_monitor.csv")
+    if not blob.exists():
+        print("  ✗ drought/state_drought_monitor.csv 未找到，跳过")
+        return
+
+    text = blob.download_as_text()
+    if text.strip().startswith("<!"):
+        print("  ✗ USDM 返回 HTML（API 已变更），跳过")
+        return
+    reader = csvmod.DictReader(io.StringIO(text))
+    rows = list(reader)
+    if not rows:
+        print("  ✗ CSV 为空")
+        return
+
+    # 找最新日期的每州数据
+    from collections import defaultdict
+    state_rows = defaultdict(list)
+    for row in rows:
+        abbr = (row.get("StateAbbreviation") or row.get("STATEABBR") or "").strip().upper()
+        date = (row.get("MapDate") or row.get("MAPDATE") or "").strip()
+        if abbr and date:
+            state_rows[abbr].append(row)
+
+    result = {}
+    for abbr, rows_s in state_rows.items():
+        latest = sorted(rows_s, key=lambda r: r.get("MapDate") or r.get("MAPDATE", ""), reverse=True)[0]
+        def pct_col(row, *names):
+            for n in names:
+                v = row.get(n)
+                if v not in (None, ""):
+                    try: return round(float(v), 1)
+                    except: pass
+            return 0.0
+        d0 = pct_col(latest, "D0", "None")
+        d1 = pct_col(latest, "D1")
+        d2 = pct_col(latest, "D2")
+        d3 = pct_col(latest, "D3")
+        d4 = pct_col(latest, "D4")
+        # drought_pct = D1+D2+D3+D4 (moderate drought or worse)
+        drought_pct = round(d1 + d2 + d3 + d4, 1)
+        severe_pct  = round(d2 + d3 + d4, 1)
+        date_str = (latest.get("MapDate") or latest.get("MAPDATE") or "")
+        result[abbr] = {
+            "date": date_str,
+            "drought_pct": drought_pct,   # D1-D4
+            "severe_pct":  severe_pct,    # D2-D4
+            "d0": d0, "d1": d1, "d2": d2, "d3": d3, "d4": d4,
+        }
+
+    out_path = os.path.join(OUT_DATA, "state_drought.json")
+    with open(out_path, "w") as f:
+        json.dump(result, f)
+    top = sorted(result.items(), key=lambda x: x[1]["drought_pct"], reverse=True)[:5]
+    print(f"  ✓ state_drought.json  ({len(result)} 州)")
+    top_str = ", ".join(f"{a}({v['drought_pct']}%)" for a, v in top)
+    print(f"  最干旱: {top_str}")
+
+
 if __name__ == "__main__":
     main()
+    build_commodity_prices()
+    build_state_drought()
