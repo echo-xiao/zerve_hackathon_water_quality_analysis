@@ -13,9 +13,21 @@ run_analysis.py — 分析主入口
   python src/analysis/run_analysis.py --steps 04,05
 """
 
-import os, sys, json, argparse, time
+import os, sys, json, argparse, time, subprocess, glob
 import warnings
 warnings.filterwarnings("ignore")
+
+# 自动从 GitHub 同步最新代码（zerve canvas 环境）
+def _auto_pull():
+    paths = glob.glob('/tmp/**/zerve_hackathon', recursive=True)
+    if paths:
+        r = subprocess.run(['git', 'pull', 'origin', 'main'],
+                           capture_output=True, text=True, cwd=paths[0])
+        if r.stdout.strip():
+            print(f"  [git pull] {r.stdout.strip()}")
+        if r.returncode != 0 and r.stderr.strip():
+            print(f"  [git pull warning] {r.stderr.strip()}")
+_auto_pull()
 
 # 把 src/analysis 加入路径，使子模块可直接 import
 ANALYSIS_DIR = os.path.dirname(os.path.abspath(__file__))
