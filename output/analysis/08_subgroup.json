@@ -1,0 +1,231 @@
+{
+  "subgroup_ates": {
+    "High Poverty Rate": {
+      "Arid Counties": {
+        "ate": -0.3597,
+        "ate_pct": -30.2,
+        "naive_ate": -0.6288,
+        "p_value": 0.0019,
+        "n": 656,
+        "n_treat": 328,
+        "n_ctrl": 328
+      },
+      "Humid Counties": {
+        "ate": -0.5223,
+        "ate_pct": -40.7,
+        "naive_ate": -1.2021,
+        "p_value": 0.0,
+        "n": 751,
+        "n_treat": 375,
+        "n_ctrl": 376
+      },
+      "Good Soil (High AWC)": {
+        "ate": -0.2347,
+        "ate_pct": -20.9,
+        "naive_ate": -0.3956,
+        "p_value": 0.0274,
+        "n": 846,
+        "n_treat": 423,
+        "n_ctrl": 423
+      },
+      "Poor Soil (Low AWC)": {
+        "ate": -0.3762,
+        "ate_pct": -31.4,
+        "naive_ate": -0.5318,
+        "p_value": 0.0083,
+        "n": 544,
+        "n_treat": 272,
+        "n_ctrl": 272
+      },
+      "West": {
+        "ate": -0.3827,
+        "ate_pct": -31.8,
+        "naive_ate": -0.0844,
+        "p_value": 0.8203,
+        "n": 150,
+        "n_treat": 75,
+        "n_ctrl": 75
+      },
+      "Midwest": {
+        "ate": -0.0194,
+        "ate_pct": -1.9,
+        "naive_ate": 0.2626,
+        "p_value": 0.1593,
+        "n": 675,
+        "n_treat": 337,
+        "n_ctrl": 338
+      },
+      "South": {
+        "ate": -0.3081,
+        "ate_pct": -26.5,
+        "naive_ate": -0.4307,
+        "p_value": 0.0189,
+        "n": 517,
+        "n_treat": 258,
+        "n_ctrl": 259
+      },
+      "Northeast": {
+        "ate": 0.1968,
+        "ate_pct": 21.7,
+        "naive_ate": 0.8276,
+        "p_value": 0.0636,
+        "n": 65,
+        "n_treat": 32,
+        "n_ctrl": 33
+      }
+    },
+    "Large Farm Size": {
+      "Arid Counties": {
+        "ate": -0.0773,
+        "ate_pct": -7.4,
+        "naive_ate": -1.0415,
+        "p_value": 0.0,
+        "n": 656,
+        "n_treat": 328,
+        "n_ctrl": 328
+      },
+      "Humid Counties": {
+        "ate": -0.1716,
+        "ate_pct": -15.8,
+        "naive_ate": -0.4603,
+        "p_value": 0.0128,
+        "n": 751,
+        "n_treat": 374,
+        "n_ctrl": 377
+      },
+      "Good Soil (High AWC)": {
+        "ate": -0.5066,
+        "ate_pct": -39.7,
+        "naive_ate": -1.6075,
+        "p_value": 0.0,
+        "n": 846,
+        "n_treat": 422,
+        "n_ctrl": 424
+      },
+      "Poor Soil (Low AWC)": {
+        "ate": -0.5101,
+        "ate_pct": -40.0,
+        "naive_ate": -1.8458,
+        "p_value": 0.0,
+        "n": 544,
+        "n_treat": 272,
+        "n_ctrl": 272
+      },
+      "West": {
+        "ate": 0.6856,
+        "ate_pct": 98.5,
+        "naive_ate": 1.1684,
+        "p_value": 0.0014,
+        "n": 150,
+        "n_treat": 75,
+        "n_ctrl": 75
+      },
+      "Midwest": {
+        "ate": -0.0319,
+        "ate_pct": -3.1,
+        "naive_ate": -1.4812,
+        "p_value": 0.0,
+        "n": 675,
+        "n_treat": 336,
+        "n_ctrl": 339
+      },
+      "South": {
+        "ate": -0.3202,
+        "ate_pct": -27.4,
+        "naive_ate": -1.1732,
+        "p_value": 0.0,
+        "n": 517,
+        "n_treat": 258,
+        "n_ctrl": 259
+      },
+      "Northeast": {
+        "ate": -0.0602,
+        "ate_pct": -5.8,
+        "naive_ate": 1.2097,
+        "p_value": 0.0058,
+        "n": 65,
+        "n_treat": 32,
+        "n_ctrl": 33
+      }
+    },
+    "High Crop Concentration": {
+      "Arid Counties": {
+        "ate": -0.8529,
+        "ate_pct": -57.4,
+        "naive_ate": -2.6249,
+        "p_value": 0.0,
+        "n": 656,
+        "n_treat": 326,
+        "n_ctrl": 330
+      },
+      "Humid Counties": {
+        "ate": -0.5305,
+        "ate_pct": -41.2,
+        "naive_ate": -1.5533,
+        "p_value": 0.0,
+        "n": 751,
+        "n_treat": 374,
+        "n_ctrl": 377
+      },
+      "Good Soil (High AWC)": {
+        "ate": -0.3005,
+        "ate_pct": -26.0,
+        "naive_ate": -1.1192,
+        "p_value": 0.0,
+        "n": 846,
+        "n_treat": 419,
+        "n_ctrl": 427
+      },
+      "Poor Soil (Low AWC)": {
+        "ate": -0.8185,
+        "ate_pct": -55.9,
+        "naive_ate": -2.3621,
+        "p_value": 0.0,
+        "n": 544,
+        "n_treat": 272,
+        "n_ctrl": 272
+      },
+      "West": {
+        "ate": 0.0725,
+        "ate_pct": 7.5,
+        "naive_ate": 0.1206,
+        "p_value": 0.7456,
+        "n": 150,
+        "n_treat": 75,
+        "n_ctrl": 75
+      },
+      "Midwest": {
+        "ate": -0.1227,
+        "ate_pct": -11.5,
+        "naive_ate": -0.7959,
+        "p_value": 0.0,
+        "n": 675,
+        "n_treat": 336,
+        "n_ctrl": 339
+      },
+      "South": {
+        "ate": -0.5992,
+        "ate_pct": -45.1,
+        "naive_ate": -1.9184,
+        "p_value": 0.0,
+        "n": 517,
+        "n_treat": 255,
+        "n_ctrl": 262
+      },
+      "Northeast": {
+        "ate": -0.3497,
+        "ate_pct": -29.5,
+        "naive_ate": -1.4967,
+        "p_value": 0.0005,
+        "n": 65,
+        "n_treat": 32,
+        "n_ctrl": 33
+      }
+    }
+  },
+  "key_findings": [
+    "High Poverty Rate：效应最强在「Humid Counties」(-40.7%)，最弱在「Northeast」(+21.7%)，差距 62.4pct",
+    "Large Farm Size：效应最强在「Poor Soil (Low AWC)」(-40.0%)，最弱在「West」(+98.5%)，差距 138.5pct",
+    "High Crop Concentration：效应最强在「Arid Counties」(-57.4%)，最弱在「Midwest」(-11.5%)，差距 45.9pct"
+  ]
+}

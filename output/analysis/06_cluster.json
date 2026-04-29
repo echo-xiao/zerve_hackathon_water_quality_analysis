@@ -1,0 +1,5688 @@
+{
+  "n_clusters": 4,
+  "n_counties": 1407,
+  "cluster_centers": [
+    {
+      "eto_avg_in": 59.7562,
+      "precip_deficit_in": 22.4109,
+      "drought_intensity": 0.3694,
+      "elevation_ft": 884.2139,
+      "avg_farm_size_ac": 391.0163,
+      "crop_diversity_hhi": 0.4723,
+      "poverty_rate": 11.5854,
+      "log_crop_water_eff": 8.3302,
+      "cluster_id": 0,
+      "n_counties": 675,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    {
+      "eto_avg_in": 70.2479,
+      "precip_deficit_in": 20.8454,
+      "drought_intensity": 0.2891,
+      "elevation_ft": 533.1649,
+      "avg_farm_size_ac": 476.8763,
+      "crop_diversity_hhi": 0.7034,
+      "poverty_rate": 19.0815,
+      "log_crop_water_eff": 4.6727,
+      "cluster_id": 1,
+      "n_counties": 298,
+      "cluster_name": "Resource-Constrained"
+    },
+    {
+      "eto_avg_in": 93.5769,
+      "precip_deficit_in": 73.6104,
+      "drought_intensity": 0.7817,
+      "elevation_ft": 1209.9178,
+      "avg_farm_size_ac": 879.4045,
+      "crop_diversity_hhi": 0.7026,
+      "poverty_rate": 12.1962,
+      "log_crop_water_eff": 4.3076,
+      "cluster_id": 2,
+      "n_counties": 309,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    {
+      "eto_avg_in": 71.2815,
+      "precip_deficit_in": 56.179,
+      "drought_intensity": 0.7747,
+      "elevation_ft": 3440.4832,
+      "avg_farm_size_ac": 2543.448,
+      "crop_diversity_hhi": 0.68,
+      "poverty_rate": 13.273,
+      "log_crop_water_eff": 3.7225,
+      "cluster_id": 3,
+      "n_counties": 125,
+      "cluster_name": "Arid Large-Farm"
+    }
+  ],
+  "county_clusters": {
+    "01001": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01003": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01005": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01029": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01031": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01043": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "01045": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01047": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01049": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01051": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01053": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01055": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01061": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01067": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01069": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01071": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "01075": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01077": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "01079": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "01083": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "01089": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "01091": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01105": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01109": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01111": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01113": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01119": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "01121": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "04012": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "04013": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "04015": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "04021": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "04027": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "05001": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05003": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05017": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05021": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05029": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05031": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05033": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05035": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05037": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05041": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05043": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05045": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05047": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05055": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05063": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05067": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05069": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05071": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05073": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05075": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05077": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05079": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05081": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05085": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "05093": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05095": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05107": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05111": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05115": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05117": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "05119": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05121": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05123": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05145": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05147": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "05149": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "06011": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06019": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06021": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06025": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06029": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06031": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06047": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06065": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06067": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06077": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06095": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06099": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06101": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06107": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "06113": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "08001": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08005": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "08011": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08013": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08017": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08029": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08033": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08039": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08061": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08063": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08067": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08069": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08073": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08075": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08077": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08087": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08089": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "08095": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08099": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "08101": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08115": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "08121": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "08123": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "08125": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "10001": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "10003": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "10005": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "13001": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13003": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13005": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13007": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13011": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13015": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "13017": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13019": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13023": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13027": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13031": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13033": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13037": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13045": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13061": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13069": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13071": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13075": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13087": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13091": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13093": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13099": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13107": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13115": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13129": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "13131": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13137": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13147": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "13153": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13155": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13161": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13163": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13165": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13167": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13175": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13185": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13193": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13197": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13201": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13205": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13209": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13211": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13229": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13243": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13251": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13253": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13261": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13269": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13273": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13275": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13277": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13279": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13283": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13287": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13297": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13299": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "13321": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "16001": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16005": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "16009": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "16011": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16019": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "16021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "16023": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "16025": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "16027": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "16029": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16031": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16033": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16039": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16041": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16043": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16045": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16047": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16049": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16051": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16053": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16055": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "16057": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "16063": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16065": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16067": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16069": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "16073": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16075": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "16077": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16083": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "16087": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "17001": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17011": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17015": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17017": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17019": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17023": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17027": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17033": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17035": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17049": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17053": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17057": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17059": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17067": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17071": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17073": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17075": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17077": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "17087": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17089": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17091": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17095": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17097": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17099": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17101": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17103": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17107": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17111": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17113": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17123": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17125": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17127": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17129": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17131": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17133": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17137": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17141": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17143": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17147": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17149": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17153": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "17159": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17161": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17169": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17171": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17179": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17181": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "17183": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17185": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17189": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17193": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17195": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "17201": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18001": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18003": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18005": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18007": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18015": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18017": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18019": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18027": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18033": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18035": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18039": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18043": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18049": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18051": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18055": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18059": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18061": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18063": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18071": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18073": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18081": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18083": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18085": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18087": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18089": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18091": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18095": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18099": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18103": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18107": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18109": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18111": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18113": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18117": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18119": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18121": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18123": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18127": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18129": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18131": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18133": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18135": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18141": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18143": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18145": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18147": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18149": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18151": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18153": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18155": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18157": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18163": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18167": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18169": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18171": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18181": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "18183": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19017": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19023": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19027": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19033": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19041": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19043": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19045": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19047": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19049": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19051": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19057": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19059": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19063": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19065": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19067": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19069": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19071": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19073": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19081": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19085": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "19091": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19099": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19103": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19109": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19111": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19115": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19119": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19129": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19131": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19133": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "19139": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19143": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19145": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19147": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19149": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19151": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19155": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19161": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19163": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19167": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19169": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19193": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "19195": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20003": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20005": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20007": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20009": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20011": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20013": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20015": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20023": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20025": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20027": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20029": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20031": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20033": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20035": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20037": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "20039": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20041": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20043": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20045": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20047": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20051": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20055": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20057": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20059": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20061": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20063": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20065": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20067": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20069": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20071": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "20075": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "20077": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20079": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20081": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20083": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20085": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20087": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20089": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20091": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20093": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20095": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20097": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20099": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20101": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20105": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20113": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20115": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20117": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20119": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20121": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20123": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20127": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20129": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20131": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20135": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20137": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20139": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20141": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20143": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20145": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20147": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20149": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20151": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20153": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "20155": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20157": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20159": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20161": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20163": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20167": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20169": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20171": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20173": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20175": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20177": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20179": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20181": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20183": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20185": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20187": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "20189": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20191": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20193": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20195": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20197": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20199": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "20201": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "20203": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "20205": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21009": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21017": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21023": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "21033": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21035": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21039": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21047": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21059": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21075": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "21083": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21097": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "21101": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21103": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21105": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "21113": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21141": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21187": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "21191": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21209": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21211": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21219": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21221": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21225": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21229": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "21233": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "22001": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22009": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22011": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22015": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22017": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22019": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22025": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22029": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22035": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22039": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22041": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22045": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22053": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22055": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22065": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22067": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22069": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22073": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22077": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22079": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22081": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22083": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22097": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22099": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22107": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22113": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22121": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "22123": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "24011": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "24013": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "24015": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "24019": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "24021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "24029": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "24033": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "24035": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "24037": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "24039": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "24041": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "24043": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "24045": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "24047": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26005": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26009": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "26015": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26017": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26023": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26025": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26027": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26037": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26045": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26049": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26055": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26057": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26059": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26063": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26065": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26067": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26069": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "26073": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26075": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26077": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26081": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26087": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26089": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "26091": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26099": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26101": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "26105": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26107": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "26111": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26113": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "26115": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26117": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26121": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26123": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26125": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26127": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26133": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26137": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26139": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26145": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26147": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26149": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26151": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26155": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26157": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26161": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "26163": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "27001": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27003": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27005": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27007": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27009": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27011": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27013": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27015": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27019": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27023": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27025": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27027": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27029": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27033": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27035": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27037": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27039": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27041": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27045": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27047": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27049": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27051": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27055": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27057": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27059": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27065": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27067": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27069": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27073": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27079": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27083": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27091": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27093": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27095": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27097": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27099": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27107": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27111": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27115": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27117": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27119": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27121": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27125": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27129": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27131": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27141": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27145": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27147": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27149": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27151": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27153": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27157": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27159": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27163": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27165": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27167": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27171": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "27173": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "28007": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28011": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28015": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28017": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28021": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28025": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28027": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28033": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28039": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28049": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28051": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28053": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28055": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28081": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "28083": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28087": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28093": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28095": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "28103": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28107": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28119": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28123": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28125": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28133": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28135": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28137": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28143": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28149": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28151": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28155": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "28161": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "28163": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "29001": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29005": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29007": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29009": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "29011": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "29013": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29015": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29017": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29019": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29023": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "29027": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29031": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29033": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29037": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29041": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29047": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29057": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29061": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29069": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "29071": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29077": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "29083": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29087": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "29089": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29095": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29097": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29099": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29101": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29103": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29107": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29109": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29111": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29113": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29115": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29121": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "29125": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29127": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29131": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29133": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "29137": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29139": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29141": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29143": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "29145": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29147": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29151": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29155": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "29157": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29159": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29163": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29165": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29167": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "29175": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29177": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29183": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29195": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29201": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29205": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29207": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "29217": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "29225": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "30001": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30003": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30005": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30007": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30009": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30011": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30013": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30015": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30017": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30019": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30021": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30025": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30027": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30029": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "30031": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "30033": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30035": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30037": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30041": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30045": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30047": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30049": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "30051": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30055": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30059": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30065": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30067": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "30069": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30071": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30073": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "30075": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30079": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30081": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30083": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30085": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30087": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30091": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "30095": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30099": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30101": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30103": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30105": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30107": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "30111": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31001": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31003": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31007": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31011": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31013": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31015": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "31017": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31019": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "31023": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31025": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "31027": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31029": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31031": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31033": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31035": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31037": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31039": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31041": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31043": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31045": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31047": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31049": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31051": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31053": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31055": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31057": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31059": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31061": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31063": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31065": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31067": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31069": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31071": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31073": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31077": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31079": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31081": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31083": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31085": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31087": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31089": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31093": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31095": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31097": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31099": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31101": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31103": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31105": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31107": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31109": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31111": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31113": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31115": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31119": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31121": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31123": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31125": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31127": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "31129": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31131": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "31133": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "31135": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31137": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31139": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31141": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31143": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31145": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31147": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "31149": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31151": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31153": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31155": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31157": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31159": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31161": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31163": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31165": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "31167": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31169": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31173": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31175": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31177": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31179": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31181": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "31185": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "34005": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "34011": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "34015": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "34019": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "34025": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "34033": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "34035": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "36001": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36003": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36007": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "36009": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36011": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36013": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36019": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "36021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36023": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36025": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "36027": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36033": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "36045": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36053": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36057": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36063": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36065": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36071": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "36075": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36077": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36083": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36089": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36095": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "36101": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36103": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "36107": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36109": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36115": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36121": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "36123": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37001": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37013": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37015": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37017": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37033": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37041": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37047": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37051": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37057": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37061": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37065": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37069": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37073": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37077": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37079": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37081": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37083": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37085": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37091": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37093": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37101": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37103": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37105": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37107": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37125": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37127": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37131": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37135": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37137": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37139": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37141": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37145": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37147": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37153": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37155": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37157": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37159": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37163": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37169": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37171": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37181": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37183": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37185": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37187": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37191": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "37195": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "37197": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38003": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38005": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38011": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "38015": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38017": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38023": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38025": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38029": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38031": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38033": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38035": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38037": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38039": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38043": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38045": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38047": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38049": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38053": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38055": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38057": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38059": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38063": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38065": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "38067": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38069": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38073": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38077": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38081": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38089": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38091": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38093": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38103": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "38105": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "39001": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39005": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "39007": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39011": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39015": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39019": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39023": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39025": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39029": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39031": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39033": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39037": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39039": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39041": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39049": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39065": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39071": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39075": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39079": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39081": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39083": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39087": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39089": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39093": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39095": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39097": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39103": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39105": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39109": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39113": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39115": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39129": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39131": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39133": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39139": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39141": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39143": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39145": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39147": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39151": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39155": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39159": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39165": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39167": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39169": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39171": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "39173": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "40003": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40007": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40009": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40011": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40013": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40015": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40017": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40023": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "40025": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "40035": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "40037": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40039": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40043": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40045": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40047": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40049": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40051": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40053": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40055": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40057": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40059": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40063": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40065": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40071": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40073": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40075": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40079": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "40081": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40083": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40093": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40095": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40097": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "40101": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "40107": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "40109": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40113": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40115": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "40119": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40125": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40129": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40131": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40135": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "40137": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40139": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40141": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40143": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "40147": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40149": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40151": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "40153": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "41001": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "41003": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "41005": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "41021": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "41035": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "41043": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "41047": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "41049": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "41053": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "41055": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "41059": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "41061": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "41063": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "41065": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "41067": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "42001": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42003": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "42009": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42011": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42013": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42019": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42027": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42029": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42037": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42041": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42049": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42051": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42055": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42061": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42063": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42065": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42071": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42073": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42075": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42083": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42087": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42095": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42099": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42109": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42117": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42121": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42125": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "42133": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "45003": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45005": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45007": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45009": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45011": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45015": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "45017": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45019": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45025": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45027": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45029": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45031": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45033": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45035": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45037": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45041": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45043": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "45045": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "45049": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45051": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "45061": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45063": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45069": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45071": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45073": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45075": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45077": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45079": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45081": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45085": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "45089": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "46005": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46007": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "46009": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "46011": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46013": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46015": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46017": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "46019": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "46021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46023": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "46025": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46027": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "46029": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46035": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46037": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46043": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46045": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46047": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "46051": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46057": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46059": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46061": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46065": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46067": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46071": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "46073": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46077": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46079": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46083": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46085": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46089": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46093": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "46099": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46101": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46109": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46115": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46119": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "46121": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "46123": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "46125": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "46127": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "46129": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "46135": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "47003": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47017": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47033": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47045": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "47047": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47053": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47055": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47069": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47071": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "47075": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "47079": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47085": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47093": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "47095": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "47097": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "47103": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47113": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47125": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47131": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47147": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47165": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47167": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "47183": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "48009": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48011": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48013": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48017": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "48023": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48025": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48027": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48029": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48035": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48039": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48045": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "48049": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48051": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48055": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48059": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48061": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48065": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48069": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48075": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48077": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48079": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48083": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48085": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48089": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48093": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48095": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48097": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48099": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48107": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48111": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48115": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48117": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "48121": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48123": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48125": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48129": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48139": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48145": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48147": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48149": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48153": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48157": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48163": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48165": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48171": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48173": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48177": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48179": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48181": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48187": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48189": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48191": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48193": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48195": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48197": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48207": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48209": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48211": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48215": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48217": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48231": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48233": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48239": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48249": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48251": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48253": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48257": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48275": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48277": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "48279": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48281": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48285": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48287": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48291": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "48293": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48295": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48303": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48305": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48307": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48309": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48321": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "48325": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48331": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48341": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48349": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48353": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48355": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48357": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48359": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "48369": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48375": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "48381": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48383": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "48395": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48399": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48409": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48411": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48415": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48417": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48421": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "48437": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48441": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48451": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48453": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48463": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48469": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48473": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48481": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48483": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48485": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48487": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48489": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48491": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48493": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48497": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48501": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48503": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "48507": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "51001": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51015": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51025": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51033": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51037": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "51049": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51053": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51061": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51067": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51083": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51085": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51093": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51097": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51101": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51111": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51117": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51131": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51143": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51165": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51171": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51175": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51181": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51183": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "51191": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "53001": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "53003": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "53005": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "53013": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "53017": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "53021": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "53023": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "53025": {
+      "cluster_id": 2,
+      "cluster_name": "Extreme-Arid Low-Efficiency"
+    },
+    "53039": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "53043": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "53047": {
+      "cluster_id": 3,
+      "cluster_name": "Arid Large-Farm"
+    },
+    "53063": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "53065": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "53071": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "53075": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "53077": {
+      "cluster_id": 1,
+      "cluster_name": "Resource-Constrained"
+    },
+    "55001": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55003": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55005": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55007": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55011": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55017": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55019": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55021": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55025": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55027": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55029": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55033": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55035": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55041": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55043": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55045": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55047": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55049": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55053": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55055": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55057": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55063": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55065": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55067": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55073": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55075": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55077": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55081": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55083": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55091": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55093": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55095": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55097": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55099": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55101": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55103": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55105": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55109": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55111": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55113": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55117": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55121": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55123": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55127": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55129": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55133": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55135": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55137": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55139": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    },
+    "55141": {
+      "cluster_id": 0,
+      "cluster_name": "High-Efficiency Grain Belt"
+    }
+  }
+}

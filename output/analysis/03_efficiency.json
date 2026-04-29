@@ -1,0 +1,59 @@
+{
+  "model_r2_cv": 0.511,
+  "factor_pct": {
+    "climate": 0.306,
+    "soil": 0.196,
+    "human": 0.499
+  },
+  "lasso_r2": 0.415,
+  "human_positive_effects": [
+    {
+      "feature": "centerpivot_ratio",
+      "coef": 0.0313
+    }
+  ],
+  "human_negative_effects": [
+    {
+      "feature": "crop_diversity_hhi",
+      "coef": -0.7205
+    },
+    {
+      "feature": "high_water_crop_share",
+      "coef": -0.6311
+    },
+    {
+      "feature": "poverty_rate",
+      "coef": -0.5071
+    },
+    {
+      "feature": "avg_farm_size_ac",
+      "coef": -0.1442
+    },
+    {
+      "feature": "median_income",
+      "coef": -0.1054
+    }
+  ],
+  "subgroup": {
+    "干旱县": {
+      "n": 656,
+      "top5": {
+        "crop_diversity_hhi": 0.5384,
+        "high_water_crop_share": 0.1949,
+        "avg_farm_size_ac": 0.0913,
+        "centerpivot_ratio": 0.0687,
+        "median_income": 0.0537
+      }
+    },
+    "湿润县": {
+      "n": 751,
+      "top5": {
+        "crop_diversity_hhi": 0.3712,
+        "poverty_rate": 0.1896,
+        "median_income": 0.1403,
+        "avg_farm_size_ac": 0.1287,
+        "high_water_crop_share": 0.1086
+      }
+    }
+  }
+}

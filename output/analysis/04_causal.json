@@ -1,0 +1,79 @@
+{
+  "treatments": [
+    {
+      "label": "centerpivot_ratio",
+      "treatment_col": "centerpivot_ratio",
+      "threshold": 0.6777,
+      "n_treated": 703,
+      "n_control": 704,
+      "naive_ate": -0.0874,
+      "naive_p": 0.5497,
+      "method": "IPW",
+      "ate": 0.3838,
+      "ate_pct_change": 46.8
+    },
+    {
+      "label": "avg_farm_size_ac",
+      "treatment_col": "avg_farm_size_ac",
+      "threshold": 378.0,
+      "n_treated": 703,
+      "n_control": 704,
+      "naive_ate": -1.3279,
+      "naive_p": 0.0,
+      "method": "IPW",
+      "ate": -0.4027,
+      "ate_pct_change": -33.2
+    },
+    {
+      "label": "crop_diversity_hhi",
+      "treatment_col": "crop_diversity_hhi",
+      "threshold": 0.523,
+      "n_treated": 701,
+      "n_control": 706,
+      "naive_ate": -2.2178,
+      "naive_p": 0.0,
+      "method": "IPW",
+      "ate": -0.3981,
+      "ate_pct_change": -32.8
+    },
+    {
+      "label": "high_water_crop_share",
+      "treatment_col": "high_water_crop_share",
+      "threshold": 0.008,
+      "n_treated": 700,
+      "n_control": 707,
+      "naive_ate": 0.1722,
+      "naive_p": 0.2384,
+      "method": "IPW",
+      "ate": -0.2858,
+      "ate_pct_change": -24.9
+    },
+    {
+      "label": "median_income",
+      "treatment_col": "median_income",
+      "threshold": 64219.0,
+      "n_treated": 703,
+      "n_control": 704,
+      "naive_ate": 0.7298,
+      "naive_p": 0.0,
+      "method": "IPW",
+      "ate": -0.0545,
+      "ate_pct_change": -5.3
+    },
+    {
+      "label": "poverty_rate",
+      "treatment_col": "poverty_rate",
+      "threshold": 12.46,
+      "n_treated": 703,
+      "n_control": 704,
+      "naive_ate": -0.7896,
+      "naive_p": 0.0,
+      "method": "IPW",
+      "ate": -0.2317,
+      "ate_pct_change": -20.7
+    }
+  ],
+  "method": "IPW",
+  "ate": 0.3838,
+  "ate_pct_change": 46.8
+}

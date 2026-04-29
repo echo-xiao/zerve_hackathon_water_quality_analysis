@@ -1,5 +1,6 @@
-# Generated output (contains injected API keys — never commit)
-output/
+# Generated output
+output/data/
+output/images/
 data/
 
 # API keys / secrets

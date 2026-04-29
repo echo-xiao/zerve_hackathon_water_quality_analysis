@@ -1,0 +1,191 @@
+{
+  "distribution": {
+    "n": 1407,
+    "mean": 49118.5,
+    "median": 490.22,
+    "std": 737569.85,
+    "quantiles": {
+      "p10": 15.47,
+      "p25": 67.66,
+      "p50": 490.22,
+      "p75": 3450.49,
+      "p90": 16493.72
+    }
+  },
+  "correlations": [
+    {
+      "feature": "crop_diversity_hhi",
+      "r": -0.499,
+      "p": 0.0,
+      "group": "人为",
+      "significant": true
+    },
+    {
+      "feature": "precip_deficit_in",
+      "r": -0.452,
+      "p": 0.0,
+      "group": "气候",
+      "significant": true
+    },
+    {
+      "feature": "awc_mean",
+      "r": 0.439,
+      "p": 0.0,
+      "group": "土壤",
+      "significant": true
+    },
+    {
+      "feature": "drought_intensity",
+      "r": -0.346,
+      "p": 0.0,
+      "group": "气候",
+      "significant": true
+    },
+    {
+      "feature": "elevation_ft",
+      "r": -0.296,
+      "p": 0.0,
+      "group": "气候",
+      "significant": true
+    },
+    {
+      "feature": "high_water_crop_share",
+      "r": -0.277,
+      "p": 0.0,
+      "group": "人为",
+      "significant": true
+    },
+    {
+      "feature": "avg_farm_size_ac",
+      "r": -0.276,
+      "p": 0.0,
+      "group": "人为",
+      "significant": true
+    },
+    {
+      "feature": "poverty_rate",
+      "r": -0.224,
+      "p": 0.0,
+      "group": "人为",
+      "significant": true
+    },
+    {
+      "feature": "median_income",
+      "r": 0.158,
+      "p": 0.0,
+      "group": "人为",
+      "significant": true
+    },
+    {
+      "feature": "clay_pct",
+      "r": 0.102,
+      "p": 0.0001,
+      "group": "土壤",
+      "significant": true
+    },
+    {
+      "feature": "centerpivot_ratio",
+      "r": 0.023,
+      "p": 0.3886,
+      "group": "人为",
+      "significant": false
+    },
+    {
+      "feature": "organic_matter",
+      "r": 0.022,
+      "p": 0.4059,
+      "group": "土壤",
+      "significant": false
+    }
+  ],
+  "vif": [
+    {
+      "feature": "drought_intensity",
+      "vif": 8.08
+    },
+    {
+      "feature": "precip_deficit_in",
+      "vif": 7.86
+    },
+    {
+      "feature": "poverty_rate",
+      "vif": 2.54
+    },
+    {
+      "feature": "elevation_ft",
+      "vif": 2.41
+    },
+    {
+      "feature": "median_income",
+      "vif": 2.39
+    },
+    {
+      "feature": "high_water_crop_share",
+      "vif": 1.96
+    },
+    {
+      "feature": "organic_matter",
+      "vif": 1.86
+    },
+    {
+      "feature": "crop_diversity_hhi",
+      "vif": 1.77
+    },
+    {
+      "feature": "awc_mean",
+      "vif": 1.66
+    },
+    {
+      "feature": "clay_pct",
+      "vif": 1.62
+    },
+    {
+      "feature": "centerpivot_ratio",
+      "vif": 1.48
+    },
+    {
+      "feature": "avg_farm_size_ac",
+      "vif": 1.47
+    }
+  ],
+  "dropped_collinear": [],
+  "high_collinear_pairs": [
+    {
+      "feat1": "Precip Deficit (in)",
+      "feat2": "Drought Intensity",
+      "r": 0.918
+    },
+    {
+      "feat1": "Median Income",
+      "feat2": "Poverty Rate",
+      "r": -0.739
+    }
+  ],
+  "high_vs_low": {
+    "centerpivot_ratio": {
+      "high_eff_median": 0.656,
+      "low_eff_median": 0.693,
+      "ratio": 0.95
+    },
+    "avg_farm_size_ac": {
+      "high_eff_median": 290.0,
+      "low_eff_median": 619.5,
+      "ratio": 0.47
+    },
+    "crop_diversity_hhi": {
+      "high_eff_median": 0.482,
+      "low_eff_median": 0.693,
+      "ratio": 0.7
+    },
+    "median_income": {
+      "high_eff_median": 67178.0,
+      "low_eff_median": 60323.0,
+      "ratio": 1.11
+    },
+    "poverty_rate": {
+      "high_eff_median": 11.54,
+      "low_eff_median": 14.305,
+      "ratio": 0.81
+    }
+  }
+}

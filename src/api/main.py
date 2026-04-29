@@ -25,7 +25,15 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 # ── 路径 ────────────────────────────────────────────────────────────
-BASE_DIR     = Path(__file__).parent.parent.parent
+import glob as _glob
+_here = Path(__file__).resolve()
+_zerve_dirs = _glob.glob('/tmp/**/zerve_hackathon', recursive=True)
+if _zerve_dirs:
+    BASE_DIR = Path(_zerve_dirs[0])
+elif _here.parent.name == "app":
+    BASE_DIR = _here.parent
+else:
+    BASE_DIR = _here.parent.parent.parent
 OUTPUT_DIR   = BASE_DIR / "output"
 ANALYSIS_DIR = OUTPUT_DIR / "analysis"
 DATA_DIR     = OUTPUT_DIR / "data"
@@ -81,9 +89,46 @@ class ExplainRequest(BaseModel):
 
 # ── 端点 ────────────────────────────────────────────────────────────
 
+@app.get("/debug/paths")
+def debug_paths():
+    import os
+    dirs = {}
+    for d in ['/tmp', '/app', '/files', '/data', '/home', '/mnt']:
+        try:
+            dirs[d] = os.listdir(d)[:10]
+        except:
+            dirs[d] = "not accessible"
+    return {
+        "base_dir": str(BASE_DIR),
+        "analysis_dir": str(ANALYSIS_DIR),
+        "analysis_dir_exists": ANALYSIS_DIR.exists(),
+        "files": os.listdir(str(ANALYSIS_DIR)) if ANALYSIS_DIR.exists() else [],
+        "container_dirs": dirs,
+    }
+
 @app.get("/")
 def root():
-    return {"status": "ok", "message": "Agricultural Water Efficiency API"}
+    report_url = os.getenv(
+        "ZERVE_REPORT_URL",
+        "https://docs.google.com/document/d/1mHOlY64Tvxi4CmZJs_0Jb29I0Pm_rpIS3SCQJLQAwig/edit?usp=sharing"
+    )
+    return {
+        "status": "ok",
+        "message": "Agricultural Water Efficiency API",
+        "report": report_url or None,
+        "docs": "/docs",
+    }
+
+
+@app.get("/report")
+def get_report():
+    """Redirect to the project report (Google Docs)"""
+    from fastapi.responses import RedirectResponse
+    url = os.getenv(
+        "ZERVE_REPORT_URL",
+        "https://docs.google.com/document/d/1mHOlY64Tvxi4CmZJs_0Jb29I0Pm_rpIS3SCQJLQAwig/edit?usp=sharing"
+    )
+    return RedirectResponse(url=url)
 
 
 @app.get("/county/{fips}")
@@ -365,3 +410,9 @@ def serve_map():
     if p.exists():
         return FileResponse(str(p))
     raise HTTPException(404, "地图文件未找到")
+
+
+if __name__ == "__main__":
+    import uvicorn
+    port = int(os.getenv("PORT", "8080"))
+    uvicorn.run(app, host="0.0.0.0", port=port)

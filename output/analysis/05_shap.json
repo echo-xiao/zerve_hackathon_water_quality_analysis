@@ -1,0 +1,18 @@
+{
+  "model_r2_cv": 0.511,
+  "shap_importance": {
+    "crop_diversity_hhi": 0.83266,
+    "high_water_crop_share": 0.25878,
+    "poverty_rate": 0.11729,
+    "median_income": 0.08289,
+    "avg_farm_size_ac": 0.07504,
+    "centerpivot_ratio": 0.03252
+  },
+  "top_actionable": [
+    "crop_diversity_hhi",
+    "high_water_crop_share",
+    "poverty_rate",
+    "median_income",
+    "avg_farm_size_ac"
+  ]
+}
