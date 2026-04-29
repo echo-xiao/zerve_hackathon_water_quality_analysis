@@ -20,13 +20,15 @@ warnings.filterwarnings("ignore")
 # 自动从 GitHub 同步最新代码（zerve canvas 环境）
 def _auto_pull():
     paths = glob.glob('/tmp/**/zerve_hackathon', recursive=True)
-    if paths:
-        r = subprocess.run(['git', 'pull', 'origin', 'main'],
-                           capture_output=True, text=True, cwd=paths[0])
-        if r.stdout.strip():
-            print(f"  [git pull] {r.stdout.strip()}")
-        if r.returncode != 0 and r.stderr.strip():
-            print(f"  [git pull warning] {r.stderr.strip()}")
+    if not paths:
+        return
+    cwd = paths[0]
+    subprocess.run(['git', 'fetch', 'origin', 'main'],
+                   capture_output=True, cwd=cwd)
+    r = subprocess.run(['git', 'reset', '--hard', 'origin/main'],
+                       capture_output=True, text=True, cwd=cwd)
+    if r.stdout.strip():
+        print(f"  [git sync] {r.stdout.strip()}")
 _auto_pull()
 
 # 把 src/analysis 加入路径，使子模块可直接 import
