@@ -7,7 +7,7 @@ load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../.env
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(BASE, "../../output/data")
-OUT  = os.path.join(BASE, "../../output/water_quality_map.html")
+OUT  = os.path.join(BASE, "../../index.html")
 
 def load(fname):
     with open(os.path.join(DATA, fname)) as f:

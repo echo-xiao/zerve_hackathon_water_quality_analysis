@@ -3,11 +3,13 @@ US National Water Quality & Resource Data Collector
 直接写入 Google Cloud Storage，无需本地存储
 
 用法：
-  python src/build/fetch_all.py                 # 运行所有数据源
-  python src/build/fetch_all.py wqp census      # 只运行指定数据源
-  python src/build/fetch_all.py --list          # 列出所有可用数据源
-  python src/build/fetch_all.py --status        # 查看当前抓取进度
-  python src/build/fetch_all.py --workers 8     # 指定并行线程数（默认4）
+  python src/build/fetch_all.py                         # 运行所有原始数据源（写入 GCS）
+  python src/build/fetch_all.py wqp census              # 只运行指定数据源
+  python src/build/fetch_all.py --list                  # 列出所有可用数据源
+  python src/build/fetch_all.py --status                # 查看当前抓取进度
+  python src/build/fetch_all.py --workers 8             # 指定并行线程数（默认4）
+  python src/build/fetch_all.py --features              # 补充特征数据（更新 features.parquet）
+  python src/build/fetch_all.py --features --skip-usgs  # 跳过慢速 USGS 地下水
 
 需要在 .env 中设置：
   GCS_BUCKET=zerve_hackathon
@@ -45,7 +47,7 @@ STATE_FIPS = {
 }
 ABBR_TO_FIPS = {v: k for k, v in STATE_FIPS.items()}
 N_STATES     = len(STATE_FIPS)
-WORKERS      = 4
+WORKERS      = 16
 
 
 # ── GCS 操作 ─────────────────────────────────────────────────────────
@@ -1119,8 +1121,1237 @@ def fetch_noaa_pdsi(workers: int = 1):
 
 
 # ══════════════════════════════════════════════════════════════
+# 新数据源：gridMET 县级气候数据（ETo + 降水）
+# ══════════════════════════════════════════════════════════════
+def fetch_gridmet(workers: int = 8):
+    """gridMET 县级年度 ETo + 降水（2018/2022，用于计算县级作物需水量）
+    策略：取每个县 agri_county.geojson 中心点 → 查 THREDDS CSV → 汇总年度值 → GCS
+    """
+    import io, csv as csvmod
+    from collections import defaultdict
+
+    # 加载已有县级数据取中心点
+    county_geo_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "../../output/data/agri_county.geojson"
+    )
+    if not os.path.exists(county_geo_path):
+        print("  ✗ agri_county.geojson 未找到，请先运行 build_agri.py")
+        return
+
+    with open(county_geo_path) as f:
+        county_geo = json.load(f)
+
+    # 计算每个县的中心点（简单平均坐标）
+    def centroid(coords):
+        flat = []
+        def _flatten(c):
+            if isinstance(c[0], list):
+                for x in c: _flatten(x)
+            else:
+                flat.append(c)
+        _flatten(coords)
+        lons = [p[0] for p in flat]
+        lats = [p[1] for p in flat]
+        return sum(lons)/len(lons), sum(lats)/len(lats)
+
+    counties = []
+    for feat in county_geo.get("features", []):
+        fips = feat.get("id") or feat["properties"].get("fips", "")
+        geom = feat["geometry"]
+        try:
+            lon, lat = centroid(geom["coordinates"])
+            counties.append({"fips": fips, "lat": round(lat, 4), "lon": round(lon, 4)})
+        except Exception:
+            continue
+
+    YEARS = list(range(2022, 2026))
+    VARS  = {
+        "etr": "agg_met_etr_1979_CurrentYear_CONUS.nc?var=daily_mean_reference_evapotranspiration_alfalfa",
+        "pr":  "agg_met_pr_1979_CurrentYear_CONUS.nc?var=precipitation_amount",
+    }
+    BASE = "https://thredds.northwestknowledge.net:443/thredds/ncss/"
+    existing = _list_existing("gridmet/")
+    total = len(counties) * len(YEARS)
+    prog  = Progress(total, f"{len(counties)} 县 × {len(YEARS)} 年，{workers} 线程")
+
+    def _fetch_county(item):
+        c, year = item
+        fips = c["fips"]
+        rel  = f"gridmet/{fips}_{year}.json"
+        if rel in existing:
+            prog.tick(skipped=True)
+            return
+        result = {"fips": fips, "year": year, "lat": c["lat"], "lon": c["lon"]}
+        for var_name, var_path in VARS.items():
+            url = (f"{BASE}{var_path}"
+                   f"&latitude={c['lat']}&longitude={c['lon']}"
+                   f"&time_start={year}-01-01&time_end={year}-12-31&accept=csv")
+            try:
+                r = requests.get(url, timeout=30)
+                if r.status_code != 200:
+                    result[var_name] = None
+                    continue
+                lines = r.text.strip().split("\n")
+                total_val = 0.0
+                count = 0
+                for line in lines[1:]:  # skip header
+                    parts = line.split(",")
+                    if len(parts) >= 4:
+                        try:
+                            total_val += float(parts[3])
+                            count += 1
+                        except (ValueError, IndexError):
+                            pass
+                # gridMET NCSS 返回值需先除以 scale_factor=10，再 mm→inches
+                result[var_name] = round(total_val * 0.1 / 25.4, 2) if count > 0 else None
+            except Exception:
+                result[var_name] = None
+        _put_json(rel, result)
+        prog.tick()
+        time.sleep(0.05)
+
+    items = [(c, yr) for c in counties for yr in YEARS]
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_fetch_county, items))
+    prog.summary()
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：USDA NASS 县级作物产量
+# ══════════════════════════════════════════════════════════════
+def fetch_nass_county_crops(workers: int = 1):
+    """USDA NASS 县级主要作物产量（玉米/大豆/小麦）→ GCS raw_data/nass_county/"""
+    nass_key = os.getenv("USDA_NASS_API", "")
+    if not nass_key:
+        print("  ✗ 未找到 USDA_NASS_API key")
+        return
+
+    queries = [
+        ("corn_county",     {"commodity_desc": "CORN",     "statisticcat_desc": "PRODUCTION", "unit_desc": "BU"}),
+        ("soybeans_county", {"commodity_desc": "SOYBEANS", "statisticcat_desc": "PRODUCTION", "unit_desc": "BU"}),
+        ("wheat_county",    {"commodity_desc": "WHEAT",    "statisticcat_desc": "PRODUCTION", "unit_desc": "BU"}),
+        ("cotton_county",   {"commodity_desc": "COTTON",   "statisticcat_desc": "PRODUCTION", "unit_desc": "BU"}),
+        ("rice_county",     {"commodity_desc": "RICE",     "statisticcat_desc": "PRODUCTION", "unit_desc": "CWT"}),
+        ("hay_county",      {"commodity_desc": "HAY",      "statisticcat_desc": "PRODUCTION", "unit_desc": "TONS"}),
+    ]
+
+    for name, extra_params in queries:
+        rel = f"nass_county/{name}.json"
+        if _exists(rel):
+            print(f"  ✓ nass_county/{name}.json 已存在，跳过")
+            continue
+        print(f"  正在下载 {name}（县级）...")
+        params = {
+            "key": nass_key,
+            "source_desc": "SURVEY",
+            "sector_desc": "CROPS",
+            "agg_level_desc": "COUNTY",
+            "year__GE": "2015",
+            "format": "JSON",
+            **extra_params,
+        }
+        try:
+            r = requests.get("https://quickstats.nass.usda.gov/api/api_GET/",
+                             params=params, timeout=180)
+            data = r.json()
+            records = data.get("data", [])
+            _put_json(rel, records)
+            print(f"  ✓ nass_county/{name}.json  ({len(records)} records)")
+        except Exception as e:
+            print(f"  ✗ {name}: {e}")
+        time.sleep(2)
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：BLS 县级年度失业率
+# ══════════════════════════════════════════════════════════════
+def fetch_bls_unemployment(workers: int = 1):
+    """BLS LAUS 县级年度失业率（unemployment rate, M13 annual avg）
+    使用 BLS Public API v2，按县 FIPS 批次查询，50个/批
+    → GCS raw_data/bls_unemployment/la_county_all.json
+    """
+    rel = "bls_unemployment/la_county_all.json"
+    if _exists(rel):
+        existing = json.loads(_get_bucket().blob(f"{GCS_PREFIX}/{rel}").download_as_bytes())
+        if existing:
+            print(f"  ✓ {rel} 已存在（{len(existing)} 县），跳过")
+            return
+        print(f"  ⚠ {rel} 为空，重新抓取...")
+
+    # 枚举全部 county FIPS
+    all_fips = []
+    for state_fips in STATE_FIPS:
+        for county in range(1, 200, 2):   # 奇数 county code，美国惯例
+            all_fips.append(f"{state_fips}{str(county).zfill(3)}")
+        for county in [2, 4, 6, 8, 10, 12, 14, 16, 18, 20,  # 部分偶数（夏威夷/阿拉斯加）
+                       510, 520, 530, 540, 550, 560, 570, 580, 590, 600]:
+            all_fips.append(f"{state_fips}{str(county).zfill(3)}")
+
+    # BLS series ID: LAUCN{5位FIPS}0000000003 = 失业率
+    series_ids = [f"LAUCN{fips}0000000003" for fips in all_fips]
+
+    bls_key = os.getenv("BLS_API_KEY", "")
+    headers = {"Content-type": "application/json"}
+    url = "https://api.bls.gov/publicAPI/v2/timeseries/data/"
+
+    all_data = {}   # fips -> {year: rate}
+    batch_size = 50
+    batches = [series_ids[i:i+batch_size] for i in range(0, len(series_ids), batch_size)]
+    print(f"  BLS API 查询 {len(series_ids)} 个县级序列（{len(batches)} 批次）...")
+
+    for i, batch in enumerate(batches):
+        payload = {
+            "seriesid": batch,
+            "startyear": "2015",
+            "endyear": "2024",
+            "annualaverage": True,
+        }
+        if bls_key:
+            payload["registrationkey"] = bls_key
+        try:
+            r = requests.post(url, json=payload, headers=headers, timeout=60)
+            data = r.json()
+            if data.get("status") != "REQUEST_SUCCEEDED":
+                continue
+            for series in data.get("Results", {}).get("series", []):
+                sid = series["seriesID"]
+                fips = sid[6:11]
+                for obs in series.get("data", []):
+                    if obs.get("period") == "M13":   # M13 = annual average
+                        try:
+                            all_data.setdefault(fips, {})[int(obs["year"])] = float(obs["value"])
+                        except: pass
+        except Exception as e:
+            pass
+        if (i + 1) % 10 == 0:
+            print(f"    {i+1}/{len(batches)} 批完成，已获取 {len(all_data)} 县...")
+        time.sleep(0.5)
+
+    # 整理成列表保存
+    records = []
+    for fips, yr_vals in all_data.items():
+        if not yr_vals: continue
+        rates = list(yr_vals.values())
+        records.append({
+            "fips": fips,
+            "unemployment_avg":    round(float(sum(rates)/len(rates)), 2),
+            "unemployment_latest": yr_vals.get(max(yr_vals)),
+            "n_years": len(rates),
+        })
+
+    if not records:
+        print("  ✗ BLS API 未返回有效数据")
+        return
+    _put_json(rel, records)
+    print(f"  ✓ la_county_all.json  ({len(records)} 县)")
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：FEMA 国家风险指数（县级洪水风险）
+# ══════════════════════════════════════════════════════════════
+def fetch_fema_nri(workers: int = 1):
+    """FEMA National Risk Index 县级洪水/干旱/综合风险 → GCS raw_data/fema_nri/"""
+    import zipfile, io as _io, csv as _csv
+    rel = "fema_nri/county_risk.json"
+    if _exists(rel):
+        print(f"  ✓ {rel} 已存在，跳过")
+        return
+    import io as _io, csv as _csv, zipfile as _zipfile
+    urls = [
+        ("zip", "https://hazards.fema.gov/nri/Content/StaticDocuments/DataDownload//NRI_Table_Counties/NRI_Table_Counties.zip"),
+        ("csv", "https://hazards.fema.gov/nri/Content/StaticDocuments/DataDownload//NRI_Table_Counties/NRI_Table_Counties.csv"),
+        ("zip", "https://hazards.fema.gov/nri/Content/StaticDocuments/DataDownload/NRI_Table_Counties/NRI_Table_Counties.zip"),
+    ]
+    for fmt, url in urls:
+        print(f"  正在下载 FEMA NRI（{fmt.upper()}）: {url[:70]}...")
+        try:
+            r = requests.get(url, timeout=180, headers={"User-Agent": "Mozilla/5.0"})
+            if r.status_code != 200:
+                print(f"    → HTTP {r.status_code}，跳过")
+                continue
+            if fmt == "zip":
+                with _zipfile.ZipFile(_io.BytesIO(r.content)) as zf:
+                    csv_name = next((n for n in zf.namelist() if n.endswith(".csv")), None)
+                    if not csv_name:
+                        print("    → ZIP 内无 CSV，跳过"); continue
+                    with zf.open(csv_name) as f:
+                        reader = _csv.DictReader(_io.TextIOWrapper(f, encoding="utf-8-sig"))
+                        records = list(reader)
+            else:
+                reader = _csv.DictReader(_io.StringIO(r.content.decode("utf-8-sig")))
+                records = list(reader)
+            if records:
+                _put_json(rel, records)
+                print(f"  ✓ fema_nri/county_risk.json  ({len(records)} 县)")
+                return
+            print("    → CSV 为空，跳过")
+        except Exception as e:
+            print(f"    → 失败: {e}")
+    print("  ✗ FEMA NRI 所有 URL 均失败")
+
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：USDA RMA 县级作物保险赔付
+# ══════════════════════════════════════════════════════════════
+def fetch_rma_insurance(workers: int = 1):
+    """USDA RMA Summary of Business 县级作物保险赔付（2015-2024）→ GCS raw_data/rma_insurance/"""
+    import zipfile, io as _io
+    headers = {"User-Agent": "Mozilla/5.0"}
+    for year in range(2015, 2025):
+        rel = f"rma_insurance/sob{year}c.txt"
+        if _exists(rel):
+            print(f"  ✓ {rel} 已存在，跳过")
+            continue
+        print(f"  正在下载 RMA 县级保险赔付 {year}...")
+        # 依次尝试多种 URL 格式
+        url_candidates = [
+            f"https://www.rma.usda.gov/data/sob/scoy/sob{year}c.zip",
+            f"https://www.rma.usda.gov/data/sob/scoy/{year}/sob{year}c.zip",
+            f"https://www.rma.usda.gov/data/sob/scoy/sobcov{year}.zip",
+            f"https://www.rma.usda.gov/-/media/RMA/Cause-of-Loss/County-Data/sob{year}c.zip",
+            f"https://www.rma.usda.gov/data/sob/scoy/sob{year}c.txt",
+        ]
+        success = False
+        for url in url_candidates:
+            try:
+                r = requests.get(url, timeout=120, headers=headers)
+                if r.status_code != 200 or len(r.content) < 1000:
+                    continue
+                # ZIP 格式
+                if url.endswith(".zip"):
+                    with zipfile.ZipFile(_io.BytesIO(r.content)) as zf:
+                        txt_name = next((n for n in zf.namelist() if n.endswith(".txt")), None)
+                        if not txt_name:
+                            continue
+                        text = zf.read(txt_name).decode("utf-8", errors="replace")
+                else:
+                    text = r.text
+                _put_text(rel, text)
+                print(f"  ✓ sob{year}c.txt  ({text.count(chr(10))} 行)  <- {url.split('/')[-1]}")
+                success = True
+                break
+            except Exception:
+                continue
+        if not success:
+            print(f"  ✗ RMA {year}: 所有 URL 均失败")
+        time.sleep(1)
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：USDA NASS 县级农场数量/规模/总产值
+# ══════════════════════════════════════════════════════════════
+def fetch_nass_farm_operations(workers: int = 1):
+    """USDA NASS 县级农场数量/平均面积/总销售额（普查年）→ GCS raw_data/nass_farms/"""
+    nass_key = os.getenv("USDA_NASS_API", "")
+    if not nass_key:
+        print("  ✗ 未找到 USDA_NASS_API key")
+        return
+
+    queries = [
+        ("farm_count", {"commodity_desc": "FARM OPERATIONS", "statisticcat_desc": "OPERATIONS", "unit_desc": "OPERATIONS"}),
+        ("farm_sales", {"commodity_desc": "COMMODITY TOTALS", "statisticcat_desc": "SALES", "unit_desc": "$"}),
+        ("farm_area",  {"commodity_desc": "FARM OPERATIONS", "statisticcat_desc": "AREA OPERATED", "unit_desc": "ACRES / OPERATION"}),
+    ]
+
+    states = list(STATE_FIPS.values())
+    for name, extra_params in queries:
+        rel = f"nass_farms/{name}.json"
+        if _exists(rel):
+            print(f"  ✓ nass_farms/{name}.json 已存在，跳过")
+            continue
+        print(f"  正在下载 NASS 县级农场 {name}（{len(states)} 州）...")
+        all_records = []
+        t0 = time.time()
+        for i, abbr in enumerate(states):
+            try:
+                params = {"key": nass_key, "source_desc": "CENSUS", "state_alpha": abbr,
+                          "agg_level_desc": "COUNTY", "year__GE": "2012", "format": "JSON", **extra_params}
+                r = requests.get("https://quickstats.nass.usda.gov/api/api_GET/",
+                                 params=params, timeout=15)
+                all_records.extend(r.json().get("data", []))
+            except Exception:
+                pass
+            # 进度条
+            done = i + 1
+            pct = done / len(states)
+            bar = "█" * int(pct * 20) + "░" * (20 - int(pct * 20))
+            elapsed = time.time() - t0
+            eta = elapsed / pct * (1 - pct) if pct > 0 else 0
+            print(f"\r  [{bar}] {done}/{len(states)}  {abbr}  记录:{len(all_records)}  "
+                  f"剩余:{int(eta)}s  ", end="", flush=True)
+            time.sleep(0.3)
+        print()  # 换行
+        _put_json(rel, all_records)
+        print(f"  ✓ nass_farms/{name}.json  ({len(all_records)} 条)")
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：EIA 州级年度电价（灌溉泵水成本代理）
+# ══════════════════════════════════════════════════════════════
+def fetch_eia_electricity(workers: int = 1):
+    """EIA 州级年度平均电价 → GCS raw_data/eia_electricity/
+    有 EIA_API_KEY 时走 API；无 key 时下载公开 Excel。
+    免费注册：https://www.eia.gov/opendata/register.php
+    """
+    eia_key = os.getenv("EIA_API_KEY", "")
+    rel_json = "eia_electricity/state_avgprice_annual.json"
+    rel_xlsx = "eia_electricity/avgprice_annual.xlsx"
+
+    if _exists(rel_json) or _exists(rel_xlsx):
+        print("  ✓ EIA 电价数据已存在，跳过")
+        return
+
+    if eia_key:
+        print("  正在下载 EIA 州级电价（API）...")
+        results = []
+        for sector in ["industrial", "commercial"]:
+            try:
+                r = requests.get("https://api.eia.gov/v2/electricity/retail-sales/data/", params={
+                    "api_key": eia_key, "frequency": "annual", "data[0]": "price",
+                    "facets[sectorName][]": sector, "start": "2015", "end": "2024", "length": 5000,
+                }, timeout=60)
+                if r.status_code == 200:
+                    items = r.json().get("response", {}).get("data", [])
+                    for item in items: item["sector"] = sector
+                    results.extend(items)
+            except Exception as e:
+                print(f"  ✗ EIA {sector}: {e}")
+            time.sleep(0.5)
+        if results:
+            _put_json(rel_json, results)
+            print(f"  ✓ {rel_json}  ({len(results)} records)")
+    else:
+        print("  EIA_API_KEY 未设置，下载公开 Excel（建议注册免费 key）...")
+        try:
+            r = requests.get("https://www.eia.gov/electricity/data/state/avgprice_annual.xlsx",
+                             timeout=60, headers={"User-Agent": "Mozilla/5.0"})
+            if r.status_code == 200:
+                _put_bytes(rel_xlsx, r.content,
+                           "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+                print(f"  ✓ {rel_xlsx}  ({len(r.content)//1024} KB)")
+            else:
+                print(f"  ✗ EIA: HTTP {r.status_code}")
+        except Exception as e:
+            print(f"  ✗ EIA: {e}")
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：NASA MODIS 县级 NDVI 植被指数（ORNL DAAC REST，无需 auth）
+# ══════════════════════════════════════════════════════════════
+def fetch_modis_ndvi(workers: int = 8):
+    """NASA MODIS MOD13A3 月度 NDVI（2016-2025，按县中心点）→ GCS raw_data/modis_ndvi/"""
+    county_geo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../output/data/agri_county.geojson")
+    if not os.path.exists(county_geo_path):
+        print("  ✗ agri_county.geojson 未找到，请先运行 build_agri.py")
+        return
+
+    with open(county_geo_path) as f:
+        county_geo = json.load(f)
+
+    def centroid(coords):
+        flat = []
+        def _flatten(c):
+            if isinstance(c[0], list):
+                for x in c: _flatten(x)
+            else:
+                flat.append(c)
+        _flatten(coords)
+        lons = [p[0] for p in flat]; lats = [p[1] for p in flat]
+        return sum(lons)/len(lons), sum(lats)/len(lats)
+
+    counties = []
+    for feat in county_geo.get("features", []):
+        fips = feat.get("id") or feat["properties"].get("fips", "")
+        try:
+            lon, lat = centroid(feat["geometry"]["coordinates"])
+            counties.append({"fips": fips, "lat": round(lat, 4), "lon": round(lon, 4)})
+        except Exception:
+            continue
+
+    existing = _list_existing("modis_ndvi/")
+    prog = Progress(len(counties), f"{len(counties)} 县 MODIS NDVI，{workers} 线程")
+
+    def _fetch_county(c):
+        fips = c["fips"]
+        rel = f"modis_ndvi/{fips}.json"
+        if rel in existing:
+            prog.tick(skipped=True); return
+        try:
+            r = requests.get("https://modis.ornl.gov/rst/api/v1/MOD13A3/subset", params={
+                "latitude": c["lat"], "longitude": c["lon"],
+                "startDate": "A2016001", "endDate": "A2025365",
+                "kmAboveBelow": 0, "kmLeftRight": 0,
+            }, timeout=30)
+            if r.status_code == 200:
+                records = []
+                for s in r.json().get("subset", []):
+                    if "NDVI" in s.get("band", ""):
+                        val = s.get("data", [None])[0]
+                        if val is not None and val > -3000:
+                            records.append({"date": s.get("calendar_date"), "ndvi": round(val * 0.0001, 4)})
+                _put_json(rel, {"fips": fips, "lat": c["lat"], "lon": c["lon"], "ndvi": records})
+            else:
+                _put_json(rel, {"fips": fips, "ndvi": []})
+        except Exception:
+            pass
+        prog.tick()
+        time.sleep(0.3)
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_fetch_county, counties))
+    prog.summary()
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：USDA SCAN 网络土壤湿度站点数据
+# ══════════════════════════════════════════════════════════════
+def fetch_soil_moisture(workers: int = 4):
+    """USDA NRCS SCAN 土壤湿度站点日均数据（2016-2025）→ GCS raw_data/soil_moisture/"""
+    AGR_STATES = ["CA","TX","NE","KS","ID","MT","CO","OR","WA",
+                  "AR","ND","SD","MN","IA","IL","IN","OH","GA","AZ","NM","OK","MO","WI","MI"]
+    existing = _list_existing("soil_moisture/")
+    prog = Progress(len(AGR_STATES), f"{len(AGR_STATES)} 州 SCAN 土壤湿度")
+
+    def _fetch_state(abbr):
+        rel = f"soil_moisture/{abbr}_scan_daily.csv"
+        if rel in existing:
+            prog.tick(skipped=True); return
+        url = (
+            "https://wcc.sc.egov.usda.gov/reportGenerator/view_csv/"
+            "customMultipleStationReport/daily/start_of_period/"
+            f"state=%22{abbr}%22%20AND%20network=%22SCAN%22/"
+            "2016-01-01,2025-12-31/"
+            "SMS:-2:value,SMS:-4:value,SMS:-8:value,PREC::value,TOBS::value"
+        )
+        try:
+            r = requests.get(url, timeout=180)
+            if r.status_code == 200 and len(r.content) > 500:
+                _put_csv(rel, r.content)
+                n_rows = r.content.count(b"\n"); print(f"\n  ✓ soil_moisture/{abbr}  ({n_rows} rows)")
+            else:
+                print(f"\n  ✗ SCAN {abbr}: HTTP {r.status_code}")
+        except Exception as e:
+            print(f"\n  ✗ SCAN {abbr}: {e}")
+        prog.tick()
+        time.sleep(0.5)
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_fetch_state, AGR_STATES))
+    prog.summary()
+
+
+# ══════════════════════════════════════════════════════════════
 # 主程序
 # ══════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：USDA NASS 县级灌溉方式（滴灌/漫灌/喷灌）
+# ══════════════════════════════════════════════════════════════
+def fetch_nass_irrigation_method(workers: int = 1):
+    """USDA NASS Farm Irrigation Survey 县级灌溉方式分布 → GCS raw_data/nass_irrigation/"""
+    nass_key = os.getenv("USDA_NASS_API", "")
+    if not nass_key:
+        print("  ✗ 未找到 USDA_NASS_API key")
+        return
+
+    # 注：NASS 灌溉方式细分数据仅在州级存在，县级无数据
+    # 策略：先抓州级比例，再在 water_efficiency.py 中映射到县
+    queries = [
+        ("irrigated_area_by_method", {"statisticcat_desc": "AREA IRRIGATED", "domain_desc": "IRRIGATION PRACTICE"}),
+        ("water_applied_by_method",  {"statisticcat_desc": "WATER APPLIED",  "domain_desc": "IRRIGATION PRACTICE"}),
+    ]
+    for name, extra_params in queries:
+        rel = f"nass_irrigation/{name}.json"
+        if _exists(rel):
+            data = json.loads(_get_bucket().blob(f"{GCS_PREFIX}/{rel}").download_as_bytes())
+            if data:  # 非空文件才跳过
+                print(f"  ✓ nass_irrigation/{name}.json 已存在，跳过")
+                continue
+            print(f"  ⚠ nass_irrigation/{name}.json 为空，重新抓取（改为州级）...")
+        print(f"  正在下载 NASS 灌溉方式 {name}（州级）...")
+        params = {"key": nass_key, "source_desc": "CENSUS", "sector_desc": "CROPS",
+                  "agg_level_desc": "STATE", "year__GE": "2013", "format": "JSON", **extra_params}
+        try:
+            r = requests.get("https://quickstats.nass.usda.gov/api/api_GET/", params=params, timeout=180)
+            records = r.json().get("data", [])
+            if not records:
+                print(f"  ✗ nass_irrigation {name}: API 返回 0 条，检查参数")
+                continue
+            _put_json(rel, records)
+            print(f"  ✓ nass_irrigation/{name}.json  ({len(records)} records，州级)")
+        except Exception as e:
+            print(f"  ✗ nass_irrigation {name}: {e}")
+        time.sleep(2)
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：SSURGO 县级土壤持水能力（AWC）
+# ══════════════════════════════════════════════════════════════
+def fetch_ssurgo_county(workers: int = 16):
+    """USDA NRCS SSURGO 县级土壤持水能力 → GCS raw_data/ssurgo_county/"""
+    county_geo_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "../../output/data/agri_county.geojson"
+    )
+    if not os.path.exists(county_geo_path):
+        print("  ✗ agri_county.geojson 未找到，请先运行 build_agri.py")
+        return
+
+    with open(county_geo_path) as f:
+        features = json.load(f).get("features", [])
+
+    fips_list = []
+    for feat in features:
+        fips = feat.get("id") or feat["properties"].get("fips", "")
+        state_fips = fips[:2]
+        abbr = feat["properties"].get("state") or STATE_FIPS.get(state_fips, "")
+        county_name = feat["properties"].get("county", "").strip()
+        if abbr and county_name and len(fips) == 5:
+            fips_list.append((fips, abbr, county_name))
+
+    existing = _list_existing("ssurgo_county/")
+    prog = Progress(len(fips_list), f"{len(fips_list)} 县 SSURGO AWC，{workers} 线程")
+
+    def _fetch_county(item):
+        fips, abbr, county_name = item
+        rel = f"ssurgo_county/{fips}.json"
+        if rel in existing:
+            prog.tick(skipped=True)
+            return
+        # 通过 laoverlap 按县名+州缩写查（areasymbol 不等于 FIPS，不能直接用）
+        sql = (
+            f"SELECT AVG(ch.awc_r) AS awc_mean, AVG(ch.sandtotal_r) AS sand_pct, "
+            f"AVG(ch.claytotal_r) AS clay_pct, AVG(ch.om_r) AS organic_matter "
+            f"FROM chorizon ch "
+            f"JOIN component co ON co.cokey = ch.cokey "
+            f"JOIN mapunit mu ON mu.mukey = co.mukey "
+            f"JOIN legend l ON l.lkey = mu.lkey "
+            f"JOIN laoverlap la ON la.lkey = l.lkey "
+            f"WHERE la.areatypename = 'County or Parish' "
+            f"AND la.areaname LIKE '%{county_name}%' "
+            f"AND l.areasymbol LIKE '{abbr}%' "
+            f"AND ch.hzdepb_r <= 100"
+        )
+        for attempt in range(3):   # 最多重试 3 次
+            try:
+                r = requests.post("https://SDMDataAccess.sc.egov.usda.gov/Tabular/post.rest",
+                    json={"query": sql, "format": "json+columnname"}, timeout=60)
+                if r.status_code == 200:
+                    table = r.json().get("Table", [])
+                    if len(table) >= 2:
+                        hdrs = [h.lower() for h in table[0]]
+                        result = {"fips": fips}
+                        for h, v in zip(hdrs, table[1]):
+                            try: result[h] = round(float(v), 4) if v is not None else None
+                            except (ValueError, TypeError): result[h] = None
+                        # 只在有实际数据时保存，失败不保存（下次可重试）
+                        if result.get("awc_mean") is not None:
+                            _put_json(rel, result)
+                    break   # 成功（含空结果），不再重试
+                else:
+                    time.sleep(2 ** attempt)   # 指数退避
+            except Exception:
+                time.sleep(2 ** attempt)
+        prog.tick()
+        time.sleep(0.2)
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_fetch_county, fips_list))
+    prog.summary()
+
+
+def clear_ssurgo_empty(workers: int = 16):
+    """删除 GCS 中 awc_mean 为 null 的 SSURGO 占位 blob，让 ssurgo_county 重新抓取。"""
+    print("  扫描 ssurgo_county/ 中无效 blob（并发下载检查）...")
+    bucket = _get_bucket()
+    blobs = list(bucket.list_blobs(prefix=f"{GCS_PREFIX}/ssurgo_county/"))
+    print(f"  共 {len(blobs)} 个 blob")
+
+    to_delete = []
+    lock = __import__("threading").Lock()
+
+    def _check(b):
+        try:
+            d = json.loads(b.download_as_bytes())
+            if d.get("awc_mean") is None:
+                with lock:
+                    to_delete.append(b)
+        except Exception:
+            with lock:
+                to_delete.append(b)
+
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        futs = [ex.submit(_check, b) for b in blobs]
+        for i, _ in enumerate(as_completed(futs), 1):
+            if i % 200 == 0:
+                print(f"    检查 {i}/{len(blobs)}...", end="\r", flush=True)
+    print()
+
+    if not to_delete:
+        print("  ✓ 无需清理，所有 blob 均有有效数据")
+        return
+    print(f"  删除 {len(to_delete)} 个无效 blob...")
+    for b in to_delete:
+        b.delete()
+    print(f"  ✓ 已清理 {len(to_delete)} 个，请重新运行：python src/build/fetch_all.py ssurgo_county")
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：USDA EQIP 县级节水保护项目参与数据
+# ══════════════════════════════════════════════════════════════
+def fetch_eqip_conservation(workers: int = 1):
+    """USDA NRCS EQIP 节水/灌溉效率保护项目县级资金（2015-2024）→ GCS raw_data/eqip/"""
+    rel = "eqip/eqip_county_all.json"
+    if _exists(rel):
+        print(f"  ✓ {rel} 已存在，跳过")
+        return
+    print("  正在下载 USDA EQIP 县级数据...")
+    # USDA Ag Data Commons - EQIP county-level obligations
+    urls_to_try = [
+        "https://www.nrcs.usda.gov/resources/data-and-reports/eqip-financial-assistance-obligation",
+        "https://api.nal.usda.gov/nalt/search?query=EQIP+county&format=json",
+    ]
+    for url in urls_to_try:
+        try:
+            r = requests.get(url, timeout=30, headers={"User-Agent": "Mozilla/5.0"})
+            if r.status_code == 200:
+                try:
+                    data = r.json()
+                    if data:
+                        _put_json(rel, data)
+                        print(f"  ✓ eqip_county_all.json  ({len(data) if isinstance(data, list) else 1} records)")
+                        return
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    # 备用：USDA QuickStats 保护实践（NRCS通过NASS发布的部分数据）
+    nass_key = os.getenv("USDA_NASS_API", "")
+    if nass_key:
+        print("  尝试 NASS 保护实践数据...")
+        try:
+            r = requests.get("https://quickstats.nass.usda.gov/api/api_GET/", params={
+                "key": nass_key, "sector_desc": "ENVIRONMENTAL",
+                "agg_level_desc": "COUNTY", "year__GE": "2015", "format": "JSON",
+            }, timeout=120)
+            records = r.json().get("data", [])
+            if records:
+                _put_json(rel, records)
+                print(f"  ✓ eqip_county_all.json  ({len(records)} records)")
+                return
+        except Exception as e:
+            print(f"  ✗ NASS environmental: {e}")
+    print("  ✗ EQIP 县级数据暂无公开 API，需手动下载")
+    print("  → 下载地址: https://www.nrcs.usda.gov/resources/data-and-reports/eqip-financial-assistance-obligation")
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：USGS 3DEP 县级海拔高度（地形代理）
+# ══════════════════════════════════════════════════════════════
+def fetch_elevation(workers: int = 8):
+    """USGS 3DEP 县级中心点海拔（英尺）→ GCS raw_data/elevation/
+    地形代理变量：海拔影响径流损失和灌溉方式选择
+    """
+    county_geo_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "../../output/data/agri_county.geojson"
+    )
+    if not os.path.exists(county_geo_path):
+        print("  ✗ agri_county.geojson 未找到，请先运行 build_agri.py")
+        return
+
+    with open(county_geo_path) as f:
+        features = json.load(f).get("features", [])
+
+    def centroid(coords):
+        flat = []
+        def _flatten(c):
+            if isinstance(c[0], list):
+                for x in c: _flatten(x)
+            else:
+                flat.append(c)
+        _flatten(coords)
+        lons = [p[0] for p in flat]; lats = [p[1] for p in flat]
+        return sum(lons)/len(lons), sum(lats)/len(lats)
+
+    counties = []
+    for feat in features:
+        fips = feat.get("id") or feat["properties"].get("fips", "")
+        try:
+            lon, lat = centroid(feat["geometry"]["coordinates"])
+            counties.append({"fips": fips, "lat": round(lat, 4), "lon": round(lon, 4)})
+        except Exception:
+            continue
+
+    existing = _list_existing("elevation/")
+    # 批量存为单个文件，避免3000+小文件
+    rel = "elevation/county_elevation.json"
+    if rel in existing:
+        print("  ✓ elevation/county_elevation.json 已存在，跳过")
+        return
+
+    prog = Progress(len(counties), f"{len(counties)} 县 USGS 3DEP 海拔，{workers} 线程")
+    results = {}
+    lock = threading.Lock()
+
+    def _fetch_county(c):
+        fips = c["fips"]
+        try:
+            r = requests.get("https://epqs.nationalmap.gov/v1/json", params={
+                "x": c["lon"], "y": c["lat"], "units": "Feet", "includeDate": "False"
+            }, timeout=15)
+            if r.status_code == 200:
+                val = r.json().get("value")
+                if val is not None:
+                    with lock:
+                        results[fips] = {"elevation_ft": round(float(val), 1),
+                                         "lat": c["lat"], "lon": c["lon"]}
+        except Exception:
+            pass
+        prog.tick()
+        time.sleep(0.05)
+
+    with ThreadPoolExecutor(max_workers=workers) as ex:
+        list(ex.map(_fetch_county, counties))
+
+    _put_json(rel, results)
+    print(f"  ✓ elevation/county_elevation.json  ({len(results)} 县)")
+
+
+# ══════════════════════════════════════════════════════════════
+# 新数据源：USDA NASS 县级农场主年龄 + 土地租赁比例
+# ══════════════════════════════════════════════════════════════
+def fetch_nass_operator_demographics(workers: int = 1):
+    """USDA NASS 县级农场主年龄分布 + 土地租赁比例（普查年）→ GCS raw_data/nass_operators/
+    关键特征：年长农场主采纳节水技术更慢；租地农场主不愿长期投资灌溉设备
+    """
+    nass_key = os.getenv("USDA_NASS_API", "")
+    if not nass_key:
+        print("  ✗ 未找到 USDA_NASS_API key")
+        return
+
+    queries = [
+        # 土地所有权（自有 / 部分租赁 / 全租赁）
+        ("land_tenure", {
+            "sector_desc": "DEMOGRAPHICS",
+            "commodity_desc": "FARM OPERATIONS",
+            "statisticcat_desc": "AREA OPERATED",
+            "domain_desc": "TENURE",
+        }),
+        # 农场主性别（女性农场主比例）— 按州分批避免超50K限制
+        ("operator_sex", {
+            "sector_desc": "DEMOGRAPHICS",
+            "commodity_desc": "PRODUCERS",
+            "domain_desc": "PRODUCERS",
+            "statisticcat_desc": "OPERATIONS",
+        }),
+        # 农场销售规模分布
+        ("farm_sales_size", {
+            "sector_desc": "DEMOGRAPHICS",
+            "commodity_desc": "PRODUCERS",
+            "domain_desc": "FARM SALES",
+            "statisticcat_desc": "OPERATIONS",
+        }),
+    ]
+
+    states = list(STATE_FIPS.values())
+    for name, extra_params in queries:
+        rel = f"nass_operators/{name}.json"
+        if _exists(rel):
+            print(f"  ✓ nass_operators/{name}.json 已存在，跳过")
+            continue
+        print(f"  正在下载 NASS 农场主特征 {name}（{len(states)} 州）...")
+        all_records = []
+        t0 = time.time()
+        for i, abbr in enumerate(states):
+            params = {
+                "key": nass_key,
+                "source_desc": "CENSUS",
+                "agg_level_desc": "COUNTY",
+                "state_alpha": abbr,
+                "year__GE": "2017",
+                "format": "JSON",
+                **extra_params,
+            }
+            try:
+                r = requests.get("https://quickstats.nass.usda.gov/api/api_GET/",
+                                 params=params, timeout=15)
+                all_records.extend(r.json().get("data", []))
+            except Exception:
+                pass
+            done = i + 1
+            pct = done / len(states)
+            bar = "█" * int(pct * 20) + "░" * (20 - int(pct * 20))
+            elapsed = time.time() - t0
+            eta = elapsed / pct * (1 - pct) if pct > 0 else 0
+            print(f"\r  [{bar}] {done}/{len(states)}  {abbr}  记录:{len(all_records)}  "
+                  f"剩余:{int(eta)}s  ", end="", flush=True)
+            time.sleep(0.3)
+        print()
+        if all_records:
+            _put_json(rel, all_records)
+            print(f"  ✓ nass_operators/{name}.json  ({len(all_records)} 条)")
+        else:
+            print(f"  ✗ nass_operators {name}: 无数据")
+
+def fetch_bea_farm_income(workers: int = 1):
+    """BEA 区域经济账户：县级农场主净收入（CAEMP25N Line 70）→ GCS raw_data/bea/farm_income.json
+    数据来源：IRS 税务整合，不受 NASS (D) 压制限制，县级覆盖率接近 100%。
+    免费 API Key：https://apps.bea.gov/api/signup/
+    """
+    rel = "bea/farm_income.json"
+    if _exists(rel):
+        print("  ✓ bea/farm_income.json 已存在，跳过")
+        return
+
+    bea_key = os.getenv("BEA_API_KEY", "")
+    if not bea_key:
+        print("  ✗ 未找到 BEA_API_KEY，请在 .env 中设置")
+        print("    免费注册：https://apps.bea.gov/api/signup/")
+        return
+
+    print("  正在下载 BEA 县级农场主净收入（2022）...")
+    params = {
+        "UserID":      bea_key,
+        "method":      "GetData",
+        "datasetname": "Regional",
+        "TableName":   "CAINC5N",
+        "LineCode":    "55",        # Farm proprietors' income
+        "GeoFips":     "COUNTY",
+        "Year":        "2022",
+        "ResultFormat":"json",
+    }
+    try:
+        r = requests.get("https://apps.bea.gov/api/data/", params=params, timeout=60)
+        data = r.json()
+        if "BEAAPI" not in data or "Results" not in data["BEAAPI"]:
+            print(f"  ✗ BEA API 返回异常: {data.get('BEAAPI',{}).get('Error','未知错误')}")
+            return
+        records = data["BEAAPI"]["Results"].get("Data", [])
+        _put_json(rel, records)
+        print(f"  ✓ bea/farm_income.json  ({len(records)} records)")
+    except Exception as e:
+        print(f"  ✗ BEA 下载失败: {e}")
+
+
+def fetch_center_pivot(workers: int = 1):
+    """GEE Python API：提交中心轴灌溉县级聚合任务，等待完成后数据自动写入 GCS。
+    需要已通过 `earthengine authenticate` 完成认证。
+    """
+    rel = "centerpivot/county_centerpivot_2024.csv"
+    if _exists(rel):
+        blob = _get_bucket().blob(f"{GCS_PREFIX}/{rel}")
+        if (blob.size or 0) > 1000:
+            print(f"  ✓ centerpivot/county_centerpivot_2024.csv 已存在")
+            return
+
+    try:
+        import ee
+    except ImportError:
+        print("  ✗ 缺少 earthengine-api，请运行：pip install earthengine-api")
+        return
+
+    try:
+        ee.Initialize(project=GCS_PROJECT)
+    except Exception:
+        try:
+            ee.Authenticate()
+            ee.Initialize(project=GCS_PROJECT)
+        except Exception as e:
+            print(f"  ✗ GEE 认证失败：{e}")
+            print("    请先在终端运行：earthengine authenticate")
+            return
+
+    print("  正在提交 GEE 中心轴检测任务（2024 CDL，全美县级）...")
+
+    YEAR         = 2024
+    PIVOT_RADIUS = 13    # 像素，30m 分辨率下 ≈ 390m（典型中心轴半径）
+
+    counties = ee.FeatureCollection("TIGER/2018/Counties") \
+                 .filter(ee.Filter.lte("STATEFP", "56"))
+
+    cdl = ee.ImageCollection("USDA/NASS/CDL") \
+            .filter(ee.Filter.calendarRange(YEAR, YEAR, "year")) \
+            .first().select("cropland")
+
+    cropland = cdl.gte(1).And(cdl.lte(80)).selfMask()
+
+    # 形态学 opening：保留包含半径 PIVOT_RADIUS 圆形的区域（中心轴特征）
+    eroded = cropland.focalMin(PIVOT_RADIUS, "circle", "pixels")
+    opened = eroded.focalMax(PIVOT_RADIUS, "circle", "pixels")
+
+    pixel_area = ee.Image.pixelArea().divide(4046.86)  # m² → 英亩
+
+    centerpivot_ac = opened.unmask(0).multiply(pixel_area).rename("centerpivot_ac")
+    total_crop_ac  = cropland.unmask(0).multiply(pixel_area).rename("total_crop_ac")
+
+    stats = centerpivot_ac.addBands(total_crop_ac) \
+        .reduceRegions(
+            collection=counties,
+            reducer=ee.Reducer.sum(),
+            scale=30,
+            crs="EPSG:5070"
+        ) \
+        .filter(ee.Filter.gt("total_crop_ac", 40)) \
+        .map(lambda f: f.set(
+            "centerpivot_ratio",
+            ee.Number(f.get("centerpivot_ac"))
+              .divide(ee.Number(f.get("total_crop_ac")))
+              .min(1).multiply(1000).round().divide(1000)
+        ).select(["GEOID", "STATEFP", "NAME",
+                  "centerpivot_ac", "total_crop_ac", "centerpivot_ratio"]))
+
+    TASK_DESC = f"county_centerpivot_{YEAR}"
+
+    # ── 断点恢复：检查是否有已在运行的同名任务 ──────────────────────────
+    task = None
+    try:
+        for t in ee.batch.Task.list():
+            s = t.status()
+            if s.get("description") == TASK_DESC and s.get("state") in ("READY", "RUNNING"):
+                task = t
+                elapsed = int(s.get("start_timestamp_ms", 0))
+                print(f"  ↩ 发现已有任务正在运行（{TASK_DESC}），继续等待...")
+                break
+    except Exception:
+        pass
+
+    if task is None:
+        task = ee.batch.Export.table.toCloudStorage(
+            collection=stats,
+            description=TASK_DESC,
+            bucket=GCS_BUCKET_NAME,
+            fileNamePrefix=f"{GCS_PREFIX}/centerpivot/county_centerpivot_{YEAR}",
+            fileFormat="CSV"
+        )
+        task.start()
+        print(f"  任务已提交（{TASK_DESC}），等待 GEE 完成（约 10-30 分钟）...")
+
+    # ── 进度条 ────────────────────────────────────────────────────────────
+    import time as _time
+    BAR_WIDTH   = 30
+    POLL_SEC    = 20
+    elapsed_sec = 0
+    ESTIMATE    = 1200  # 预计 20 分钟作为 100%
+
+    print()
+    while task.active():
+        _time.sleep(POLL_SEC)
+        elapsed_sec += POLL_SEC
+        state    = task.status().get("state", "RUNNING")
+        pct      = min(elapsed_sec / ESTIMATE, 0.99)
+        filled   = int(BAR_WIDTH * pct)
+        bar      = "█" * filled + "░" * (BAR_WIDTH - filled)
+        mins, s  = divmod(elapsed_sec, 60)
+        print(f"\r  [{bar}] {pct*100:4.1f}%  {mins:02d}:{s:02d}  {state:<10}", end="", flush=True)
+
+    print()  # 换行
+    final = task.status().get("state", "")
+    if final == "COMPLETED":
+        print(f"  ✓ GEE 导出完成（耗时 {elapsed_sec//60}m{elapsed_sec%60}s），数据已写入 GCS")
+    else:
+        err = task.status().get("error_message", "未知错误")
+        print(f"  ✗ GEE 任务失败（{final}）：{err}")
+
+
+def fetch_fris_irrigated_area(workers: int = 1):
+    """
+    USDA NASS 灌溉调查（FRIS/IWMS）县级灌溉面积
+    数据来源：NASS QuickStats Census，short_desc = 'AG LAND, IRRIGATED - ACRES'
+    预计覆盖 1500+ 县，保存至 GCS raw_data/nass_irrigation/fris_irrigated_area.json
+    """
+    nass_key = os.getenv("USDA_NASS_API", "")
+    if not nass_key:
+        print("  ✗ 未找到 USDA_NASS_API key"); return
+
+    rel = "nass_irrigation/fris_irrigated_area.json"
+    if _exists(rel):
+        data = json.loads(_get_bucket().blob(f"{GCS_PREFIX}/{rel}").download_as_bytes())
+        if data:
+            print(f"  ✓ {rel} 已存在（{len(data)} 条），跳过"); return
+        print(f"  ⚠ {rel} 为空，重新抓取...")
+
+    base = {
+        "key": nass_key,
+        "source_desc": "CENSUS",
+        "agg_level_desc": "COUNTY",
+        "format": "JSON",
+    }
+
+    # 按年份优先级：2022 → 2017 → 2012
+    for year in ["2022", "2017", "2012"]:
+        print(f"  尝试 Census {year}...")
+        # 依次尝试不同 short_desc / 参数组合
+        attempts = [
+            {**base, "year": year,
+             "short_desc": "AG LAND, IRRIGATED - ACRES"},
+            {**base, "year": year,
+             "sector_desc": "ECONOMICS", "commodity_desc": "AG LAND",
+             "statisticcat_desc": "AREA", "util_practice_desc": "IRRIGATED"},
+            {**base, "year": year,
+             "sector_desc": "ECONOMICS", "commodity_desc": "AG LAND",
+             "statisticcat_desc": "AREA", "prodn_practice_desc": "IRRIGATED"},
+        ]
+        for i, params in enumerate(attempts, 1):
+            try:
+                r = requests.get("https://quickstats.nass.usda.gov/api/api_GET/",
+                                 params=params, timeout=180)
+                resp = r.json()
+                records = resp.get("data", [])
+                if records:
+                    _put_json(rel, records)
+                    print(f"  ✓ fris_irrigated_area.json  {year}年 {len(records)} 条县级记录")
+                    return
+                err = resp.get("error", [""])[0] if resp.get("error") else ""
+                print(f"    组合{i} → 0 条  {err[:80]}")
+            except Exception as e:
+                print(f"    组合{i} → 请求失败: {e}")
+            time.sleep(0.5)
+
+    # ── 兜底：直接下载 Census Quick Stats 公开 CSV ─────────────────────
+    print("  API 全部返回 0 条，尝试直接下载公开 CSV...")
+    # NASS 提供 2022 Census county-level 数据包（公开下载，无需 API key）
+    csv_urls = [
+        # 2022 Census of Agriculture county data (全量, ~200MB)
+        "https://www.nass.usda.gov/Publications/AgCensus/2022/Full_Report/Volume_1,_Chapter_2_County_Level/st99_2_0001_0001.csv",
+        # 2017 Census county data
+        "https://www.nass.usda.gov/Publications/AgCensus/2017/Full_Report/Volume_1,_Chapter_2_County_Level/st99_2_0001_0001.csv",
+    ]
+    for url in csv_urls:
+        try:
+            print(f"  下载 {url[:70]}...")
+            r = requests.get(url, timeout=300, stream=True)
+            if r.status_code != 200:
+                print(f"    → HTTP {r.status_code}，跳过")
+                continue
+            import io, csv as csv_mod
+            lines = r.content.decode("latin-1").splitlines()
+            reader = csv_mod.DictReader(lines)
+            records = []
+            for row in reader:
+                desc = row.get("Short Desc", "").upper()
+                if "IRRIGATED" in desc and "AG LAND" in desc and "ACRE" in desc:
+                    level = row.get("Agg Level Desc", "").upper()
+                    if level == "COUNTY":
+                        records.append(row)
+            if records:
+                _put_json(rel, records)
+                print(f"  ✓ 从公开 CSV 提取 {len(records)} 条县级灌溉面积记录")
+                return
+            print(f"    → 未找到匹配行")
+        except Exception as e:
+            print(f"    → 下载失败: {e}")
+
+    print("  ✗ 所有方式均失败，irrigated_area_ac 将只有 171 县")
+
+
+def fetch_nass_ag_land_irrigated(workers: int = 1):
+    """USDA NASS Census 2022 县级总灌溉农地面积（AG LAND, IRRIGATED）→ GCS raw_data/nass_irrigation/ag_land_irrigated_2022.json"""
+    nass_key = os.getenv("USDA_NASS_API", "")
+    if not nass_key:
+        print("  ✗ 未找到 USDA_NASS_API key"); return
+
+    rel = "nass_irrigation/ag_land_irrigated_2022.json"
+    if _exists(rel):
+        data = json.loads(_get_bucket().blob(f"{GCS_PREFIX}/{rel}").download_as_bytes())
+        if data:
+            print(f"  ✓ {rel} 已存在（{len(data)} 条），跳过"); return
+        print(f"  ⚠ {rel} 为空，重新抓取...")
+
+    base = {"key": nass_key, "agg_level_desc": "COUNTY", "year": "2022", "format": "JSON"}
+    attempts = [
+        # AG LAND, IRRIGATED — ECONOMICS sector（官方总灌溉农地，一县一行）
+        {"source_desc": "CENSUS", "sector_desc": "ECONOMICS",
+         "commodity_desc": "AG LAND", "statisticcat_desc": "AREA",
+         "short_desc": "AG LAND, IRRIGATED - ACRES"},
+        # 去掉 short_desc 用宽口径
+        {"source_desc": "CENSUS", "sector_desc": "ECONOMICS",
+         "commodity_desc": "AG LAND", "statisticcat_desc": "AREA",
+         "util_practice_desc": "IRRIGATED"},
+        # FARMS & LAND & ASSETS sector
+        {"source_desc": "CENSUS", "sector_desc": "FARMS & LAND & ASSETS",
+         "commodity_desc": "AG LAND", "statisticcat_desc": "AREA",
+         "util_practice_desc": "IRRIGATED"},
+    ]
+    for i, extra in enumerate(attempts, 1):
+        params = {**base, **extra}
+        print(f"  尝试参数组合 {i}: {extra}")
+        try:
+            r = requests.get("https://quickstats.nass.usda.gov/api/api_GET/",
+                             params=params, timeout=180)
+            records = r.json().get("data", [])
+            if records:
+                _put_json(rel, records)
+                print(f"  ✓ ag_land_irrigated_2022.json  ({len(records)} 条县级记录)")
+                return
+            print(f"    → 0 条  {r.json().get('error', '')}")
+        except Exception as e:
+            print(f"    → 请求失败: {e}")
+        time.sleep(1)
+    print("  ✗ 所有组合均返回 0 条")
+
+
+def fetch_nass_irrigated_area(workers: int = 1):
+    """USDA NASS Census 2022 县级灌溉面积 → GCS raw_data/nass_irrigation/county_irrigated_area_2022.json"""
+    nass_key = os.getenv("USDA_NASS_API", "")
+    if not nass_key:
+        print("  ✗ 未找到 USDA_NASS_API key")
+        return
+
+    rel = "nass_irrigation/county_irrigated_area_2022.json"
+    if _exists(rel):
+        data = json.loads(_get_bucket().blob(f"{GCS_PREFIX}/{rel}").download_as_bytes())
+        if data:
+            print(f"  ✓ {rel} 已存在（{len(data)} 条），跳过")
+            return
+        print(f"  ⚠ {rel} 为空，重新抓取...")
+
+    base = {
+        "key": nass_key,
+        "source_desc": "CENSUS",
+        "agg_level_desc": "COUNTY",
+        "year": "2022",
+        "format": "JSON",
+    }
+    # 依次尝试不同参数组合，取第一个有数据的
+    attempts = [
+        # 1) AG LAND, IRRIGATED — 总灌溉农地面积，覆盖最广
+        {"sector_desc": "ECONOMICS", "commodity_desc": "AG LAND",
+         "statisticcat_desc": "AREA", "util_practice_desc": "IRRIGATED"},
+        # 2) FIELD CROPS HARVESTED IRRIGATED
+        {"sector_desc": "CROPS", "commodity_desc": "FIELD CROPS",
+         "statisticcat_desc": "AREA HARVESTED", "prodn_practice_desc": "IRRIGATED"},
+        # 3) 去掉 commodity_desc，只限 IRRIGATED
+        {"sector_desc": "CROPS",
+         "statisticcat_desc": "AREA HARVESTED", "prodn_practice_desc": "IRRIGATED"},
+        # 4) 原有 ERS 口径（作为最后备用）
+        {"sector_desc": "CROPS",
+         "statisticcat_desc": "AREA HARVESTED", "prodn_practice_desc": "IN THE OPEN, IRRIGATED"},
+    ]
+
+    for i, extra in enumerate(attempts, 1):
+        params = {**base, **extra}
+        desc = ", ".join(f"{k}={v}" for k, v in extra.items())
+        print(f"  尝试参数组合 {i}: {desc}")
+        try:
+            r = requests.get("https://quickstats.nass.usda.gov/api/api_GET/",
+                             params=params, timeout=180)
+            records = r.json().get("data", [])
+            if records:
+                _put_json(rel, records)
+                print(f"  ✓ county_irrigated_area_2022.json  ({len(records)} 条县级记录)")
+                return
+            err = r.json().get("error", ["无错误信息"])
+            print(f"    → 0 条  {err}")
+        except Exception as e:
+            print(f"    → 请求失败: {e}")
+        time.sleep(1)
+
+    print("  ✗ 所有参数组合均返回 0 条，请登录 https://quickstats.nass.usda.gov 手动验证参数")
+
+
+
 SOURCES = {
     "wqp":        ("Water Quality Portal（全国，按州+年）",          fetch_wqp),
     "usgs":       ("USGS 水文数据（全国，按州+年）",                 fetch_usgs),
@@ -1139,6 +2370,26 @@ SOURCES = {
     "commodities":  ("Alpha Vantage 农产品月度期货价格（玉米/小麦/大豆/棉花）", fetch_commodity_prices),
     "groundwater":  ("USGS NWIS Ogallala+中央谷地下水位年均趋势",              fetch_groundwater),
     "noaa_pdsi":    ("NOAA CDO 主要农业州 Palmer 干旱指数（月度）",             fetch_noaa_pdsi),
+    "gridmet":          ("gridMET 县级年度 ETo+降水（2022-2025，用于需水量计算）",    fetch_gridmet),
+    "nass_county":      ("USDA NASS 县级作物产量（玉米/大豆/小麦/棉花，2015+）",      fetch_nass_county_crops),
+    "bls_unemployment": ("BLS LAUS 县级年度失业率（2015-2024）",                       fetch_bls_unemployment),
+    "fema_nri":         ("FEMA National Risk Index 县级洪水/干旱/综合风险",             fetch_fema_nri),
+    "rma_insurance":    ("USDA RMA 县级作物保险赔付（2015-2024）",                        fetch_rma_insurance),
+    "nass_farms":       ("USDA NASS 县级农场数量/规模/总销售额（普查年）",                 fetch_nass_farm_operations),
+    "eia_electricity":  ("EIA 州级年度电价（灌溉泵水成本代理，需 EIA_API_KEY）",           fetch_eia_electricity),
+    "modis_ndvi":       ("NASA MODIS 县级月度 NDVI 植被指数（2016-2025）",                 fetch_modis_ndvi),
+    "soil_moisture":      ("USDA SCAN 土壤湿度站点日均数据（2016-2025）",                  fetch_soil_moisture),
+    "nass_irrigation":    ("USDA NASS 县级灌溉方式（滴灌/漫灌/喷灌，普查年）",              fetch_nass_irrigation_method),
+    "ssurgo_county":      ("USDA NRCS SSURGO 县级土壤持水能力 AWC",                         fetch_ssurgo_county),
+    "ssurgo_clear":       ("清理 GCS 中 awc_mean 为 null 的 SSURGO 占位文件",               clear_ssurgo_empty),
+    "eqip_conservation":    ("USDA NRCS EQIP 县级节水保护项目参与数据",                      fetch_eqip_conservation),
+    "elevation":            ("USGS 3DEP 县级中心点海拔高度（地形代理变量）",                   fetch_elevation),
+    "nass_operators":       ("USDA NASS 县级农场主年龄分布+土地租赁比例（普查年）",            fetch_nass_operator_demographics),
+    "bea_farm_income":      ("BEA 县级农场主净收入（CAEMP25N，需 BEA_API_KEY）",               fetch_bea_farm_income),
+    "center_pivot":         ("GEE Python API：2024 CDL 形态学检测县级中心轴喷灌比例",            fetch_center_pivot),
+    "nass_irrigated_area":  ("USDA NASS Census 2022 县级灌溉收获面积（FIELD CROPS, IRRIGATED）",  fetch_nass_irrigated_area),
+    "nass_ag_land_irr":     ("USDA NASS Census 2022 县级总灌溉农地面积（AG LAND, IRRIGATED）",     fetch_nass_ag_land_irrigated),
+    "fris":                 ("USDA NASS FRIS 县级灌溉面积（AG LAND IRRIGATED，API+公开CSV兜底）",  fetch_fris_irrigated_area),
 }
 
 DEFAULT_ORDER = [
@@ -1212,3 +2463,4 @@ if __name__ == "__main__":
     print(f"  全部完成！耗时 {elapsed // 60}分{elapsed % 60}秒")
     print(f"  数据已存储在 gs://{GCS_BUCKET_NAME}/{GCS_PREFIX}/")
     print("=" * 65)
+

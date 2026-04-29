@@ -10,3 +10,7 @@ shap
 prophet
 folium
 plotly
+earthengine-api
+fastapi
+uvicorn[standard]
+google-generativeai
