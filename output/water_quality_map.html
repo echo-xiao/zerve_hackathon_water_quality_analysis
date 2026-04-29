@@ -2661,6 +2661,7 @@ function _showCountyPopup(p){
   var GROUPS=[
     {label:'Human Factors',color:'#d97706',factors:[
       {nm:'Crop Diversity', key:'diversity',   field:'crop_diversity_hhi',    fmt:function(v){return v.toFixed(2);}},
+      {nm:'Diversif. Potential', key:'intervention', field:'intervention_gain_pct', fmt:function(v){return v>0?'+'+v.toFixed(1)+'%':'—';}},
       {nm:'High-Water Share', key:'hwcs',        field:'high_water_crop_share', fmt:function(v){return(v*100).toFixed(0)+'%';}},
       {nm:'Farm Size',   key:'farm_size',   field:'avg_farm_size_ac',      fmt:function(v){return _fmt(v)+' ac';}},
       {nm:'Poverty Rate',     key:'poverty',     field:'poverty_rate',          fmt:function(v){return v.toFixed(1)+'%';}},
@@ -2773,7 +2774,8 @@ function _computePercentiles(fips){
   var result={};
   var fields=['crop_water_eff','crop_diversity_hhi','high_water_crop_share',
     'avg_farm_size_ac','poverty_rate','median_income','centerpivot_ratio',
-    'precip_avg_in','drought_intensity','elevation_ft','awc_mean','clay_pct','organic_matter'];
+    'precip_avg_in','drought_intensity','elevation_ft','awc_mean','clay_pct','organic_matter',
+    'intervention_gain_pct'];
   var target=(window._effCountyLookup||{})[fips]||{};
   fields.forEach(function(field){
     var vals=COUNTY_ANALYSIS.map(function(c){return c[field];})
