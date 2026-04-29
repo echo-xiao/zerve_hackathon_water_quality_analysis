@@ -30,15 +30,45 @@ _here = Path(__file__).resolve()
 _zerve_dirs = _glob.glob('/tmp/**/zerve_hackathon', recursive=True)
 if _zerve_dirs:
     BASE_DIR = Path(_zerve_dirs[0])
+    OUTPUT_DIR   = BASE_DIR / "output"
+    ANALYSIS_DIR = OUTPUT_DIR / "analysis"
+    DATA_DIR     = OUTPUT_DIR / "data"
 elif _here.parent.name == "app":
-    BASE_DIR = _here.parent
+    BASE_DIR     = _here.parent
+    OUTPUT_DIR   = Path("/tmp/zerve_output")
+    ANALYSIS_DIR = OUTPUT_DIR / "analysis"
+    DATA_DIR     = OUTPUT_DIR / "data"
 else:
-    BASE_DIR = _here.parent.parent.parent
-OUTPUT_DIR   = BASE_DIR / "output"
-ANALYSIS_DIR = OUTPUT_DIR / "analysis"
-DATA_DIR     = OUTPUT_DIR / "data"
+    BASE_DIR     = _here.parent.parent.parent
+    OUTPUT_DIR   = BASE_DIR / "output"
+    ANALYSIS_DIR = OUTPUT_DIR / "analysis"
+    DATA_DIR     = OUTPUT_DIR / "data"
 
 app = FastAPI(title="Agricultural Water Efficiency API", version="1.0")
+
+GITHUB_RAW = "https://raw.githubusercontent.com/echo-xiao/zerve_hackathon_water_quality_analysis/main/output"
+DATA_FILES = ["02_eda", "03_efficiency", "04_causal", "05_shap",
+              "06_cluster", "07_insights", "summary", "county_wide"]
+
+@app.on_event("startup")
+async def download_data():
+    import urllib.request
+    ANALYSIS_DIR.mkdir(parents=True, exist_ok=True)
+    for name in DATA_FILES:
+        p = ANALYSIS_DIR / f"{name}.json"
+        if not p.exists():
+            url = f"{GITHUB_RAW}/analysis/{name}.json"
+            try:
+                urllib.request.urlretrieve(url, str(p))
+            except Exception as e:
+                print(f"Failed to download {name}.json: {e}")
+    # 下载地图 HTML
+    map_p = OUTPUT_DIR / "water_quality_map.html"
+    if not map_p.exists():
+        try:
+            urllib.request.urlretrieve(f"{GITHUB_RAW}/water_quality_map.html", str(map_p))
+        except Exception as e:
+            print(f"Failed to download map html: {e}")
 
 app.add_middleware(
     CORSMiddleware,
@@ -241,11 +271,24 @@ def get_map_county_full():
     if not county_map:
         raise HTTPException(503, "分析数据未就绪")
 
+    # Compute intervention_gain_pct using IPW causal estimate for crop_diversity_hhi
+    results = _load_results()
+    hhi_treatments = results.get("04_causal", {}).get("treatments", [])
+    hhi_t = next((t for t in hhi_treatments if t.get("treatment_col") == "crop_diversity_hhi"), {})
+    hhi_threshold = hhi_t.get("threshold", 0.523)
+    hhi_ate_pct = abs(hhi_t.get("ate_pct_change", 32.8))
+
     features = []
     for fips, c in county_map.items():
         eff = c.get("crop_water_eff")
         if eff is None:
             continue
+        hhi = c.get("crop_diversity_hhi")
+        if hhi is not None and hhi > hhi_threshold:
+            scale = (hhi - hhi_threshold) / max(1.0 - hhi_threshold, 0.01)
+            intervention_gain_pct = round(scale * hhi_ate_pct, 1)
+        else:
+            intervention_gain_pct = None
         features.append({
             "fips": fips,
             "county": c.get("county", ""),
@@ -265,6 +308,9 @@ def get_map_county_full():
             "drought_intensity": c.get("drought_intensity"),
             # 土壤
             "awc_mean": c.get("awc_mean"),
+            # 干预潜力
+            "crop_diversity_hhi": hhi,
+            "intervention_gain_pct": intervention_gain_pct,
         })
 
     return {"count": len(features), "counties": features}
@@ -321,8 +367,9 @@ def get_summary():
 @app.post("/simulate")
 def simulate(req: SimulateRequest):
     """
-    干预模拟：调整人为因素，用 SHAP 线性近似预测效率变化
+    干预模拟：调整人为因素，用 IPW-ATE 因果估计量预测效率变化
     """
+    import math
     county_map = _load_county_map()
     fips = req.fips.zfill(5)
     county = county_map.get(fips)
@@ -330,32 +377,62 @@ def simulate(req: SimulateRequest):
         raise HTTPException(404, f"未找到 FIPS={fips}")
 
     results = _load_results()
-    shap_means = results.get("05_shap", {}).get("shap_mean_values", {})
-    if not shap_means:
-        raise HTTPException(503, "SHAP 数据未就绪")
+    causal_treatments = results.get("04_causal", {}).get("treatments", [])
+    if not causal_treatments:
+        raise HTTPException(503, "因果数据未就绪")
 
-    # 用 SHAP 均值近似：Δeff ≈ Σ (Δfeature_i × shap_mean_i / feature_mean_i)
+    # 构建因果效应查找表 {feature: {threshold, ate_log}}
+    causal_map = {
+        t["treatment_col"]: {
+            "threshold": t["threshold"],
+            "ate_log": t["ate"],  # log 尺度
+        }
+        for t in causal_treatments
+    }
+
     interventions = {
-        "centerpivot_ratio": req.centerpivot_ratio,
-        "avg_farm_size_ac":  req.avg_farm_size_ac,
+        "centerpivot_ratio":  req.centerpivot_ratio,
+        "avg_farm_size_ac":   req.avg_farm_size_ac,
         "crop_diversity_hhi": req.crop_diversity_hhi,
     }
+
+    current_eff = county.get("crop_water_eff", 0) or 0
+    current_log = math.log1p(max(current_eff, 0))
     delta_log_eff = 0.0
     changes = []
+
     for feat, new_val in interventions.items():
         if new_val is None:
             continue
         old_val = county.get(feat)
         if old_val is None:
             continue
-        shap_per_unit = shap_means.get(feat, 0)
-        delta = (new_val - old_val) * shap_per_unit
-        delta_log_eff += delta
-        changes.append({"feature": feat, "old": old_val, "new": new_val, "delta_contribution": round(delta, 4)})
+        causal = causal_map.get(feat)
+        if not causal:
+            continue
 
-    import math
-    current_eff = county.get("crop_water_eff", 0) or 0
-    current_log = math.log1p(max(current_eff, 0))
+        threshold = causal["threshold"]
+        ate_log   = causal["ate_log"]
+
+        # 判断干预方向：从处理侧 → 控制侧 or 控制侧 → 处理侧
+        old_treated = (old_val > threshold)
+        new_treated = (new_val > threshold)
+        if old_treated == new_treated:
+            delta = 0.0  # 同侧，无跨阈值效应
+        elif old_treated and not new_treated:
+            delta = -ate_log  # 从处理移到控制：反向 ATE
+        else:
+            delta = ate_log   # 从控制移到处理：正向 ATE
+
+        delta_log_eff += delta
+        changes.append({
+            "feature": feat,
+            "old": old_val,
+            "new": new_val,
+            "threshold": threshold,
+            "delta_contribution": round(delta, 4),
+        })
+
     new_log = current_log + delta_log_eff
     new_eff = math.expm1(new_log)
 

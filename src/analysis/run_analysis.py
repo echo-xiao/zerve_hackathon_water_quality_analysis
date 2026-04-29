@@ -227,12 +227,27 @@ def inject_map(all_results: dict):
         except Exception:
             return None
 
+    # Load IPW causal estimate for crop_diversity_hhi
+    causal_data = _load("04_causal.json") or {}
+    hhi_treatment = next((t for t in causal_data.get("treatments", [])
+                          if t.get("treatment_col") == "crop_diversity_hhi"), {})
+    hhi_threshold = hhi_treatment.get("threshold", 0.523)
+    hhi_ate_pct   = abs(hhi_treatment.get("ate_pct_change", 32.8))
+
     counties = []
     for fips, c in county_wide.items():
         eff = c.get("crop_water_eff")
         if eff is None:
             continue
         ci = county_clusters.get(fips, {})
+        hhi = _safe(c.get("crop_diversity_hhi"))
+        # Intervention potential: only for high-HHI (low diversity) counties;
+        # scale by how far above threshold so darker = more room to improve.
+        if hhi is not None and hhi > hhi_threshold:
+            scale = (hhi - hhi_threshold) / max(1.0 - hhi_threshold, 0.01)
+            intervention_gain_pct = round(scale * hhi_ate_pct, 1)
+        else:
+            intervention_gain_pct = None
         counties.append({
             "fips": fips, "county": c.get("county",""), "state": c.get("state",""),
             # 目标变量
@@ -256,11 +271,13 @@ def inject_map(all_results: dict):
             "organic_matter": _safe(c.get("organic_matter")),
             # 人为 / 可干预因素
             "centerpivot_ratio": _safe(c.get("centerpivot_ratio")),
-            "crop_diversity_hhi": _safe(c.get("crop_diversity_hhi")),
+            "crop_diversity_hhi": hhi,
             "high_water_crop_share": _safe(c.get("high_water_crop_share")),
             "avg_farm_size_ac": _safe(c.get("avg_farm_size_ac")),
             "median_income": _safe(c.get("median_income")),
             "poverty_rate": _safe(c.get("poverty_rate")),
+            # 因果干预潜力
+            "intervention_gain_pct": intervention_gain_pct,
         })
 
     html = open(map_path, encoding="utf-8").read()
