@@ -1,16 +1,16 @@
 """
 Agricultural Water Efficiency API
-FastAPI 后端 — 供前端地图调用
+FastAPI backend for the interactive map
 
-启动：
+Run locally:
   uvicorn src.api.main:app --reload --port 8000
 
-端点：
-  GET  /county/{fips}          县级水效率详情 + SHAP 归因
-  GET  /map/efficiency          全县效率数据（地图渲染用）
-  GET  /opportunities           低效高潜力县列表
-  POST /simulate                干预模拟（调整特征预测效率变化）
-  POST /explain                 Gemini 自然语言解读
+Endpoints:
+  GET  /county/{fips}          County-level efficiency details + SHAP attribution
+  GET  /map/efficiency          All-county efficiency data (map rendering)
+  GET  /opportunities           Low-efficiency, high-potential county list
+  POST /simulate                Intervention simulation (adjust features, predict efficiency change)
+  POST /explain                 Gemini natural language explanation
 """
 
 import os, json
@@ -24,7 +24,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-# ── 路径 ────────────────────────────────────────────────────────────
+# ── Paths ───────────────────────────────────────────────────────────
 import glob as _glob
 _here = Path(__file__).resolve()
 _zerve_dirs = _glob.glob('/tmp/**/zerve_hackathon', recursive=True)
@@ -62,7 +62,7 @@ async def download_data():
                 urllib.request.urlretrieve(url, str(p))
             except Exception as e:
                 print(f"Failed to download {name}.json: {e}")
-    # 下载地图 HTML
+    # Download map HTML
     map_p = OUTPUT_DIR / "water_quality_map.html"
     if not map_p.exists():
         try:
@@ -77,10 +77,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── 数据加载（启动时缓存）──────────────────────────────────────────
+# ── Data loading (cached at startup) ────────────────────────────────
 @lru_cache(maxsize=1)
 def _load_results():
-    """加载 run_analysis.py 产出的所有 JSON 结果"""
+    """Load all JSON results produced by run_analysis.py"""
     results = {}
     for name in ["02_eda", "03_efficiency", "04_causal", "05_shap",
                  "06_cluster", "07_insights", "summary"]:
@@ -91,7 +91,7 @@ def _load_results():
 
 @lru_cache(maxsize=1)
 def _load_county_map():
-    """加载县级效率宽表（run_analysis 产出的 county_wide.csv 转 dict）"""
+    """Load county-level efficiency table produced by run_analysis.py"""
     p = ANALYSIS_DIR / "county_wide.json"
     if p.exists():
         return json.loads(p.read_text())
@@ -105,7 +105,7 @@ def _load_geojson():
     return {"type": "FeatureCollection", "features": []}
 
 
-# ── 模型 ────────────────────────────────────────────────────────────
+# ── Request models ──────────────────────────────────────────────────
 class SimulateRequest(BaseModel):
     fips: str
     centerpivot_ratio: Optional[float] = None
@@ -117,7 +117,7 @@ class ExplainRequest(BaseModel):
     language: str = "zh"
 
 
-# ── 端点 ────────────────────────────────────────────────────────────
+# ── Endpoints ───────────────────────────────────────────────────────
 
 @app.get("/debug/paths")
 def debug_paths():
@@ -163,20 +163,20 @@ def get_report():
 
 @app.get("/county/{fips}")
 def get_county(fips: str):
-    """返回单个县的水效率详情、SHAP 归因、与全国/气候带对比"""
+    """Return single county water efficiency details, SHAP attribution, and national comparison"""
     county_map = _load_county_map()
     if not county_map:
-        raise HTTPException(503, "分析数据未就绪，请先运行 run_analysis.py")
+        raise HTTPException(503, "Analysis data not ready — please run run_analysis.py first")
 
     fips = fips.zfill(5)
     county = county_map.get(fips)
     if not county:
-        raise HTTPException(404, f"未找到 FIPS={fips} 的数据")
+        raise HTTPException(404, f"No data found for FIPS={fips}")
 
     results = _load_results()
     shap_data = results.get("05_shap", {})
 
-    # 找该县的 SHAP waterfall 数据（如果有）
+    # Find SHAP waterfall data for this county (if available)
     county_shap = {}
     for item in shap_data.get("county_shap", []):
         if item.get("fips") == fips:
@@ -211,10 +211,10 @@ def get_county(fips: str):
 
 @app.get("/map/efficiency")
 def get_map_efficiency():
-    """返回全县水效率数据，供前端 choropleth 渲染"""
+    """Return all-county efficiency data for choropleth map rendering"""
     county_map = _load_county_map()
     if not county_map:
-        raise HTTPException(503, "分析数据未就绪")
+        raise HTTPException(503, "Analysis data not ready")
 
     features = []
     for fips, c in county_map.items():
@@ -240,9 +240,9 @@ def get_opportunities(
     insight_type: Optional[str] = None,
 ):
     """
-    返回政策优先县。insight_type 可选：
+    Return priority counties for policy intervention. insight_type options:
       low_hanging_fruit | virtual_water_exporters | dual_exposure | top50_policy_priority
-    默认返回 low_hanging_fruit（低挂果实）
+    Defaults to low_hanging_fruit.
     """
     results = _load_results()
     insights = results.get("07_insights", {})
@@ -250,7 +250,7 @@ def get_opportunities(
     key = insight_type or "low_hanging_fruit"
     opps = insights.get(key, [])
 
-    # 兼容旧格式
+    # Fallback to legacy format
     if not opps:
         opps = results.get("summary", {}).get("opportunities", [])
 
@@ -266,10 +266,10 @@ def get_opportunities(
 
 @app.get("/map/county_full")
 def get_map_county_full():
-    """返回全县完整数据：效率 + 聚类 + insight flags，供地图多子模式渲染"""
+    """Return full county dataset: efficiency + clusters + insight flags for map rendering"""
     county_map = _load_county_map()
     if not county_map:
-        raise HTTPException(503, "分析数据未就绪")
+        raise HTTPException(503, "Analysis data not ready")
 
     # Compute intervention_gain_pct using IPW causal estimate for crop_diversity_hhi
     results = _load_results()
@@ -293,7 +293,7 @@ def get_map_county_full():
             "fips": fips,
             "county": c.get("county", ""),
             "state": c.get("state", ""),
-            # 分析结果
+            # Analysis results
             "crop_water_eff": eff,
             "percentile": c.get("eff_percentile"),
             "irrigated_area_ac": c.get("irrigated_area_ac"),
@@ -302,13 +302,13 @@ def get_map_county_full():
             "is_lhf": int(c.get("is_lhf", 0) or 0),
             "is_vwe": int(c.get("is_vwe", 0) or 0),
             "is_dual": int(c.get("is_dual", 0) or 0),
-            # 气候
+            # Climate
             "eto_avg_in": c.get("eto_avg_in"),
             "precip_deficit_in": c.get("precip_deficit_in"),
             "drought_intensity": c.get("drought_intensity"),
-            # 土壤
+            # Soil
             "awc_mean": c.get("awc_mean"),
-            # 干预潜力
+            # Intervention potential
             "crop_diversity_hhi": hhi,
             "intervention_gain_pct": intervention_gain_pct,
         })
@@ -318,11 +318,11 @@ def get_map_county_full():
 
 @app.get("/clusters")
 def get_clusters():
-    """返回县级分类结果（6类县型）"""
+    """Return county cluster results (4 cluster types)"""
     results = _load_results()
     cluster_data = results.get("06_cluster", {})
     if not cluster_data:
-        raise HTTPException(503, "聚类数据未就绪，请先运行 run_analysis.py")
+        raise HTTPException(503, "Cluster data not ready — please run run_analysis.py first")
     return {
         "n_clusters": cluster_data.get("n_clusters"),
         "n_counties": cluster_data.get("n_counties"),
@@ -332,20 +332,20 @@ def get_clusters():
 
 @app.get("/clusters/{fips}")
 def get_county_cluster(fips: str):
-    """返回某县的聚类归属"""
+    """Return cluster assignment for a specific county"""
     results = _load_results()
     cluster_data = results.get("06_cluster", {})
     fips = fips.zfill(5)
     county_clusters = cluster_data.get("county_clusters", {})
     info = county_clusters.get(fips)
     if not info:
-        raise HTTPException(404, f"未找到 FIPS={fips} 的聚类数据")
+        raise HTTPException(404, f"No cluster data found for FIPS={fips}")
     return {"fips": fips, **info}
 
 
 @app.get("/summary")
 def get_summary():
-    """返回全国汇总：因素占比、因果效应、Top 可干预变量"""
+    """Return national summary: factor decomposition, causal effects, top actionable variables"""
     results = _load_results()
     eff = results.get("03_efficiency", {})
     causal = results.get("04_causal", {})
@@ -367,21 +367,21 @@ def get_summary():
 @app.post("/simulate")
 def simulate(req: SimulateRequest):
     """
-    干预模拟：调整人为因素，用 IPW-ATE 因果估计量预测效率变化
+    Intervention simulation: adjust human factors and predict efficiency change using IPW-ATE causal estimates
     """
     import math
     county_map = _load_county_map()
     fips = req.fips.zfill(5)
     county = county_map.get(fips)
     if not county:
-        raise HTTPException(404, f"未找到 FIPS={fips}")
+        raise HTTPException(404, f"No data found for FIPS={fips}")
 
     results = _load_results()
     causal_treatments = results.get("04_causal", {}).get("treatments", [])
     if not causal_treatments:
-        raise HTTPException(503, "因果数据未就绪")
+        raise HTTPException(503, "Causal data not ready")
 
-    # 构建因果效应查找表 {feature: {threshold, ate_log}}
+    # Build causal effect lookup table {feature: {threshold, ate_log}}
     causal_map = {
         t["treatment_col"]: {
             "threshold": t["threshold"],
@@ -414,15 +414,15 @@ def simulate(req: SimulateRequest):
         threshold = causal["threshold"]
         ate_log   = causal["ate_log"]
 
-        # 判断干预方向：从处理侧 → 控制侧 or 控制侧 → 处理侧
+        # Determine intervention direction: treated→control or control→treated
         old_treated = (old_val > threshold)
         new_treated = (new_val > threshold)
         if old_treated == new_treated:
-            delta = 0.0  # 同侧，无跨阈值效应
+            delta = 0.0  # Same side — no threshold crossing effect
         elif old_treated and not new_treated:
-            delta = -ate_log  # 从处理移到控制：反向 ATE
+            delta = -ate_log  # Treated → control: reverse ATE
         else:
-            delta = ate_log   # 从控制移到处理：正向 ATE
+            delta = ate_log   # Control → treated: forward ATE
 
         delta_log_eff += delta
         changes.append({
@@ -447,12 +447,12 @@ def simulate(req: SimulateRequest):
 
 @app.post("/explain")
 async def explain(req: ExplainRequest):
-    """调用 Gemini 对县级数据生成自然语言解读"""
+    """Call Gemini to generate a natural language explanation of county-level data"""
     from dotenv import load_dotenv
     load_dotenv(BASE_DIR / ".env")
     gemini_key = os.getenv("GEMINI_API_KEY", "")
     if not gemini_key:
-        raise HTTPException(503, "GEMINI_API_KEY 未配置")
+        raise HTTPException(503, "GEMINI_API_KEY not configured")
 
     county_data = get_county(req.fips)
 
@@ -460,23 +460,23 @@ async def explain(req: ExplainRequest):
     genai.configure(api_key=gemini_key)
     model = genai.GenerativeModel("gemini-2.0-flash")
 
-    lang = "中文" if req.language == "zh" else "English"
-    prompt = f"""你是农业水资源分析专家，请用{lang}简洁解读以下县级农业水效率数据（3-4句话）：
+    lang = "Chinese" if req.language == "zh" else "English"
+    prompt = f"""You are an agricultural water efficiency expert. Briefly explain the following county-level data in {lang} (3-4 sentences):
 
-县名：{county_data['county']}, {county_data['state']}
-水效率：{county_data['crop_water_eff']} $/af（全国第{county_data.get('percentile', '?')}百分位）
-灌溉面积：{county_data['irrigated_area_ac']} acres
-气候条件：ETo={county_data['climate']['eto_avg_in']} in, 降水={county_data['climate']['precip_avg_in']} in
-中心轴喷灌比例：{county_data['human_factors']['centerpivot_ratio']}
-SHAP 主因：{county_data['shap_attribution']}
+County: {county_data['county']}, {county_data['state']}
+Water efficiency: {county_data['crop_water_eff']} $/af (national {county_data.get('percentile', '?')}th percentile)
+Irrigated area: {county_data['irrigated_area_ac']} acres
+Climate: ETo={county_data['climate']['eto_avg_in']} in, Precip={county_data['climate']['precip_avg_in']} in
+Center pivot ratio: {county_data['human_factors']['centerpivot_ratio']}
+SHAP attribution: {county_data['shap_attribution']}
 
-请指出该县效率高/低的主要原因和可改进方向。"""
+Identify the main reasons for this county's efficiency level and suggest improvement directions."""
 
     response = model.generate_content(prompt)
     return {"fips": req.fips, "explanation": response.text}
 
 
-# ── 静态文件（前端地图）──────────────────────────────────────────
+# ── Static files (frontend map) ─────────────────────────────────────
 _static = OUTPUT_DIR
 if _static.exists():
     app.mount("/static", StaticFiles(directory=str(_static)), name="static")
@@ -486,7 +486,7 @@ def serve_map():
     p = OUTPUT_DIR / "water_quality_map.html"
     if p.exists():
         return FileResponse(str(p))
-    raise HTTPException(404, "地图文件未找到")
+    raise HTTPException(404, "Map file not found")
 
 
 if __name__ == "__main__":
