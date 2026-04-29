@@ -479,11 +479,6 @@ body{font-family:var(--pal);background:var(--cream);overflow:hidden;}
       <span class="fp-nm">Crop Diversity<span class="fp-tip"><span class="fp-tip-body"><b>Crop Diversity (HHI)</b><br>Herfindahl-Hirschman Index. Lower HHI = more diverse crops. Diversification reduces single-crop risk and improves water efficiency.<br><br><b>r=-0.50</b> (negative) means higher diversity → higher efficiency.</span></span></span>
       <div class="fp-rbar" title="r = −0.50"><div class="fp-rbar-l"><div class="fp-rbar-f" style="width:100%;background:#f97316"></div></div><div class="fp-rbar-r"><div class="fp-rbar-f" style="width:0%;background:#16a34a"></div></div></div>
     </div>
-    <div class="fp-row" id="fpr-intervention" onclick="fpClick('intervention')">
-      <div class="fp-cdot" style="background:#e31a1c"></div>
-      <span class="fp-nm" style="color:#c0392b;font-weight:600">Diversification Potential<span class="fp-tip"><span class="fp-tip-body"><b>Diversification Potential</b><br>Counties with high crop concentration (HHI &gt; 0.52) that could gain efficiency through diversification.<br><br><b>IPW causal estimate: +32.8% efficiency gain</b> if county reduces HHI below threshold. Gray = already diverse or not eligible. Color intensity = magnitude of gain potential.</span></span></span>
-      <div class="fp-rbar" title="IPW ATE = +32.8%"><div class="fp-rbar-l"><div class="fp-rbar-f" style="width:0%;background:#f97316"></div></div><div class="fp-rbar-r"><div class="fp-rbar-f" style="width:66%;background:#e31a1c"></div></div></div>
-    </div>
     <div class="fp-row" id="fpr-hwcs" onclick="fpClick('hwcs')">
       <div class="fp-cdot" style="background:#de2d26"></div>
       <span class="fp-nm">High-Water Crop Share<span class="fp-tip"><span class="fp-tip-body"><b>High-Water Crop Share</b><br>Value share of high-irrigation crops (rice, cotton). Higher share → more water per unit value → lower efficiency.<br><br><b>r=-0.28</b>, one of the most actionable human factors.</span></span></span>
@@ -559,11 +554,6 @@ body{font-family:var(--pal);background:var(--cream);overflow:hidden;}
       <span class="fp-nm">Crop Diversity<span class="fp-tip"><span class="fp-tip-body"><b>Crop Diversity (HHI)</b><br>Herfindahl-Hirschman Index. Lower HHI = more diverse crops. Diversification reduces single-crop risk and improves water efficiency.<br><br><b>r=-0.50</b> (negative) means higher diversity → higher efficiency.</span></span></span>
       <div class="fp-rbar" title="r = −0.50"><div class="fp-rbar-l"><div class="fp-rbar-f" style="width:100%;background:#f97316"></div></div><div class="fp-rbar-r"><div class="fp-rbar-f" style="width:0%;background:#16a34a"></div></div></div>
     </div>
-    <div class="fp-row" id="fpr-intervention" onclick="fpClick('intervention')">
-      <div class="fp-cdot" style="background:#e31a1c"></div>
-      <span class="fp-nm" style="color:#c0392b;font-weight:600">Diversification Potential<span class="fp-tip"><span class="fp-tip-body"><b>Diversification Potential</b><br>Counties with high crop concentration (HHI &gt; 0.52) that could gain efficiency through diversification.<br><br><b>IPW causal estimate: +32.8% efficiency gain</b> if county reduces HHI below threshold. Gray = already diverse or not eligible. Color intensity = magnitude of gain potential.</span></span></span>
-      <div class="fp-rbar" title="IPW ATE = +32.8%"><div class="fp-rbar-l"><div class="fp-rbar-f" style="width:0%;background:#f97316"></div></div><div class="fp-rbar-r"><div class="fp-rbar-f" style="width:66%;background:#e31a1c"></div></div></div>
-    </div>
     <div class="fp-row" id="fpr-hwcs" onclick="fpClick('hwcs')">
       <div class="fp-cdot" style="background:#de2d26"></div>
       <span class="fp-nm">High-Water Crop Share<span class="fp-tip"><span class="fp-tip-body"><b>High-Water Crop Share</b><br>Value share of high-irrigation crops (rice, cotton). Higher share → more water per unit value → lower efficiency.<br><br><b>r=-0.28</b>, one of the most actionable human factors.</span></span></span>
@@ -606,7 +596,13 @@ body{font-family:var(--pal);background:var(--cream);overflow:hidden;}
   <!-- Tab 3: Cluster analysis -->
   <div class="p-tab-content" id="ptc-cluster">
       <div style="padding:10px 12px 6px">
-        <div style="font-size:8px;color:#64748b;margin-bottom:8px;line-height:1.5">
+        <div style="font-size:9px;font-weight:700;color:#0f172a;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Causal Intervention</div>
+        <div class="fp-row" id="fpr-intervention" onclick="fpClick('intervention')" style="margin:0 -4px 8px;border-radius:6px;background:#fff5f5;border:1px solid #fca5a5;">
+          <div class="fp-cdot" style="background:#e31a1c"></div>
+          <span class="fp-nm" style="color:#c0392b;font-weight:600">Diversification Potential<span class="fp-tip"><span class="fp-tip-body"><b>Diversification Potential</b><br>Counties with high crop concentration (HHI &gt; 0.52) that could gain efficiency through diversification.<br><br><b>IPW causal estimate: +32.8% efficiency gain</b> if county reduces HHI below threshold. Gray = already diverse or not eligible. Color intensity = magnitude of gain potential.</span></span></span>
+          <div style="font-size:9px;color:#e31a1c;font-weight:700;white-space:nowrap">+32.8%</div>
+        </div>
+        <div style="font-size:8px;color:#64748b;margin-bottom:10px;line-height:1.5">
           K-means clustering (k=4) categorizes 1,407 counties by climate, soil &amp; human factors. Click any county on the map to see its cluster.
         </div>
       </div>
